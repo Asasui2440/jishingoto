@@ -1,26 +1,194 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ------------------------------------------------------------------
+   デザイントークン
+   Figma「Codex祭」(rWWLKU9N8JD4mtaRojBL94) の値をそのまま写している。
+------------------------------------------------------------------ */
+@theme {
+  /* 面 */
+  --color-canvas: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+
+  /* 文字 */
+  --color-ink: #1a202c;
+  --color-ink-muted: #4a5568;
+  --color-ink-soft: #718096;
+  --color-ink-faint: #a0aec0;
+
+  /* プライマリ（黄）。Figma 変数 Accents/Yellow を基準にした4段階。
+     黄は明るいので、載せるものによって濃さを変えないと読めなくなる。
+     （#ffcc00 に白文字はコントラスト比 1.5:1 で、基準の 4.5:1 に遠く届かない）
+       primary      塗り。濃い文字（--color-ink, 10.8:1）を載せる
+       primary-mid  バー・枠線・アイコン。明るい面に対して 3.2:1
+       primary-ink  明るい面に置く文字。白地に対して 5.9:1
+       primary-soft 淡い面。上には primary-ink を載せる */
+  --color-primary: #ffcc00;
+  --color-primary-mid: #b87d00;
+  --color-primary-ink: #8a5a00;
+  --color-primary-soft: #fff6d6;
+
+  /* ロゴタイプ専用。Figma のブランド表現をそのまま残している */
+  --color-accent: #ffcc00;
+
+  /* セマンティック */
+  --color-safe: #2ec4b6;
+  --color-safe-soft: #e6f9f7;
+  --color-warn: #ff9f1c;
+  --color-warn-soft: #fff5e6;
+  --color-danger: #e53e3e;
+  --color-danger-soft: #ffe3e3;
+  --color-glass: #4cc9f0;
+  --color-glass-soft: #eaf9ff;
+
+  /* SNS */
+  --color-line: #06c755;
+
+  /* 角丸 */
+  --radius-chip: 8px;
+  --radius-field: 12px;
+  --radius-tile: 16px;
+  --radius-card: 20px;
+  --radius-panel: 24px;
+  --radius-pill: 28px;
+
+  /* 文字サイズ。
+     Figma の px を rem に置き換えてある（既定 16px = 1rem）。
+     こうしておくと「文字の大きさ」設定でルートの font-size を変えたときに、
+     小さな注記まで含めて全部が一緒に大きくなる。名前の数字は既定サイズでの px。 */
+  --text-11: 0.6875rem;
+  --text-13: 0.8125rem;
+  --text-15: 0.9375rem;
+  --text-28: 1.75rem;
+  --text-40: 2.5rem;
+
+  /* フォント */
+  --font-sans: var(--font-rethink-sans), var(--font-noto-sans-jp), system-ui, sans-serif;
+  --font-display: var(--font-gabarito), var(--font-noto-sans-jp), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
+  overscroll-behavior-y: none;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* iOS で文字が勝手に拡大されるのを防ぐ */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* タップ時の青いハイライトを消す（ネイティブアプリっぽく） */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* キーボード操作のときだけフォーカスリングを出す */
+:focus-visible {
+  outline: 3px solid var(--color-primary-ink);
+  outline-offset: 2px;
+}
+
+/* 年齢層に応じた UI スケール（設定から data-ui-scale を切り替える） */
+:root[data-ui-scale="large"] {
+  font-size: 17.5px;
+}
+:root[data-ui-scale="xlarge"] {
+  font-size: 20px;
+}
+
+/* ふりがな（<ruby>）の見た目 */
+ruby {
+  ruby-position: over;
+}
+ruby > rt {
+  font-size: 0.5em;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+  /* ふりがなの分だけ行が詰まらないように */
+  line-height: 1.1;
+}
+/* ふりがな off のときは ruby のボックス自体をなくす。
+   display:inline だと前後に半角ぶんのアキが残ってしまう。 */
+:root:not([data-furigana="on"]) ruby {
+  display: contents;
+}
+:root:not([data-furigana="on"]) ruby > rt {
+  display: none;
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+/* ------------------------------------------------------------------
+   モーション
+------------------------------------------------------------------ */
+
+/* 地震の揺れ */
+@keyframes quake-shake {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  10% { transform: translate3d(-5px, 2px, 0) rotate(-0.5deg); }
+  20% { transform: translate3d(6px, -3px, 0) rotate(0.6deg); }
+  30% { transform: translate3d(-7px, -2px, 0) rotate(-0.4deg); }
+  40% { transform: translate3d(5px, 4px, 0) rotate(0.5deg); }
+  50% { transform: translate3d(-4px, -4px, 0) rotate(-0.6deg); }
+  60% { transform: translate3d(7px, 2px, 0) rotate(0.4deg); }
+  70% { transform: translate3d(-6px, 3px, 0) rotate(-0.5deg); }
+  80% { transform: translate3d(4px, -2px, 0) rotate(0.3deg); }
+  90% { transform: translate3d(-3px, 2px, 0) rotate(-0.2deg); }
+}
+
+/* 解析中のスキャン線 */
+@keyframes scan-sweep {
+  0%   { top: 4%; opacity: 0.35; }
+  50%  { top: 88%; opacity: 1; }
+  100% { top: 4%; opacity: 0.35; }
+}
+
+/* リスクマーカーの脈動 */
+@keyframes marker-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+/* 画面の入場 */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@utility animate-quake {
+  animation: quake-shake 0.4s linear infinite;
+}
+@utility animate-scan {
+  animation: scan-sweep 2.4s ease-in-out infinite;
+}
+@utility animate-marker {
+  animation: marker-pulse 1.8s ease-in-out infinite;
+}
+@utility animate-rise {
+  animation: rise-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-fade {
+  animation: fade-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ジシンゴト
 
-## Getting Started
+地震を「知識」から「自分事の行動」へ変える、スマートフォン向けの防災シミュレーション。
+部屋の写真を撮って危ないところを見つけ、地震のときの動きを試してから、
+その部屋に合わせたチェックリストを持ち帰る、という流れの Web アプリ。
 
-First, run the development server:
+Figma:
+[Codex祭](https://www.figma.com/design/rWWLKU9N8JD4mtaRojBL94/Codex%E7%A5%AD?node-id=8-8&m=dev)
+
+## 動かす
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 をスマホ幅（〜402px）で開くのが想定。
+PC のブラウザでも中央に寄せて表示される。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 画面の流れ
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ルート | Figma のフレーム | 内容 |
+|---|---|---|
+| `/` | `onboarding` (8:8) | タイトル・体験の説明・表示設定 |
+| `/camera` | `camera-guide` (8:47) | 撮影ガイドとカメラプレビュー |
+| `/privacy` | `privacy-blur` (8:95) | 顔や個人情報のぼかし確認 |
+| `/analyzing` | `analysis-loading` (8:137) | 解析中の演出と豆知識 |
+| `/risks` | `risk-confirmation` (8:185) | 見つかった危険の確認・追加・削除 |
+| `/quiz` | `simulation-question` (8:398) / `simulation-feedback` (8:457) | 出題とふりかえり（同じルートの2状態） |
+| `/result` | `result-checklist` (8:509) | 4軸の評価とチェックリスト |
+| `/share` | `share-card` (8:592) | シェアカードの生成と共有 |
 
-## Learn More
+## 構成
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  app/            各画面（すべてクライアントコンポーネント）
+  components/
+    icons.tsx     Figma から書き出した SVG（自動生成・直接編集しない）
+    ui/           Screen / Button / Card / Furigana など共通パーツ
+    SettingsSheet.tsx
+  lib/
+    api.ts        ★ バックエンドとの境界（いまはモック）
+    content.ts    設問・危険の種類・チェックリストなどの文言データ
+    session.tsx   体験1回ぶんの状態と集計
+    settings.tsx  ふりがな・文字サイズ・音の設定
+    store.ts      sessionStorage / localStorage を外部ストアとして扱う土台
+    camera.ts     MediaDevices のラッパー
+    audio.ts      Web Audio による地鳴り・効果音
+    share-card.ts Canvas でのシェア画像生成
+public/figma/     Figma から書き出した画像とアイコン
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## バックエンドをつなぐとき
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+差し替えるのは **`src/lib/api.ts` の中身だけ** でいいようにしてある。
+シグネチャはそのままに、`fetch` に置き換える。
 
-## Deploy on Vercel
+```ts
+export async function analyzeRoom(photo?: Blob): Promise<Risk[]>
+export async function detectBlurRegions(photo?: Blob): Promise<BlurRegion[]>
+export async function fetchQuestions(risks: Risk[]): Promise<Question[]>
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `Risk` / `Question` / `BlurRegion` の型は `src/lib/content.ts` と `src/lib/api.ts` にある。
+- 体験1回ぶんの状態は `sessionStorage`（`jishingoto.session.v1`）に入る。
+  撮影した写真だけは `blob:` URL なので保存対象から外している。
+- 設問データはいま `content.ts` にベタ書きだが、`fetchQuestions` が
+  同じ形を返せばそのまま差し替えられる。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 実装メモ
+
+### デザイン
+- 色・角丸・文字サイズは `src/app/globals.css` の `@theme` にまとめてある。
+- **配色は黄色基調**。Figma では操作系が青だったが、仕様の「黄色調」に合わせて置き換えた。
+  黄は明るいので、載せるものによって濃さを変えないと読めなくなる（`#ffcc00` に白文字は
+  コントラスト比 **1.5:1**、WCAG AA の 4.5:1 に遠く届かない）。そのため4段階に分けている:
+
+  | トークン | 値 | 用途 | コントラスト |
+  |---|---|---|---|
+  | `--color-primary` | `#ffcc00` | 塗り（ボタン・マーカー） | 上に `--color-ink` を載せて 10.8:1 |
+  | `--color-primary-mid` | `#b87d00` | バー・枠線 | 明るい面に対して 3.2:1 |
+  | `--color-primary-ink` | `#8a5a00` | 明るい面に置く文字・アイコン | 白地に対して 5.9:1 |
+  | `--color-primary-soft` | `#fff6d6` | 淡い面（チップの背景など） | 上に `primary-ink` を載せて 5.5:1 |
+
+  **黄の塗りの上に白文字を置かないこと。** ボタンの文字は `text-ink` を使う。
+- `--color-accent` はロゴタイプ専用。Figma のブランド表現をそのまま残している。
+- アイコンは Figma の書き出しをそのまま React 化したもの。
+  差し替えるときは `public/figma/icons/` に SVG を置いて
+  `node scripts/generate-icons.mjs` を叩く。手で `src/components/icons.tsx` を触らない。
+  Figma の書き出しは色が焼き込まれているので、置かれる面に応じて濃さを変えたいアイコンは
+  `scripts/generate-icons.mjs` の `RECOLOR` に登録して `currentColor` に変換し、
+  使う側で `text-ink` / `text-primary-ink` などを指定する。
+
+### 端末 API
+- **カメラ**（`MediaDevices`）は、権限が降りない・HTTPS でない・PC などの場合に
+  自動でサンプル写真かファイル選択に切り替わる。PC でも一通り触れる。
+- **音**（Web Audio）は音源ファイルを持たず、ブラウンノイズを合成して地鳴りを作っている。
+- **振動**（`navigator.vibrate`）と音は設定でまとめて切れる。
+- `prefers-reduced-motion` が有効なときは、揺れを含むアニメーションを止める。
+
+### リザルトの見せかた
+仕様の「正解をはっきり出すのは良くない」に合わせて、
+◯✕ ではなく **安全度のグラデーション** で返している。
+
+- 選択肢は `safety: 0–1` を持ち、フィードバックでは帯の上の位置として示す。
+- リザルトは設問単位ではなく **4つの軸にまとめて** 出す。
+- 「できたこと」は安全度の高かった選択だけを拾い、低い選択を名指ししない。
+- 時間切れで自動送りになった場合は「きみが選んだ」とは書かない。
+
+### ふりがな・多言語・年齢層
+- `content.ts` の文言は `漢字[かんじ]` 記法で書く。`<Furigana>` が `<ruby>` に変換し、
+  表示の有無は `:root[data-furigana]` で切り替わる（再レンダー不要）。
+- 文字サイズはルートの `font-size` を変える方式。
+  そのため画面側の文字サイズは px ではなく rem ベースの
+  `text-11` / `text-13` / `text-15` などを使うこと（`--text-*` は `globals.css` で定義）。
+- 多言語は `Settings.locale` に口だけ用意してある（`ja` / `easy` / `en`）。
+  文言の辞書はまだ入れていない。
+
+## まだ入っていないもの
+
+- 3D（Three.js / React Three Fiber / Drei / GLTF）を使った部屋の再現と演出
+- Geolocation / Google Maps を使った避難ルート
+- 多言語の文言辞書（`Settings.locale` の受け口だけある）
+- 実際の AI 解析（`src/lib/api.ts` はすべてモック）
