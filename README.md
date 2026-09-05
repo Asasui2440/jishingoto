@@ -52,6 +52,9 @@ public/figma/     Figma から書き出した画像とアイコン
 
 ## バックエンドをつなぐとき
 
+**→ 詳しい仕様は [docs/BACKEND_API.md](docs/BACKEND_API.md)**
+（エンドポイントごとの入出力、JSON の形、CORS、つなぎこみ手順）
+
 差し替えるのは **`src/lib/api.ts` の中身だけ** でいいようにしてある。
 シグネチャはそのままに、`fetch` に置き換える。
 
