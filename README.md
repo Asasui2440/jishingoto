@@ -25,7 +25,7 @@ PC のブラウザでも中央に寄せて表示される。
 | `/privacy` | `privacy-blur` (8:95) | 顔や個人情報のぼかし確認 |
 | `/analyzing` | `analysis-loading` (8:137) | 解析中の演出と豆知識 |
 | `/risks` | `risk-confirmation` (8:185) | 見つかった危険の確認・追加・削除 |
-| `/quiz` | `simulation-question` (8:398) / `simulation-feedback` (8:457) | 出題とふりかえり（同じルートの2状態） |
+| `/quiz` | `simulation-question` (8:398) | 出題。5問を続けて出す（途中で結果は出さない） |
 | `/result` | `result-checklist` (8:509) | 4軸の評価とチェックリスト |
 | `/share` | `share-card` (8:592) | シェアカードの生成と共有 |
 
@@ -59,6 +59,7 @@ public/figma/     Figma から書き出した画像とアイコン
 export async function analyzeRoom(photo?: Blob): Promise<Risk[]>
 export async function detectBlurRegions(photo?: Blob): Promise<BlurRegion[]>
 export async function fetchQuestions(risks: Risk[]): Promise<Question[]>
+export async function generateAftermath(photo: string | null, risks: Risk[]): Promise<Aftermath>
 ```
 
 - `Risk` / `Question` / `BlurRegion` の型は `src/lib/content.ts` と `src/lib/api.ts` にある。
@@ -99,13 +100,39 @@ export async function fetchQuestions(risks: Risk[]): Promise<Question[]>
 - `prefers-reduced-motion` が有効なときは、揺れを含むアニメーションを止める。
 
 ### リザルトの見せかた
-仕様の「正解をはっきり出すのは良くない」に合わせて、
-◯✕ ではなく **安全度のグラデーション** で返している。
+仕様の「リザルトはまとめて」「正解をはっきり出すのは良くない」に合わせている。
 
-- 選択肢は `safety: 0–1` を持ち、フィードバックでは帯の上の位置として示す。
-- リザルトは設問単位ではなく **4つの軸にまとめて** 出す。
+- **1問ごとのフィードバックは出さない。** 5問を続けて出題し、
+  全部終わってから `/result` でまとめて見せる。
+  Figma の `simulation-feedback` (8:457) にあった安全度スケールは、この方針のため使っていない。
+- 回答したときの音と振動は、**選んだ内容によらず同じ**にしてある。
+  違えてしまうと、その場で正解・不正解が分かってしまうため。
+- 選択肢は内部的に `safety: 0–1` を持つが、**画面には数値も帯も出さない**。
+  使うのは4軸の集計と、リザルトの「ふりかえり」の並び順だけ。
+- リザルトの「ふりかえり」は、選んだ行動と解説を折りたたみで並べる。評価はつけない。
+- 出題されなかった軸は「今回はなし」と表示する（点をでっちあげない）。
 - 「できたこと」は安全度の高かった選択だけを拾い、低い選択を名指ししない。
-- 時間切れで自動送りになった場合は「きみが選んだ」とは書かない。
+- 時間切れで自動送りになった場合は「時間切れ」と明示する。
+
+### 部屋の危険と設問のひもづけ
+`/risks` で「あぶない」とチェックした場所が、そのまま次の問題になる。
+
+- `Question.riskKind`（`fall` / `break` / `block`）が、部屋で見つかる危険の種類に対応する。
+- `fetchQuestions(risks)` が、チェック済みの危険にひもづく設問を先に並べ、
+  そのあと共通の設問を足す。
+- 設問を増やすときは `content.ts` の `QUESTIONS` に足し、
+  部屋の場所に紐づくものなら `riskKind` と `place` を書く。
+
+### 地震の演出
+揺れ（`animate-quake` + 地鳴り + 振動）は **最初の1問だけ**。
+毎問やると体験が間延びするため、`QuestionView` に `shake` を渡して制御している。
+
+### 「もし地震がきたら」の予想図
+リザルトの先頭に、部屋がどうなるかの予想図を出す（`src/components/AftermathCard.tsx`）。
+
+画像は **バックエンドで AI に生成してもらう想定**で、`api.ts` の `generateAftermath()` が
+`{ imageUrl, events }` を返す。`imageUrl` が入ればそれを表示し、
+いまは `null` なので元の写真に「何がどうなったか」のマーカーを重ねて代用している。
 
 ### ふりがな・多言語・年齢層
 - `content.ts` の文言は `漢字[かんじ]` 記法で書く。`<Furigana>` が `<ruby>` に変換し、

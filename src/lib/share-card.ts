@@ -140,9 +140,10 @@ export function drawShareCard(
   ctx.fillText("学習用シミュレーションの結果です", W / 2, H - 96);
 }
 
-export function axisRows(scores: Record<Axis, number>): ShareRow[] {
-  return (["initial", "judgement", "room", "evacuation"] as Axis[]).map((a) => ({
-    label: AXIS_LABEL[a],
-    score: scores[a],
-  }));
+/** 出題されなかった軸（null）はシェアカードに載せない */
+export function axisRows(scores: Record<Axis, number | null>): ShareRow[] {
+  return (["initial", "judgement", "room", "evacuation"] as Axis[]).flatMap((a) => {
+    const score = scores[a];
+    return score === null ? [] : [{ label: AXIS_LABEL[a], score }];
+  });
 }

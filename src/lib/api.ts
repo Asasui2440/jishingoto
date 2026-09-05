@@ -2,7 +2,7 @@
  * バックエンドとの境界。
  *
  * いまは全部モックだが、シグネチャは実装が入れ替わっても変わらない想定。
- * 実装が用意できたら、この中身を fetch に差し替えるだけで済むようにしている。
+ * 実装が用意できたら、この中身を fetch に置き換えるだけで済むようにしている。
  */
 import { DETECTED_RISKS, QUESTIONS, type Question, type Risk } from "./content";
 
@@ -33,8 +33,56 @@ export async function analyzeRoom(_photo?: Blob): Promise<Risk[]> {
   return DETECTED_RISKS.map((r) => ({ ...r }));
 }
 
-/** 確認済みの危険ポイントをもとに、出題する設問を返す */
-export async function fetchQuestions(_risks: Risk[]): Promise<Question[]> {
+/**
+ * 出題する設問を返す。
+ *
+ * 「あぶない」と確認した危険にひもづく設問を先に出し、
+ * そのあとどの部屋でも共通の設問を出す。
+ * こうすると、自分の部屋で見つけた場所がそのまま問題になる。
+ */
+export async function fetchQuestions(risks: Risk[]): Promise<Question[]> {
   await wait(200);
-  return QUESTIONS;
+  const kinds = new Set(risks.filter((r) => r.confirmed).map((r) => r.kind));
+
+  const forRisks = QUESTIONS.filter((q) => q.riskKind && kinds.has(q.riskKind));
+  const common = QUESTIONS.filter((q) => !q.riskKind);
+
+  // 危険をひとつも確認していないときは、危険ひもづきの設問も一通り出す
+  const leading = forRisks.length > 0 ? forRisks : QUESTIONS.filter((q) => q.riskKind);
+  return [...leading, ...common];
+}
+
+/**
+ * 「もし地震がきたら、この部屋はどうなるか」の画像を作る。
+ *
+ * バックエンドで、撮影した部屋の写真と確認済みの危険をもとに
+ * AI に生成してもらう想定。返すのは画像の URL。
+ *
+ * いまはモックなので、元の写真をそのまま返して
+ * 画面側で「何が倒れたか」のマーカーを重ねている。
+ */
+export type Aftermath = {
+  /** 生成された画像。null ならモック（画面側は元の写真を使う） */
+  imageUrl: string | null;
+  /** 何が起きたかの短い説明。危険ごとに1つ */
+  events: { riskId: string; text: string }[];
+};
+
+const AFTERMATH_TEXT: Record<Risk["kind"], string> = {
+  fall: "たおれて、逃[に]げ道[みち]をふさいだ",
+  break: "われて、床[ゆか]にガラスが散[ち]らばった",
+  block: "まわりのモノがくずれて、通[とお]れなくなった",
+};
+
+export async function generateAftermath(
+  _photo: string | null,
+  risks: Risk[],
+): Promise<Aftermath> {
+  await wait(1400);
+  return {
+    imageUrl: null,
+    events: risks
+      .filter((r) => r.confirmed)
+      .map((r) => ({ riskId: r.id, text: `${r.name}が${AFTERMATH_TEXT[r.kind]}` })),
+  };
 }

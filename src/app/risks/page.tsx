@@ -101,6 +101,7 @@ export default function RiskConfirmationPage() {
   const { risks, update } = useSession();
   const vibrate = useHaptics();
   const [adding, setAdding] = useState(false);
+  const confirmedCount = risks.filter((r) => r.confirmed).length;
   const [draft, setDraft] = useState({ name: "", kind: "fall" as RiskKind });
 
   // 解析を飛ばして直接この URL を開かれたときのために、空なら戻す
@@ -108,25 +109,30 @@ export default function RiskConfirmationPage() {
     if (getSession().risks.length === 0) router.replace("/analyzing");
   }, [router]);
 
+  // update は「ひとつ前の値」から作る。
+  // レンダー時の risks を使うと、続けて2回タップしたときに
+  // 2回目が古い配列を上書きして、1回目の変更が消える。
   const confirm = (id: string) => {
     vibrate();
-    update({
-      risks: risks.map((r) => (r.id === id ? { ...r, confirmed: !r.confirmed } : r)),
-    });
+    update((prev) => ({
+      ...prev,
+      risks: prev.risks.map((r) => (r.id === id ? { ...r, confirmed: !r.confirmed } : r)),
+    }));
   };
 
   const remove = (id: string) => {
     vibrate();
-    update({ risks: risks.filter((r) => r.id !== id) });
+    update((prev) => ({ ...prev, risks: prev.risks.filter((r) => r.id !== id) }));
   };
 
   const addCustom = (e: React.FormEvent) => {
     e.preventDefault();
     const name = draft.name.trim();
     if (!name) return;
-    update({
+    update((prev) => ({
+      ...prev,
       risks: [
-        ...risks,
+        ...prev.risks,
         {
           id: `u${Date.now()}`,
           name,
@@ -137,7 +143,7 @@ export default function RiskConfirmationPage() {
           custom: true,
         },
       ],
-    });
+    }));
     setDraft({ name: "", kind: "fall" });
     setAdding(false);
   };
@@ -245,9 +251,19 @@ export default function RiskConfirmationPage() {
           ))}
         </ul>
 
-        <Button className="mt-4" onClick={() => router.push("/quiz")}>
+        {/* ここで選んだ場所が、そのまま次の問題になる */}
+        <p className="mt-3 text-center text-11 text-ink-soft">
+          {confirmedCount > 0 ? (
+            <Furigana
+              text={`チェックした${confirmedCount}つの場所[ばしょ]から問題[もんだい]が出[で]るよ`}
+            />
+          ) : (
+            <Furigana text="あぶないと思[おも]う場所[ばしょ]を、チェックボタンで選[えら]んでね" />
+          )}
+        </p>
+        <Button className="mt-2" onClick={() => router.push("/quiz")}>
           <ArrowRightCircleIcon className="size-5 text-ink" />
-          かくにんできた！ つぎへ
+          {confirmedCount > 0 ? "この場所で体験する" : "このまますすむ"}
         </Button>
       </div>
 

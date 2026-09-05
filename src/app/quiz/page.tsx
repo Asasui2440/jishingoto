@@ -4,55 +4,48 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import roomQuiz from "@/../public/figma/img/room-quiz.jpg";
-import {
-  ArrowRight2Icon,
-  CheckSmallIcon,
-  ChevronRightIcon,
-  LightbulbBlueIcon,
-  PolygonIcon,
-  Volume2Icon,
-} from "@/components/icons";
-import { Tag } from "@/components/ui/Bits";
-import { Button } from "@/components/ui/Button";
+import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
+import { Meter, Tag } from "@/components/ui/Bits";
 import { Card } from "@/components/ui/Card";
-import { Furigana, plain } from "@/components/ui/Furigana";
+import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { playRumble, playTick } from "@/lib/audio";
-import { QUESTIONS, safetyBand, type Choice, type Question } from "@/lib/content";
+import { fetchQuestions } from "@/lib/api";
+import { RISK_KINDS, type Choice, type Question } from "@/lib/content";
 import { useHaptics, useSettings } from "@/lib/settings";
-import { useSession } from "@/lib/session";
+import { getSession, useSession } from "@/lib/session";
+import { playRumble, playTick } from "@/lib/audio";
 
-/** 揺れの演出を出す長さ */
+/** 揺れの演出を出す長さ。最初の1問だけ鳴らす */
 const SHAKE_MS = 2600;
-
-/* ------------------------------------------------------------------ */
-/* 出題                                                                 */
-/* ------------------------------------------------------------------ */
 
 /**
  * 1問ぶんの出題。
  *
- * 揺れ・カウントダウンの状態は「その設問だけのもの」なので、
+ * カウントダウンの状態は「その設問だけのもの」なので、
  * 親から key={question.id} で貼り替えて初期化する。
  */
 function QuestionView({
   question,
   index,
   total,
+  shake,
   onAnswer,
 }: {
   question: Question;
   index: number;
   total: number;
+  /** 地震の演出を出すか。最初の1問だけ true */
+  shake: boolean;
   onAnswer: (choice: Choice, timedOut: boolean) => void;
 }) {
   const { sound } = useSettings();
   const vibrate = useHaptics();
   const [remaining, setRemaining] = useState(question.seconds > 0 ? question.seconds : null);
-  const [shaking, setShaking] = useState(true);
+  const [shaking, setShaking] = useState(shake);
 
-  // 設問が出た瞬間に、揺れの音と振動を始める
+  // 地震の演出は最初の1問だけ。毎問やると体験が間延びする。
   useEffect(() => {
+    if (!shake) return;
     const stopSound = sound ? playRumble(SHAKE_MS / 1000 + 1) : null;
     vibrate([0, 200, 80, 200, 80, 300]);
     const id = setTimeout(() => setShaking(false), SHAKE_MS);
@@ -74,6 +67,8 @@ function QuestionView({
     return () => clearTimeout(id);
   }, [remaining, question, onAnswer]);
 
+  const kind = question.riskKind ? RISK_KINDS[question.riskKind] : null;
+
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
@@ -82,7 +77,7 @@ function QuestionView({
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-black text-primary-ink">Q{index + 1}</span>
             <span className="text-13 text-ink-muted">
-              <Furigana text={question.category} /> ({index + 1}/{total})
+              <Furigana text={question.category} />
             </span>
           </div>
           <span className="flex items-center gap-1 text-xs text-ink-muted">
@@ -90,9 +85,28 @@ function QuestionView({
             音・振動: {sound ? "ON" : "OFF"}
           </span>
         </div>
+        {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
+        <div className="mt-2 px-6">
+          <Meter value={(index + 1) / total} height={6} track="var(--color-border)" />
+          <p className="mt-1 text-right text-11 text-ink-soft">
+            {index + 1} / {total}
+          </p>
+        </div>
       </div>
 
-      <div className={["flex flex-col gap-4 px-6 pt-3", shaking ? "animate-quake" : ""].join(" ")}>
+      <div className={["flex flex-col gap-4 px-6 pt-2", shaking ? "animate-quake" : ""].join(" ")}>
+        {/* 部屋で「あぶない」と確認した場所が、そのまま問題になる */}
+        {kind && question.place ? (
+          <div className="flex items-center gap-2">
+            <Tag color={kind.text} soft={kind.soft}>
+              <Furigana text={kind.label} />
+            </Tag>
+            <span className="font-display text-13 font-bold text-ink-muted">
+              きみの部屋の「<Furigana text={question.place} />」の話
+            </span>
+          </div>
+        ) : null}
+
         <Card className="p-4">
           <p className="font-display text-lg font-bold text-ink">
             <Furigana text={question.situation} />
@@ -175,162 +189,39 @@ function QuestionView({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* フィードバック                                                        */
-/* ------------------------------------------------------------------ */
-
-function SafetyScale({ safety }: { safety: number }) {
-  const band = safetyBand(safety);
-  return (
-    <Card className="rounded-tile">
-      <p className="font-display text-13 font-bold text-ink">
-        <Furigana text="えらんだ行動[こうどう]の安全度[あんぜんど]" />
-      </p>
-      {/* 「◯✕」ではなく、どのくらい安全寄りかを帯で見せる */}
-      <div
-        className="mt-2.5 flex h-3 overflow-hidden rounded-md"
-        role="img"
-        aria-label={`安全度は「${plain(band.label)}」`}
-      >
-        <span className="w-[28%] bg-danger" />
-        <span className="w-[28%] bg-warn" />
-        <span className="flex-1 bg-safe" />
-      </div>
-      {/* 目盛りの端のラベルと、いまの位置を指すラベルは行を分ける。
-          同じ行に置くと、安全度が両端に寄ったときに重なる。 */}
-      <div className="relative mt-1 h-6">
-        <span
-          className="absolute flex -translate-x-1/2 flex-col items-center gap-0.5"
-          style={{ left: `${Math.min(85, Math.max(15, safety * 100))}%` }}
-        >
-          <PolygonIcon className="h-1.5 w-2 rotate-180" style={{ color: band.color }} />
-          <span
-            className="font-display text-11 font-bold whitespace-nowrap"
-            style={{ color: band.color }}
-          >
-            <Furigana text={band.label} />
-          </span>
-        </span>
-      </div>
-      <div className="flex justify-between text-11 text-ink-soft">
-        <span>あぶない</span>
-        <span>安全！</span>
-      </div>
-    </Card>
-  );
-}
-
-function FeedbackView({
-  choice,
-  timedOut,
-  index,
-  total,
-  onNext,
-}: {
-  choice: Choice;
-  /** 時間切れで自動的に選ばれた場合。「きみが選んだ」とは書かない */
-  timedOut: boolean;
-  index: number;
-  total: number;
-  onNext: () => void;
-}) {
-  return (
-    <div className="flex min-h-dvh flex-col justify-between">
-      <div>
-        <StatusBar />
-        <div className="flex items-center justify-between px-6 pt-3">
-          <h1 className="font-display text-base font-bold text-ink">
-            <Furigana text="行動[こうどう]のふりかえり" />
-          </h1>
-          <p className="text-13 text-ink-muted">
-            問題 {index + 1}/{total}
-          </p>
-        </div>
-      </div>
-
-      <div className="animate-rise flex flex-col gap-4 px-6 pt-3">
-        <div
-          className={[
-            "rounded-card border-2 p-4",
-            timedOut ? "border-warn bg-warn-soft" : "border-safe bg-safe-soft",
-          ].join(" ")}
-        >
-          <p className="flex items-center gap-2">
-            <span
-              className="grid size-6 shrink-0 place-items-center rounded-xl"
-              style={{ background: timedOut ? "var(--color-warn)" : "var(--color-safe)" }}
-            >
-              {timedOut ? (
-                // Figma の ring アイコンは中身が空だったので、記号で代用する
-                <span className="font-display text-sm leading-none font-black text-white">!</span>
-              ) : (
-                <CheckSmallIcon className="size-3.5 text-white" />
-              )}
-            </span>
-            <span
-              className="font-display text-xs font-bold"
-              style={{ color: timedOut ? "var(--color-warn)" : "var(--color-safe)" }}
-            >
-              <Furigana
-                text={
-                  timedOut
-                    ? "時間切[じかんぎ]れ！ こうなったよ"
-                    : "きみのえらんだ行動[こうどう]"
-                }
-              />
-            </span>
-          </p>
-          <p className="mt-2 font-display text-base font-bold text-ink">
-            <Furigana text={choice.label} />
-          </p>
-        </div>
-
-        <SafetyScale safety={choice.safety} />
-
-        <Card className="p-[18px]">
-          <p className="flex items-center gap-1.5 font-display text-sm font-bold text-primary-ink">
-            <LightbulbBlueIcon className="size-[18px] shrink-0 text-primary-ink" />
-            <Furigana text="AI解説[かいせつ]アドバイス" />
-          </p>
-          <div className="mt-3 flex flex-col gap-3">
-            {choice.explanation.map((p, i) => (
-              <p key={i} className="text-sm leading-[1.6] text-ink-muted">
-                <Furigana text={p} />
-              </p>
-            ))}
-          </div>
-        </Card>
-
-        <Button onClick={onNext}>
-          {index + 1 < total ? "つぎの問題へ" : "けっかを見る"}
-          <ArrowRight2Icon className="size-5 text-ink" />
-        </Button>
-      </div>
-
-      <DisclaimerFooter />
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
 export default function QuizPage() {
   const router = useRouter();
-  const { answer } = useSession();
+  const { answer, update } = useSession();
   const { sound } = useSettings();
   const vibrate = useHaptics();
 
+  const [questions, setQuestions] = useState<Question[] | null>(null);
   const [index, setIndex] = useState(0);
-  const [picked, setPicked] = useState<{ choice: Choice; timedOut: boolean } | null>(null);
 
-  const question = QUESTIONS[index];
-  const total = QUESTIONS.length;
+  // 部屋で確認した危険にひもづく設問を取りに行く
+  useEffect(() => {
+    const risks = getSession().risks;
+    if (risks.length === 0) {
+      router.replace("/analyzing");
+      return;
+    }
+    let alive = true;
+    void fetchQuestions(risks).then((qs) => {
+      if (alive) setQuestions(qs);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
+  const total = questions?.length ?? 0;
 
   const onAnswer = useCallback(
     (choice: Choice, timedOut: boolean) => {
-      setPicked({ choice, timedOut });
-      vibrate(choice.safety >= 0.7 ? [14, 60, 14] : 24);
-      if (sound) playTick(choice.safety >= 0.7 ? 780 : 320);
+      if (!questions) return;
+      const question = questions[index];
+
+      // answer は同じ設問への回答を上書きするので、進む前に記録しておく
       answer({
         questionId: question.id,
         choiceId: choice.id,
@@ -338,34 +229,38 @@ export default function QuizPage() {
         axis: question.axis,
         timedOut,
       });
+
+      // 正解／不正解を示さないよう、音も振動も選択によらず同じにする
+      vibrate(12);
+      if (sound) playTick(660);
+
+      if (index + 1 < questions.length) {
+        setIndex(index + 1);
+      } else {
+        update({ finishedAt: Date.now() });
+        router.push("/result");
+      }
     },
-    [answer, question, sound, vibrate],
+    [answer, index, questions, router, sound, update, vibrate],
   );
 
-  const next = () => {
-    setPicked(null);
-    if (index + 1 < total) setIndex(index + 1);
-    else router.push("/result");
-  };
-
-  if (picked) {
+  if (!questions) {
     return (
-      <FeedbackView
-        choice={picked.choice}
-        timedOut={picked.timedOut}
-        index={index}
-        total={total}
-        onNext={next}
-      />
+      <div className="flex min-h-dvh flex-col justify-between">
+        <StatusBar />
+        <p className="px-6 text-center text-13 text-ink-muted">問題を用意しています...</p>
+        <DisclaimerFooter />
+      </div>
     );
   }
 
   return (
     <QuestionView
-      key={question.id}
-      question={question}
+      key={questions[index].id}
+      question={questions[index]}
       index={index}
       total={total}
+      shake={index === 0}
       onAnswer={onAnswer}
     />
   );

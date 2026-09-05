@@ -32,7 +32,7 @@ export default function SharePage() {
   const date = useMemo(() => new Date(), []);
 
   useEffect(() => {
-    if (getSession().answers.length === 0) router.replace("/");
+    if (!getSession().finishedAt) router.replace("/");
   }, [router]);
 
   // 画面に見えているカードと同じ内容を、書き出し用に Canvas にも描いておく
@@ -95,7 +95,10 @@ export default function SharePage() {
 
           <div className="mt-4 flex flex-col gap-2 rounded-tile bg-canvas p-3">
             {AXES.map((axis) => {
-              const band = safetyBand(scores[axis] / 5);
+              const score = scores[axis];
+              // 出題されなかった軸は載せない
+              if (score === null) return null;
+              const band = safetyBand(score / 5);
               return (
                 <div key={axis} className="flex items-center justify-between gap-2">
                   <span className="font-display text-13 font-bold text-ink-muted">

@@ -25,6 +25,8 @@ export type Session = {
   /** チェックリストでチェックを入れた項目 */
   checked: string[];
   startedAt: number | null;
+  /** 全問終わった時刻。リザルトを出していいかの判定に使う */
+  finishedAt: number | null;
 };
 
 const EMPTY: Session = {
@@ -34,6 +36,7 @@ const EMPTY: Session = {
   answers: [],
   checked: [],
   startedAt: null,
+  finishedAt: null,
 };
 
 // photoUrl は blob: URL なので、保存しても次のセッションでは使えない
@@ -92,20 +95,22 @@ export function useSession() {
  * 設問ごとの ◯✕ ではなく、軸ごとにまとめた安全度として見せることで
  * 「どれが正解だったか」を直接つきつけない形にしている。
  */
-export function scoreByAxis(answers: Answer[], risks: Risk[]): Record<Axis, number> {
+export function scoreByAxis(answers: Answer[], risks: Risk[]): Record<Axis, number | null> {
   const axes: Axis[] = ["initial", "judgement", "room", "evacuation"];
-  const out = {} as Record<Axis, number>;
+  const out = {} as Record<Axis, number | null>;
 
   for (const axis of axes) {
     const hits = answers.filter((a) => a.axis === axis);
+    // 出題されなかった軸は null。点をでっちあげない。
+    // 出る設問は部屋で確認した危険によって変わるので、空の軸は普通に起きる。
     out[axis] =
       hits.length > 0
         ? Math.max(1, Math.round((hits.reduce((s, a) => s + a.safety, 0) / hits.length) * 5))
-        : 3;
+        : null;
   }
 
   // 「部屋のそなえ」は設問だけでなく、部屋の中で見つかった危険の数も反映する
-  if (risks.length > 0) {
+  if (risks.length > 0 && out.room !== null) {
     const confirmed = risks.filter((r) => r.confirmed).length;
     out.room = Math.max(1, out.room - Math.min(2, Math.floor(confirmed / 2)));
   }

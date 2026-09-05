@@ -33,9 +33,11 @@ export default function PrivacyBlurPage() {
     const x = ((e.clientX - box.left) / box.width) * 100;
     const y = ((e.clientY - box.top) / box.height) * 100;
     vibrate();
-    update({
+    // ひとつ前の値から作る（続けてタップしたとき取りこぼさないように）
+    update((prev) => ({
+      ...prev,
       blurRegions: [
-        ...blurRegions,
+        ...prev.blurRegions,
         {
           id: `u${Date.now()}`,
           x: Math.max(0, x - NEW_BLUR.w / 2),
@@ -45,12 +47,12 @@ export default function PrivacyBlurPage() {
           shape: "rect",
         },
       ],
-    });
+    }));
   };
 
   const removeBlur = (id: string) => {
     vibrate();
-    update({ blurRegions: blurRegions.filter((b) => b.id !== id) });
+    update((prev) => ({ ...prev, blurRegions: prev.blurRegions.filter((b) => b.id !== id) }));
   };
 
   return (
