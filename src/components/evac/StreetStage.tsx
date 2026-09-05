@@ -44,6 +44,10 @@ export function StreetStage({
     hasMapsKey() ? "loading" : "sketch",
   );
 
+  // 依存は緯度経度の「値」で持つ。オブジェクトのままだと毎レンダーで
+  // getPanorama() を呼び直してしまう（課金にも響く）。
+  const { lat, lng } = position;
+
   useEffect(() => {
     if (!hasMapsKey()) return;
     let alive = true;
@@ -53,8 +57,8 @@ export function StreetStage({
         // パノラマは緯度経度から探す（ID には依存しない）
         const service = new maps.StreetViewService();
         const { data } = await service.getPanorama({
-          location: position,
-          radius: 80,
+          location: { lat, lng },
+          radius: 120,
           source: maps.StreetViewSource.OUTDOOR,
         });
         if (!alive || !boxRef.current || !data.location?.latLng) {
@@ -91,7 +95,7 @@ export function StreetStage({
     return () => {
       alive = false;
     };
-  }, [position, heading]);
+  }, [lat, lng, heading]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-panel bg-ink" style={{ height }}>

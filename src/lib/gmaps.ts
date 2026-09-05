@@ -39,7 +39,7 @@ export function loadMaps(): Promise<typeof google.maps> {
     const params = new URLSearchParams({
       key: MAPS_API_KEY,
       v: "weekly",
-      libraries: "geometry",
+      libraries: "geometry,places",
       language: "ja",
       region: "JP",
       loading: "async",

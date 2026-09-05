@@ -26,6 +26,8 @@ export type EvacDecision = {
 
 export type EvacSession = {
   home: LatLng | null;
+  /** 指定した地点の呼び名（住所・「現在地」など）。画面表示だけに使う */
+  homeLabel: string | null;
   shelter: Shelter | null;
   /** 表示した候補経路 */
   routes: RouteOption[];
@@ -44,6 +46,7 @@ export type EvacSession = {
 
 const EMPTY: EvacSession = {
   home: null,
+  homeLabel: null,
   shelter: null,
   routes: [],
   startRouteId: null,

@@ -320,7 +320,7 @@ export function findChoice(eventId: string, choiceId: string) {
  */
 export const DEMO_HOME: LatLng = { lat: 35.7186, lng: 139.7237 };
 
-export const DEMO_AREA_LABEL = "文京区[ぶんきょうく]大塚[おおつか] 付近[ふきん]（デモ地域[ちいき]）";
+export const DEMO_AREA_LABEL = "文京区[ぶんきょうく]大塚[おおつか] 付近[ふきん]（デモ地点[ちてん]）";
 
 /**
  * 避難場所の候補。
@@ -350,10 +350,18 @@ export const DEMO_SHELTERS: Shelter[] = [
   },
 ];
 
+/**
+ * 避難場所の一覧を出すときの注意書き。
+ * 出どころ（公的データ／地図の施設情報）は `Shelter.source` に入っていて、
+ * カードごとにそのまま表示している。
+ */
+export const SHELTER_CAUTION =
+  "公的[こうてき]データや地図[ちず]の施設情報[しせつじょうほう]から近[ちか]い順[じゅん]に出[だ]しています。実際[じっさい]の指定[してい]避難場所[ひなんばしょ]は、住[す]んでいる自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。";
+
 /** 避難場所一覧の出典リンク（画面に出す） */
 export const SHELTER_SOURCE_LINK = {
-  label: "文京区：避難場所・避難所",
-  url: "https://www.city.bunkyo.lg.jp/bosai/kikikanri/hinan/hinanjo.html",
+  label: "国土地理院：指定緊急避難場所データ",
+  url: "https://www.gsi.go.jp/bousaichiri/hinanbasho.html",
 };
 
 /* ------------------------------------------------------------------ */

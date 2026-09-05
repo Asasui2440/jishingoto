@@ -6,21 +6,25 @@ import { EventSheet } from "@/components/evac/EventSheet";
 import { EvacMap } from "@/components/evac/EvacMap";
 import { StreetStage } from "@/components/evac/StreetStage";
 import { XCircleDarkIcon } from "@/components/icons";
+import { Meter } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { fetchDecisionPoints, type DecisionPoint } from "@/lib/evac-api";
+import { buildWalkSteps, fetchDecisionPoints, type WalkStep } from "@/lib/evac-api";
 import { SCENARIO_BADGE, type EvacChoice } from "@/lib/evac-content";
 import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
 import { useHaptics } from "@/lib/settings";
 
 /**
- * フェーズ2 ③：ストリートビュー上の判断。
+ * フェーズ2 ③：自宅付近から避難場所まで、ストリートビューで実際に歩く。
+ *
+ * 経路を約70mごとに区切り、「進む」でパノラマを次の地点へ移す。
+ * 判断地点に着いた回だけ、下部シートに想定シナリオと3択が出る。
  *
  * 画面の並び（仕様 7）:
  *   [ 想定シナリオ帯 ]
- *   [ ストリートビュー ＋ 危険範囲・番号・HUD ]  ← 下端は帰属表示のため空ける
- *   [ 下部シート：状況と3つの選択肢 ]
+ *   [ ストリートビュー ＋ HUD（危険範囲・番号はイベント時だけ） ]
+ *   [ 下部：進む／判断シート ]  ← パノラマの上には重ねない（帰属表示を隠さない）
  */
 export default function EvacWalkPage() {
   const router = useRouter();
@@ -28,7 +32,7 @@ export default function EvacWalkPage() {
     useEvac();
   const vibrate = useHaptics();
 
-  const [points, setPoints] = useState<DecisionPoint[] | null>(null);
+  const [steps, setSteps] = useState<WalkStep[] | null>(null);
   const [index, setIndex] = useState(0);
   /** 迂回して切り替わったあとの経路。null なら最初に選んだ経路のまま。 */
   const [reroutedTo, setReroutedTo] = useState<string | null>(null);
@@ -36,11 +40,11 @@ export default function EvacWalkPage() {
   /** この地点だけ制限時間を延ばした・なくしたときの値 */
   const [timerOverride, setTimerOverride] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
+  const [answered, setAnswered] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{
     choice: EvacChoice;
     timedOut: boolean;
     rerouted: boolean;
-    last: boolean;
   } | null>(null);
 
   // 経路を選んでいなければ戻す
@@ -53,72 +57,74 @@ export default function EvacWalkPage() {
   const route = useMemo(() => routes.find((r) => r.id === routeId) ?? null, [routes, routeId]);
   const timerFor = timerOverride ?? timerSeconds;
 
+  // 経路を「歩ける粒度」に割る
   useEffect(() => {
-    if (!route || points) return;
+    if (!route || steps) return;
     let alive = true;
-    void fetchDecisionPoints(route).then((list) => {
-      if (alive) setPoints(list);
+    void fetchDecisionPoints(route).then((points) => {
+      if (alive) setSteps(buildWalkSteps(route, points));
     });
     return () => {
       alive = false;
     };
-  }, [route, points]);
+  }, [route, steps]);
 
-  const point = points?.[index] ?? null;
-  const total = points?.length ?? 0;
+  const step = steps?.[index] ?? null;
+  const decisionSteps = useMemo(() => steps?.filter((s) => s.event) ?? [], [steps]);
+  const decisionNo = step?.event
+    ? decisionSteps.findIndex((s) => s.id === step.id) + 1
+    : decisionSteps.filter((s) => s.t < (step?.t ?? 0)).length;
+
+  /** いま判断シートを出すべきか（まだ答えていないイベント地点） */
+  const pendingEvent =
+    step?.event && step.pointId && !answered.includes(step.pointId) && !feedback
+      ? step.event
+      : null;
+
+  const arrived = steps !== null && index >= steps.length - 1 && !pendingEvent && !feedback;
 
   const onChoose = useCallback(
     async (choice: EvacChoice, timedOut: boolean) => {
-      if (!points || !point) return;
+      if (!steps || !step?.event || !step.pointId) return;
+      const pointId = step.pointId;
       vibrate(12);
 
       const other = routes.find((r) => r.id !== routeId) ?? null;
       const rerouted = choice.reroute && other !== null;
 
       decide({
-        pointId: point.id,
-        eventId: point.event.id,
+        pointId,
+        eventId: step.event.id,
         choiceId: choice.id,
         rerouted,
         timedOut,
         extraSeconds: choice.extraSeconds,
       });
+      setAnswered((prev) => [...prev, pointId]);
       setExtraSeconds((s) => s + choice.extraSeconds);
 
-      let nextPoints = points;
       if (rerouted && other) {
-        // 迂回したら、この先の判断地点は別ルートのものに差し替える
-        const alt = await fetchDecisionPoints(other);
-        const tail = alt.filter((p) => p.t > point.t);
-        nextPoints = [...points.slice(0, index + 1), ...tail];
-        setPoints(nextPoints);
+        // 迂回したら、この先の道のりと判断地点を別ルートのものに差し替える
+        const altPoints = await fetchDecisionPoints(other);
+        const altSteps = buildWalkSteps(other, altPoints).filter((s) => s.t > step.t);
+        setSteps([...steps.slice(0, index + 1), ...altSteps]);
         setReroutedTo(other.id);
         pushTakenRoute(other.id);
       }
 
-      setFeedback({
-        choice,
-        timedOut,
-        rerouted,
-        last: index + 1 >= nextPoints.length,
-      });
+      setFeedback({ choice, timedOut, rerouted });
     },
-    [decide, index, point, points, pushTakenRoute, routeId, routes, vibrate],
+    [decide, index, pushTakenRoute, routeId, routes, step, steps, vibrate],
   );
 
-  const next = () => {
-    if (!points) return;
-    if (index + 1 < points.length) {
-      setIndex(index + 1);
-      setTimerOverride(null);
-      setFeedback(null);
-    } else {
-      update({ finishedAt: Date.now() });
-      router.push("/evac/report");
-    }
+  const forward = () => {
+    if (!steps) return;
+    setFeedback(null);
+    setTimerOverride(null);
+    setIndex((i) => Math.min(i + 1, steps.length - 1));
   };
 
-  if (!route || !points || !point) {
+  if (!route || !steps || !step) {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
         <StatusBar />
@@ -145,30 +151,31 @@ export default function EvacWalkPage() {
 
         <div className="px-5 pt-3">
           <StreetStage
-            position={point.position}
-            heading={point.heading}
-            kind={point.event.kind}
-            zone={feedback ? null : point.event.zone}
-            zoneNumber={index + 1}
+            position={step.position}
+            heading={step.heading}
+            kind={step.event?.kind ?? null}
+            zone={pendingEvent ? pendingEvent.zone : null}
+            zoneNumber={decisionNo}
             height={250}
           >
             {/* HUD。下端は Google の帰属表示のために空けている。 */}
             <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
               <span className="flex flex-col items-start gap-1.5">
                 <span className="rounded-chip bg-black/65 px-2 py-1 text-11 font-bold text-white">
-                  <Furigana text="避難場所[ひなんばしょ]まで" /> {formatDistance(point.remainingM)}・
-                  {formatDuration(point.remainingS)}
+                  <Furigana text="避難場所[ひなんばしょ]まで" /> {formatDistance(step.remainingM)}・
+                  {formatDuration(step.remainingS)}
                 </span>
                 {extraSeconds > 0 ? (
                   <span className="rounded-chip bg-warn/90 px-2 py-1 text-11 font-bold text-ink">
                     <Furigana text="判断[はんだん]でついた遅[おく]れ" /> ＋
-                    {Math.round(extraSeconds / 60)}分
+                    {Math.max(1, Math.round(extraSeconds / 60))}分
                   </span>
                 ) : null}
               </span>
               <span className="flex flex-col items-end gap-1.5">
                 <span className="rounded-chip bg-black/65 px-2 py-1 text-11 font-bold text-white">
-                  <Furigana text="判断[はんだん]" /> {index + 1}/{total}
+                  <Furigana text="判断[はんだん]" /> {Math.max(decisionNo, 0)}/
+                  {decisionSteps.length}
                 </span>
                 <button
                   type="button"
@@ -184,13 +191,42 @@ export default function EvacWalkPage() {
               ↑ <Furigana text="進[すす]む向[む]き" />
             </span>
           </StreetStage>
+
+          {/* 家からの進み具合 */}
+          <div className="mt-2">
+            <Meter value={step.t} height={5} track="var(--color-border)" />
+            <div className="mt-1 flex justify-between text-11 text-ink-soft">
+              <span>
+                <Furigana text="家[いえ]の近[ちか]く" />
+              </span>
+              <span>
+                <Furigana text={shelter?.name ?? "避難場所[ひなんばしょ]"} />
+              </span>
+            </div>
+          </div>
           <p className="mt-1 text-11 text-ink-soft">
             <Furigana text="背景[はいけい]はストリートビュー（Google）。重[かさ]ねているのは想定[そうてい]の範囲[はんい]だけです。" />
           </p>
         </div>
       </div>
 
-      {feedback ? (
+      {/* 下部：判断シート → フィードバック → 進む／到着 */}
+      {pendingEvent ? (
+        <EventSheet
+          // 制限時間を変えたら作り直して、カウントを入れ替える
+          key={`${step.id}:${timerFor}`}
+          event={pendingEvent}
+          index={Math.max(decisionNo - 1, 0)}
+          total={decisionSteps.length}
+          seconds={timerFor}
+          onExtend={() => setTimerOverride(timerFor > 0 ? timerFor + 10 : 10)}
+          onDisableTimer={() => {
+            setTimerOverride(0);
+            update({ timerSeconds: 0 });
+          }}
+          onChoose={onChoose}
+        />
+      ) : feedback ? (
         <div className="animate-rise flex flex-col gap-3 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
           <p className="font-display text-13 font-bold text-primary-ink">
             {feedback.timedOut ? (
@@ -208,32 +244,40 @@ export default function EvacWalkPage() {
           </p>
           {feedback.rerouted ? (
             <p className="rounded-field bg-safe-soft px-3 py-2 text-13 font-semibold text-ink-muted">
-              <Furigana text="別[べつ]ルートに切[き]り替[か]えました。この先[さき]の判断地点[はんだんちてん]も変[か]わります。" />
+              <Furigana text="別[べつ]ルートに切[き]り替[か]えました。ここから先[さき]の道[みち]も変[か]わります。" />
             </p>
           ) : null}
-          <Button onClick={next}>
-            {feedback.last ? (
-              <Furigana text="避難場所[ひなんばしょ]に到着[とうちゃく]" />
-            ) : (
-              <Furigana text="次[つぎ]の地点[ちてん]へ" />
-            )}
+          <Button onClick={forward}>
+            <Furigana text="先[さき]へ進[すす]む" />
+          </Button>
+        </div>
+      ) : arrived ? (
+        <div className="animate-rise flex flex-col gap-3 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
+          <p className="font-display text-15 font-bold text-ink">
+            <Furigana text={shelter?.name ?? "避難場所[ひなんばしょ]"} />
+            <Furigana text=" に着[つ]きました" />
+          </p>
+          <p className="text-13 text-ink-muted">
+            <Furigana text="ここまでの判断[はんだん]と、通[とお]った道[みち]をふりかえります。" />
+          </p>
+          <Button
+            onClick={() => {
+              update({ finishedAt: Date.now() });
+              router.push("/evac/report");
+            }}
+          >
+            <Furigana text="ふりかえりを見[み]る" />
           </Button>
         </div>
       ) : (
-        <EventSheet
-          // 制限時間を変えたら作り直して、カウントを入れ替える
-          key={`${point.id}:${timerFor}`}
-          event={point.event}
-          index={index}
-          total={total}
-          seconds={timerFor}
-          onExtend={() => setTimerOverride(timerFor > 0 ? timerFor + 10 : 10)}
-          onDisableTimer={() => {
-            setTimerOverride(0);
-            update({ timerSeconds: 0 });
-          }}
-          onChoose={onChoose}
-        />
+        <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
+          <p className="text-13 text-ink-muted">
+            <Furigana text="ストリートビューを見回[みまわ]して、進[すす]む道[みち]を確[たし]かめてね。" />
+          </p>
+          <Button onClick={forward}>
+            <Furigana text="次[つぎ]の地点[ちてん]まで進[すす]む" />
+          </Button>
+        </div>
       )}
 
       <DisclaimerFooter />
@@ -251,13 +295,13 @@ export default function EvacWalkPage() {
             </div>
             <div className="mt-3">
               <EvacMap
-                center={point.position}
+                center={step.position}
                 home={home}
                 shelters={shelter ? [shelter] : []}
                 selectedShelterId={shelter?.id ?? null}
                 routes={routes}
                 activeRouteId={routeId}
-                walker={point.position}
+                walker={step.position}
                 height={240}
               />
             </div>
@@ -266,7 +310,7 @@ export default function EvacWalkPage() {
             </p>
             <div className="mt-3">
               <Button size="md" variant="quiet" onClick={() => setMapOpen(false)}>
-                <Furigana text="判断[はんだん]にもどる" />
+                <Furigana text="ストリートビューにもどる" />
               </Button>
             </div>
           </div>

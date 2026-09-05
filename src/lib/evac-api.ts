@@ -79,13 +79,165 @@ export function headingAt(path: LatLng[], t: number) {
 
 /**
  * 指定した地点の近くの避難場所を返す。
- * 本番では自治体オープンデータの API / CSV を引く。
+ *
+ * 探しにいく順番:
+ *   1. 国土地理院「指定緊急避難場所」データ（公的データ。地震に対応する skhb01）
+ *   2. Google Places（公園・学校・公民館など、避難場所になりやすい施設の候補）
+ *   3. デモデータ（どちらも使えないとき）
+ *
+ * 2 は「自治体が指定した避難場所」ではないので、画面では候補として出し、
+ * 自治体の一覧で確認するよう促す（`Shelter.source` をそのまま表示している）。
  */
 export async function fetchShelters(near: LatLng): Promise<Shelter[]> {
-  await wait(300);
-  return [...DEMO_SHELTERS].sort(
-    (a, b) => distanceM(near, a.position) - distanceM(near, b.position),
+  const sort = (list: Shelter[]) =>
+    [...list]
+      .sort((a, b) => distanceM(near, a.position) - distanceM(near, b.position))
+      .slice(0, 5);
+
+  try {
+    const official = await fetchGsiShelters(near);
+    if (official.length > 0) return sort(official);
+  } catch {
+    // 公的データを取れなければ次の手段へ
+  }
+
+  if (hasMapsKey()) {
+    try {
+      const places = await fetchPlaceShelters(near);
+      if (places.length > 0) return sort(places);
+    } catch {
+      // Places も使えなければデモデータへ
+    }
+  }
+
+  await wait(200);
+  return sort(DEMO_SHELTERS);
+}
+
+/* --- 1. 国土地理院の指定緊急避難場所データ --------------------------- */
+
+/** 緯度経度 → タイル座標 */
+function tileOf(p: LatLng, z: number) {
+  const n = 2 ** z;
+  const x = Math.floor(((p.lng + 180) / 360) * n);
+  const latRad = (p.lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
   );
+  return { x, y };
+}
+
+type GsiFeature = {
+  geometry?: { coordinates?: [number, number] };
+  properties?: Record<string, string | number | undefined>;
+};
+
+/**
+ * 地理院タイルの GeoJSON（skhb01 = 地震）から、周囲の指定緊急避難場所を集める。
+ * 中心のタイルとその周り 8 枚を見る。
+ *
+ * 取得できない環境（CORS・オフラインなど）では例外にして、呼び出し側が次の手段に移る。
+ */
+async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
+  const z = 14;
+  const { x, y } = tileOf(near, z);
+  const tiles: { x: number; y: number }[] = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) tiles.push({ x: x + dx, y: y + dy });
+  }
+
+  const results = await Promise.all(
+    tiles.map(async (t) => {
+      const res = await fetch(`https://maps.gsi.go.jp/xyz/skhb01/${z}/${t.x}/${t.y}.geojson`);
+      if (!res.ok) return [] as GsiFeature[];
+      const json = (await res.json()) as { features?: GsiFeature[] };
+      return json.features ?? [];
+    }),
+  );
+
+  const pick = (props: Record<string, string | number | undefined>, keys: string[]) => {
+    for (const k of keys) {
+      const v = props[k];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return "";
+  };
+
+  return results.flat().flatMap((f, i): Shelter[] => {
+    const c = f.geometry?.coordinates;
+    const props = f.properties ?? {};
+    if (!c || c.length < 2) return [];
+    const name = pick(props, ["名称", "施設・場所名", "name"]);
+    if (!name) return [];
+    return [
+      {
+        id: `gsi-${i}-${c[0].toFixed(5)}-${c[1].toFixed(5)}`,
+        name,
+        kind: "指定緊急避難場所",
+        address: pick(props, ["住所", "所在地", "address"]),
+        position: { lat: c[1], lng: c[0] },
+        source: "国土地理院「指定緊急避難場所データ」（地震）",
+        note: "対応[たいおう]する災害[さいがい]の種別[しゅべつ]は、自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。",
+      },
+    ];
+  });
+}
+
+/* --- 2. Google Places（避難場所になりやすい施設の候補） ---------------- */
+
+async function fetchPlaceShelters(near: LatLng): Promise<Shelter[]> {
+  const maps = await loadMaps();
+  const { Place, SearchNearbyRankPreference } = (await maps.importLibrary(
+    "places",
+  )) as google.maps.PlacesLibrary;
+
+  const { places } = await Place.searchNearby({
+    fields: ["displayName", "location", "formattedAddress", "primaryTypeDisplayName"],
+    locationRestriction: { center: near, radius: 1500 },
+    includedPrimaryTypes: ["park", "primary_school", "school", "community_center"],
+    maxResultCount: 8,
+    rankPreference: SearchNearbyRankPreference.DISTANCE,
+    language: "ja",
+    region: "JP",
+  });
+
+  return places.flatMap((p): Shelter[] => {
+    const loc = p.location;
+    if (!loc) return [];
+    return [
+      {
+        id: `place-${p.id}`,
+        name: p.displayName ?? "名称不明",
+        kind: p.primaryTypeDisplayName ?? "施設",
+        address: p.formattedAddress ?? "",
+        position: { lat: loc.lat(), lng: loc.lng() },
+        source: "Google マップの施設情報（避難場所の候補）",
+        note: "自治体[じちたい]が指定[してい]した避難場所[ひなんばしょ]とは限[かぎ]りません。実際[じっさい]の指定[してい]は自治体[じちたい]の一覧[いちらん]で確[たし]かめてください。",
+      },
+    ];
+  });
+}
+
+/* --- 住所から地点を探す ------------------------------------------------ */
+
+/** 住所や地名から緯度経度を引く（自宅付近の指定に使う） */
+export async function geocodeAddress(
+  query: string,
+): Promise<{ position: LatLng; label: string } | null> {
+  if (!hasMapsKey()) return null;
+  const maps = await loadMaps();
+  const geocoder = new maps.Geocoder();
+  const { results } = await geocoder.geocode({
+    address: query,
+    region: "JP",
+    componentRestrictions: { country: "JP" },
+  });
+  const first = results[0];
+  if (!first) return null;
+  return {
+    position: { lat: first.geometry.location.lat(), lng: first.geometry.location.lng() },
+    label: first.formatted_address,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -297,3 +449,53 @@ export const TIMER_PRESETS = [
   { seconds: 20, label: "20秒[びょう]（延長[えんちょう]）" },
   { seconds: 0, label: "なし（時間[じかん]を気[き]にせず考[かんが]える）" },
 ];
+
+/* ------------------------------------------------------------------ */
+/* 経路を歩く                                                            */
+/* ------------------------------------------------------------------ */
+
+export type WalkStep = {
+  id: string;
+  /** 経路上の位置（0–1） */
+  t: number;
+  position: LatLng;
+  /** 進行方向（度）。ストリートビューの向きに使う */
+  heading: number;
+  remainingM: number;
+  remainingS: number;
+  /** この地点で起きる判断イベント（無ければ、ただ進むだけの地点） */
+  event?: HazardEvent;
+  pointId?: string;
+};
+
+/** 1歩ぶんの距離（m）。ストリートビューを進める間隔。 */
+const STEP_M = 70;
+
+/**
+ * 自宅から避難場所までを、ストリートビューで歩ける粒度に区切る。
+ * 判断地点はその途中に混ぜ込む。
+ */
+export function buildWalkSteps(route: RouteOption, points: DecisionPoint[]): WalkStep[] {
+  const total = pathLengthM(route.path);
+  const count = Math.min(24, Math.max(5, Math.round(total / STEP_M)));
+
+  const ts = new Set<number>();
+  for (let i = 0; i <= count; i++) ts.add(Number((i / count).toFixed(4)));
+  for (const p of points) ts.add(Number(p.t.toFixed(4)));
+
+  return [...ts]
+    .sort((a, b) => a - b)
+    .map((t): WalkStep => {
+      const point = points.find((p) => Number(p.t.toFixed(4)) === t);
+      return {
+        id: `${route.id}:${t}`,
+        t,
+        position: point?.position ?? pointAt(route.path, t),
+        heading: point?.heading ?? headingAt(route.path, t),
+        remainingM: Math.round(total * (1 - t)),
+        remainingS: Math.round((total * (1 - t)) / WALK_SPEED),
+        event: point?.event,
+        pointId: point?.id,
+      };
+    });
+}
