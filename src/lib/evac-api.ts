@@ -374,8 +374,6 @@ export async function fetchRoutes(home: LatLng, shelter: Shelter): Promise<Route
 
 /* --- Routes API（新） ------------------------------------------------ */
 
-const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-
 type RoutesApiRoute = {
   distanceMeters?: number;
   /** "423s" の形 */
@@ -384,8 +382,42 @@ type RoutesApiRoute = {
   legs?: { steps?: unknown[] }[];
 };
 
-/** Routes API を1回叩く。経由点を渡すと、そこを通る別ルートになる。 */
+/**
+ * 経路を1回取る。経由点を渡すと、そこを通る別ルートになる。
+ *
+ * Routes API は REST なので、ブラウザから直接叩くと `X-Goog-Api-Key` に
+ * キーが載り、DevTools からそのまま読めてしまう。
+ * `GOOGLE_MAPS_SERVER_KEY` が設定してあれば `/api/routes` を通して、
+ * 経路用のキーをブラウザに出さないようにする。
+ *
+ * 設定が無い環境（キーを1本しか用意していないとき）は、
+ * これまでどおりブラウザから直接叩く。動くことを優先する。
+ */
 async function callRoutesApi(
+  origin: LatLng,
+  destination: LatLng,
+  via?: LatLng,
+): Promise<RoutesApiRoute[]> {
+  const res = await fetch("/api/routes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ origin, destination, ...(via ? { via } : {}) }),
+  });
+
+  if (res.ok) {
+    const json = (await res.json()) as { routes?: RoutesApiRoute[] };
+    return json.routes ?? [];
+  }
+  // 503 = サーバー用のキーが未設定。それ以外は本当に失敗している。
+  if (res.status !== 503) throw new Error(`routes-proxy-${res.status}`);
+
+  return callRoutesApiDirect(origin, destination, via);
+}
+
+const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
+
+/** ブラウザから直接叩く版。キーはリファラー制限で守る前提。 */
+async function callRoutesApiDirect(
   origin: LatLng,
   destination: LatLng,
   via?: LatLng,
@@ -410,7 +442,6 @@ async function callRoutesApi(
       destination: point(destination),
       ...(via ? { intermediates: [point(via)] } : {}),
       travelMode: "WALK",
-      // 経由点を指定するときは代替ルートを求められない
       computeAlternativeRoutes: !via,
       languageCode: "ja",
       regionCode: "JP",
