@@ -138,9 +138,14 @@ type Props = {
   turn?: number | null;
   /** 自動で歩いている最中か。矢印の見せかたを変える */
   walking?: boolean;
+  /** 矢印をタップしたとき。渡すと矢印が押せるようになる（自分で進む） */
+  onAdvance?: () => void;
   height?: number;
   children?: React.ReactNode;
 };
+
+/** 進む向きが画面のどこに見えるか。これを超えると画面の端に寄せる（度） */
+const HALF_FOV_DEG = 45;
 
 /**
  * ストリートビュー（現実の場所を理解するための背景）。
@@ -162,6 +167,7 @@ export function StreetStage({
   showArrow = false,
   turn = null,
   walking = false,
+  onAdvance,
   height = 260,
   children,
 }: Props) {
@@ -170,6 +176,8 @@ export function StreetStage({
   const [mode, setMode] = useState<"loading" | "pano" | "sketch">(
     hasMapsKey() ? "loading" : "sketch",
   );
+  /** いま見ている向き。見回しても矢印が進行方向を指し続けるように追う。 */
+  const [pov, setPov] = useState(heading);
 
   // 依存は緯度経度の「値」で持つ。オブジェクトのままだと毎レンダーで
   // getPanorama() を呼び直してしまう（課金にも響く）。
@@ -217,6 +225,11 @@ export function StreetStage({
             enableCloseButton: false,
             showRoadLabels: false,
           });
+          // 見回しても矢印が進行方向を指し続けるように、視点の向きを追う
+          panoRef.current.addListener("pov_changed", () => {
+            const p = panoRef.current?.getPov();
+            if (p) setPov(p.heading);
+          });
         } else {
           // 2回目以降は隣のパノラマを辿って歩く（ワープさせない）
           await walkTo(panoRef.current, maps, { lat, lng }, heading, isCurrent);
@@ -262,13 +275,13 @@ export function StreetStage({
           <span
             key={`flash-${zoneKey}`}
             aria-hidden
-            className="animate-zone-flash pointer-events-none absolute inset-x-0 top-0 bottom-8 bg-white"
+            className="animate-zone-flash pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 bg-white"
           />
 
           <div
             key={`zone-${zoneKey}`}
             aria-hidden
-            className="animate-zone-lock pointer-events-none absolute"
+            className="animate-zone-lock pointer-events-none absolute z-10"
             style={{
               left: `${zone.x}%`,
               top: `${zone.y}%`,
@@ -306,46 +319,84 @@ export function StreetStage({
         </>
       ) : null}
 
-      {/* 進行方向の案内。パノラマは進行方向を向けてあるので、まっすぐ＝進む向き。 */}
-      {showArrow ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-10 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1"
-        >
-          <svg
-            width="44"
-            height="60"
-            viewBox="0 0 44 60"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className={walking ? "animate-pulse" : ""}
-          >
-            <filter id="street-arrow-shadow">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.45" />
-            </filter>
-            <path
-              d="M22 4 L38 26 H28 V56 H16 V26 H6 Z"
-              fill="white"
-              fillOpacity="0.92"
-              stroke="rgba(0,0,0,0.25)"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-              filter="url(#street-arrow-shadow)"
-            />
-          </svg>
-          <span className="rounded-chip bg-black/65 px-2 py-1 font-display text-11 font-black text-white">
-            {walking ? "歩いています" : "この向きに進む"}
-          </span>
-          {turn !== null ? (
-            <span className="rounded-chip bg-primary px-2 py-1 font-display text-11 font-black text-ink">
-              {turn > 0 ? "この先 みぎにまがる →" : "← この先 ひだりにまがる"}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {/*
+        進む向きの案内。
+        見回しても進行方向を指し続けるよう、いまの視点との差から画面上の位置を決める。
+        onAdvance を渡すと押せるようになり、自分でタップして一歩進める。
+      */}
+      {showArrow
+        ? (() => {
+            // 進行方向と、いま見ている向きの差（-180〜180。＋が右）
+            const rel = ((heading - pov + 540) % 360) - 180;
+            const offscreen = Math.abs(rel) > HALF_FOV_DEG;
+            // 視野の中なら位置で示し、外なら画面の端に寄せる
+            const x = Math.max(8, Math.min(92, 50 + (rel / HALF_FOV_DEG) * 42));
+            const Tag = onAdvance ? "button" : "div";
 
-      {/* HUD（現在地・残り距離など）。下端は帰属表示のために空けておく。 */}
-      {children}
+            return (
+              <Tag
+                {...(onAdvance
+                  ? { type: "button" as const, onClick: onAdvance, "aria-label": "進む" }
+                  : { "aria-hidden": true })}
+                className={[
+                  "absolute bottom-10 z-10 flex -translate-x-1/2 flex-col items-center gap-1",
+                  onAdvance ? "cursor-pointer" : "pointer-events-none",
+                ].join(" ")}
+                style={{ left: `${x}%`, transition: "left 120ms linear" }}
+              >
+                {offscreen ? (
+                  // 進む道が視野の外。振り向く向きを示す。
+                  <span className="rounded-chip bg-primary px-2.5 py-1.5 font-display text-13 font-black text-ink shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+                    {rel > 0 ? "→ こっち" : "こっち ←"}
+                  </span>
+                ) : (
+                  <svg
+                    width="44"
+                    height="60"
+                    viewBox="0 0 44 60"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={walking ? "animate-pulse" : ""}
+                  >
+                    <filter id="street-arrow-shadow">
+                      <feDropShadow
+                        dx="0"
+                        dy="2"
+                        stdDeviation="3"
+                        floodColor="#000"
+                        floodOpacity="0.45"
+                      />
+                    </filter>
+                    <path
+                      d="M22 4 L38 26 H28 V56 H16 V26 H6 Z"
+                      fill="white"
+                      fillOpacity="0.92"
+                      stroke="rgba(0,0,0,0.25)"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                      filter="url(#street-arrow-shadow)"
+                    />
+                  </svg>
+                )}
+                <span className="rounded-chip bg-black/65 px-2 py-1 font-display text-11 font-black text-white">
+                  {walking ? "歩いています" : offscreen ? "むきをかえる" : "タップで進む"}
+                </span>
+                {turn !== null && !offscreen ? (
+                  <span className="rounded-chip bg-primary px-2 py-1 font-display text-11 font-black text-ink">
+                    {turn > 0 ? "この先 みぎにまがる →" : "← この先 ひだりにまがる"}
+                  </span>
+                ) : null}
+              </Tag>
+            );
+          })()
+        : null}
+
+      {/*
+        HUD（現在地・残り距離など）。下端は帰属表示のために空けておく。
+        ストリートビューのキャンバスが上に乗るので、z-10 で持ち上げる。
+        中身側で pointer-events-auto を付けたものだけ押せる。
+      */}
+      <div className="pointer-events-none absolute inset-0 z-10">{children}</div>
     </div>
   );
 }

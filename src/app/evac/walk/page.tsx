@@ -198,6 +198,8 @@ export default function EvacWalkPage() {
             showArrow={!pendingEvent && !feedback && !arrived}
             turn={Math.abs(turn) >= TURN_THRESHOLD_DEG ? turn : null}
             walking={walking && !pendingEvent && !feedback && !arrived}
+            // 自動で歩いている間は押せなくする（自分で進むのは手動のときだけ）
+            onAdvance={!walking && !pendingEvent && !feedback && !arrived ? forward : undefined}
             height={250}
           >
             {/* HUD。下端は Google の帰属表示のために空けている。 */}
@@ -310,26 +312,26 @@ export default function EvacWalkPage() {
       ) : walking ? (
         <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
           <p className="text-13 text-ink-muted">
-            <Furigana text="避難場所[ひなんばしょ]へ歩[ある]いています。危[あぶ]ないところがあると、その場[ば]で止[と]まります。" />
+            <Furigana text="自動[じどう]で歩[ある]いています。危[あぶ]ないところがあると、その場[ば]で止[と]まります。" />
           </p>
           <Button variant="outline" onClick={() => setWalking(false)}>
-            <Furigana text="いったん止[と]まる" />
+            <Furigana text="自分[じぶん]で歩[ある]く" />
           </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
           <p className="text-13 text-ink-muted">
-            <Furigana text="ストリートビューを見回[みまわ]して、進[すす]む道[みち]を確[たし]かめてね。" />
+            <Furigana text="画面[がめん]をドラッグで見回[みまわ]せます。白[しろ]い矢印[やじるし]をタップすると進[すす]みます。" />
           </p>
-          <Button onClick={() => setWalking(true)}>
-            <Furigana text={index === 0 ? "歩[ある]きだす" : "歩[ある]きを再開[さいかい]する"} />
+          <Button onClick={forward}>
+            <Furigana text="進[すす]む" />
           </Button>
           <button
             type="button"
-            onClick={forward}
+            onClick={() => setWalking(true)}
             className="font-display text-13 font-bold text-primary-ink underline underline-offset-2"
           >
-            <Furigana text="一歩[いっぽ]だけ進[すす]む" />
+            <Furigana text="自動[じどう]で歩[ある]いてもらう" />
           </button>
         </div>
       )}
