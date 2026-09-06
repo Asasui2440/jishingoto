@@ -5,15 +5,27 @@ import { HazardSketch } from "./HazardSketch";
 import type { EventKind, LatLng } from "@/lib/evac-content";
 import { hasMapsKey, loadMaps } from "@/lib/gmaps";
 
+const ZONE_LABELS: Record<EventKind, string> = {
+  wall: "想定：塀・ブロック",
+  fall: "想定：落下物",
+  closed: "想定：通行止め",
+};
+
 type Props = {
   position: LatLng;
   /** 進行方向（度）。パノラマの初期の向きに使う */
   heading: number;
   /** イベント発生中なら、その種類。デモ表示のイラストにも使う */
   kind?: EventKind | null;
-  /** 想定の危険範囲（％）。番号マーカーと半透明の枠を重ねる */
+  /** 想定の危険範囲（％）。検知枠を重ねる */
   zone?: { x: number; y: number; w: number; h: number } | null;
   zoneNumber?: number;
+  /** 進行方向の案内矢印を出すか */
+  showArrow?: boolean;
+  /** この先の曲がり（度。＋が右）。null なら曲がりの案内は出さない */
+  turn?: number | null;
+  /** 自動で歩いている最中か。矢印の見せかたを変える */
+  walking?: boolean;
   height?: number;
   children?: React.ReactNode;
 };
@@ -35,6 +47,9 @@ export function StreetStage({
   kind = null,
   zone = null,
   zoneNumber,
+  showArrow = false,
+  turn = null,
+  walking = false,
   height = 260,
   children,
 }: Props) {
@@ -47,6 +62,9 @@ export function StreetStage({
   // 依存は緯度経度の「値」で持つ。オブジェクトのままだと毎レンダーで
   // getPanorama() を呼び直してしまう（課金にも響く）。
   const { lat, lng } = position;
+
+  // イベントが変わるたびに key を変えて、枠の出現アニメーションを出し直す
+  const zoneKey = zone ? `${kind ?? "-"}:${zoneNumber ?? 0}:${zone.x},${zone.y}` : "";
 
   useEffect(() => {
     if (!hasMapsKey()) return;
@@ -114,29 +132,98 @@ export function StreetStage({
         </>
       ) : null}
 
-      {/* 想定の危険範囲。実在の建物を壊して見せる加工はしない。 */}
+      {/*
+        想定の危険範囲。
+        枠が縮んで定まる動きにしているが、これは画像を解析した結果ではない。
+        「歩いていて気づいて足が止まった」という体験に見た目を合わせているだけで、
+        位置も種類もルールエンジンがあらかじめ決めている（仕様 10・11）。
+      */}
       {zone ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute rounded-field border-[3px] border-dashed border-warn bg-warn/25"
-          style={{
-            left: `${zone.x}%`,
-            top: `${zone.y}%`,
-            width: `${zone.w}%`,
-            height: `${zone.h}%`,
-          }}
-        />
+        <>
+          {/* 気づいた瞬間のフラッシュ。下端は帰属表示のために外してある。 */}
+          <span
+            key={`flash-${zoneKey}`}
+            aria-hidden
+            className="animate-zone-flash pointer-events-none absolute inset-x-0 top-0 bottom-8 bg-white"
+          />
+
+          <div
+            key={`zone-${zoneKey}`}
+            aria-hidden
+            className="animate-zone-lock pointer-events-none absolute"
+            style={{
+              left: `${zone.x}%`,
+              top: `${zone.y}%`,
+              width: `${zone.w}%`,
+              height: `${zone.h}%`,
+            }}
+          >
+            {/* 背景 */}
+            <div className="absolute inset-0 bg-warn/20" />
+            {/* 枠の中を1度だけ走るスキャン線 */}
+            <span className="absolute inset-x-0 overflow-hidden">
+              <span className="animate-zone-scan absolute inset-x-0 h-0.5 bg-warn shadow-[0_0_8px_var(--color-warn)]" />
+            </span>
+            {/* 外枠 */}
+            <div className="absolute inset-0 border-2 border-warn" />
+            {/* コーナーマーカー */}
+            <div className="absolute top-0 left-0 h-4 w-4 border-t-[3px] border-l-[3px] border-warn" />
+            <div className="absolute top-0 right-0 h-4 w-4 border-t-[3px] border-r-[3px] border-warn" />
+            <div className="absolute bottom-0 left-0 h-4 w-4 border-b-[3px] border-l-[3px] border-warn" />
+            <div className="absolute bottom-0 right-0 h-4 w-4 border-b-[3px] border-r-[3px] border-warn" />
+            {/* ラベル。枠が定まってから出す。 */}
+            {kind ? (
+              <span className="animate-zone-label absolute -top-6 left-0 flex items-center gap-1 rounded-sm bg-warn px-1.5 py-0.5 font-display text-11 font-black text-ink">
+                <span>⚠</span>
+                <span>{ZONE_LABELS[kind]}</span>
+              </span>
+            ) : null}
+            {/* 番号 */}
+            {zoneNumber ? (
+              <span className="animate-zone-label absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-warn font-display text-11 font-black text-ink shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+                {zoneNumber}
+              </span>
+            ) : null}
+          </div>
+        </>
       ) : null}
-      {zone && zoneNumber ? (
-        <span
-          className="pointer-events-none absolute grid size-7 place-items-center rounded-full bg-warn font-display text-13 font-black text-ink shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
-          style={{
-            left: `calc(${zone.x + zone.w / 2}% - 14px)`,
-            top: `calc(${zone.y + zone.h / 2}% - 14px)`,
-          }}
+
+      {/* 進行方向の案内。パノラマは進行方向を向けてあるので、まっすぐ＝進む向き。 */}
+      {showArrow ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-10 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1"
         >
-          {zoneNumber}
-        </span>
+          <svg
+            width="44"
+            height="60"
+            viewBox="0 0 44 60"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={walking ? "animate-pulse" : ""}
+          >
+            <filter id="street-arrow-shadow">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.45" />
+            </filter>
+            <path
+              d="M22 4 L38 26 H28 V56 H16 V26 H6 Z"
+              fill="white"
+              fillOpacity="0.92"
+              stroke="rgba(0,0,0,0.25)"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              filter="url(#street-arrow-shadow)"
+            />
+          </svg>
+          <span className="rounded-chip bg-black/65 px-2 py-1 font-display text-11 font-black text-white">
+            {walking ? "歩いています" : "この向きに進む"}
+          </span>
+          {turn !== null ? (
+            <span className="rounded-chip bg-primary px-2 py-1 font-display text-11 font-black text-ink">
+              {turn > 0 ? "この先 みぎにまがる →" : "← この先 ひだりにまがる"}
+            </span>
+          ) : null}
+        </div>
       ) : null}
 
       {/* HUD（現在地・残り距離など）。下端は帰属表示のために空けておく。 */}

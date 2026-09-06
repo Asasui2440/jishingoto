@@ -22,7 +22,7 @@ import {
   type RouteOption,
   type Shelter,
 } from "./evac-content";
-import { hasMapsKey, loadMaps } from "./gmaps";
+import { MAPS_API_KEY, hasMapsKey, loadMaps } from "./gmaps";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -78,6 +78,13 @@ export function headingAt(path: LatLng[], t: number) {
 /* ------------------------------------------------------------------ */
 
 /**
+ * 「近く」とみなす上限（m）。
+ * 地理院タイル（z14 の 3×3 枚）が覆う範囲とだいたい合わせてある。
+ * これより遠い候補は、指定した地点の「近く」ではないので出さない。
+ */
+const NEARBY_RADIUS_M = 3000;
+
+/**
  * 指定した地点の近くの避難場所を返す。
  *
  * 探しにいく順番:
@@ -87,44 +94,87 @@ export function headingAt(path: LatLng[], t: number) {
  *
  * 2 は「自治体が指定した避難場所」ではないので、画面では候補として出し、
  * 自治体の一覧で確認するよう促す（`Shelter.source` をそのまま表示している）。
+ *
+ * どの手段でも、指定した地点から `NEARBY_RADIUS_M` より遠いものは落とす。
+ * 遠くの避難場所を「近く」として並べると、その地点に避難場所があるかのように
+ * 誤って伝わるため（仕様 11）。近くに1件も無ければ空配列を返し、
+ * 画面側が「見つからなかった」と出す。
  */
 export async function fetchShelters(near: LatLng): Promise<Shelter[]> {
-  const sort = (list: Shelter[]) =>
+  const nearby = (list: Shelter[]) =>
     [...list]
+      .filter((s) => distanceM(near, s.position) <= NEARBY_RADIUS_M)
       .sort((a, b) => distanceM(near, a.position) - distanceM(near, b.position))
       .slice(0, 5);
 
   try {
-    const official = await fetchGsiShelters(near);
-    if (official.length > 0) return sort(official);
+    const official = nearby(await fetchGsiShelters(near));
+    if (official.length > 0) return official;
   } catch {
     // 公的データを取れなければ次の手段へ
   }
 
   if (hasMapsKey()) {
     try {
-      const places = await fetchPlaceShelters(near);
-      if (places.length > 0) return sort(places);
+      const places = nearby(await fetchPlaceShelters(near));
+      if (places.length > 0) return places;
     } catch {
       // Places も使えなければデモデータへ
     }
   }
 
   await wait(200);
-  return sort(DEMO_SHELTERS);
+  // デモデータはデモ地点の周りにしか無い。離れた地点では 0 件になる。
+  return nearby(DEMO_SHELTERS);
 }
 
 /* --- 1. 国土地理院の指定緊急避難場所データ --------------------------- */
 
-/** 緯度経度 → タイル座標 */
-function tileOf(p: LatLng, z: number) {
+/**
+ * 地理院の指定緊急避難場所タイルの仕様（実際に叩いて確かめた値）:
+ *   - 配信されているズームは **10 だけ**。他のズームは 404 を返す。
+ *   - 層が災害種別ごとに分かれていて、`skhb04` が **地震**。
+ *     （01 洪水 / 02 崖崩れ・土石流・地滑り / 03 高潮 / 04 地震 /
+ *       05 津波 / 06 大規模な火事 / 07 内水氾濫 / 08 火山現象）
+ *   - properties は `name` / `address` / `remarks` / `disaster1..8`。
+ *
+ * @see https://www.gsi.go.jp/bousaichiri/hinanbasho.html
+ */
+const GSI_ZOOM = 10;
+const GSI_EARTHQUAKE_LAYER = "skhb04";
+
+/** 緯度経度 → タイル座標（小数のまま。境界までの近さを測るのに使う） */
+function tileFloat(p: LatLng, z: number) {
   const n = 2 ** z;
-  const x = Math.floor(((p.lng + 180) / 360) * n);
   const latRad = (p.lat * Math.PI) / 180;
-  const y = Math.floor(
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
-  );
-  return { x, y };
+  return {
+    x: ((p.lng + 180) / 360) * n,
+    y: ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+  };
+}
+
+/**
+ * 探す範囲を覆うタイルを列挙する。
+ *
+ * z10 のタイルは 1 枚で 30km 近くを覆い、数百 KB ある。
+ * 3×3 で 9 枚取ると数 MB になってしまうので、
+ * 基本は中心の 1 枚だけにして、指定地点がタイルの境界に近いときだけ隣を足す。
+ */
+function tilesAround(near: LatLng, z: number, radiusM: number) {
+  const { x, y } = tileFloat(near, z);
+  // タイル1枚ぶんの幅（m）。この緯度での実距離。
+  const tileM = (40_075_017 * Math.cos((near.lat * Math.PI) / 180)) / 2 ** z;
+  const margin = radiusM / tileM;
+
+  const spread = (v: number) => {
+    const base = Math.floor(v);
+    const out = [base];
+    if (v - base < margin) out.push(base - 1);
+    if (base + 1 - v < margin) out.push(base + 1);
+    return out;
+  };
+
+  return spread(x).flatMap((tx) => spread(y).map((ty) => ({ x: tx, y: ty })));
 }
 
 type GsiFeature = {
@@ -133,22 +183,18 @@ type GsiFeature = {
 };
 
 /**
- * 地理院タイルの GeoJSON（skhb01 = 地震）から、周囲の指定緊急避難場所を集める。
- * 中心のタイルとその周り 8 枚を見る。
+ * 地理院タイルの GeoJSON（地震の指定緊急避難場所）から、周囲の候補を集める。
  *
  * 取得できない環境（CORS・オフラインなど）では例外にして、呼び出し側が次の手段に移る。
  */
 async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
-  const z = 14;
-  const { x, y } = tileOf(near, z);
-  const tiles: { x: number; y: number }[] = [];
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) tiles.push({ x: x + dx, y: y + dy });
-  }
+  const tiles = tilesAround(near, GSI_ZOOM, NEARBY_RADIUS_M);
 
   const results = await Promise.all(
     tiles.map(async (t) => {
-      const res = await fetch(`https://maps.gsi.go.jp/xyz/skhb01/${z}/${t.x}/${t.y}.geojson`);
+      const res = await fetch(
+        `https://maps.gsi.go.jp/xyz/${GSI_EARTHQUAKE_LAYER}/${GSI_ZOOM}/${t.x}/${t.y}.geojson`,
+      );
       if (!res.ok) return [] as GsiFeature[];
       const json = (await res.json()) as { features?: GsiFeature[] };
       return json.features ?? [];
@@ -163,18 +209,23 @@ async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
     return "";
   };
 
-  return results.flat().flatMap((f, i): Shelter[] => {
+  const seen = new Set<string>();
+
+  return results.flat().flatMap((f): Shelter[] => {
     const c = f.geometry?.coordinates;
     const props = f.properties ?? {};
     if (!c || c.length < 2) return [];
-    const name = pick(props, ["名称", "施設・場所名", "name"]);
+    const name = pick(props, ["name", "名称", "施設・場所名"]);
     if (!name) return [];
+    const id = `gsi-${c[0].toFixed(5)}-${c[1].toFixed(5)}`;
+    if (seen.has(id)) return [];
+    seen.add(id);
     return [
       {
-        id: `gsi-${i}-${c[0].toFixed(5)}-${c[1].toFixed(5)}`,
+        id,
         name,
         kind: "指定緊急避難場所",
-        address: pick(props, ["住所", "所在地", "address"]),
+        address: pick(props, ["address", "住所", "所在地"]),
         position: { lat: c[1], lng: c[0] },
         source: "国土地理院「指定緊急避難場所データ」（地震）",
         note: "対応[たいおう]する災害[さいがい]の種別[しゅべつ]は、自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。",
@@ -220,11 +271,42 @@ async function fetchPlaceShelters(near: LatLng): Promise<Shelter[]> {
 
 /* --- 住所から地点を探す ------------------------------------------------ */
 
+/**
+ * 打ち間違いなどで該当が無いと、Geocoder は `country: "JP"` の制限に引きずられて
+ * 「日本」（国の中心＝長野県の山中）を `partial_match` 付きで返してくる。
+ * これは「見つからなかった」と同じ意味なので採用しない。
+ */
+const FALLBACK_TYPES = ["country"];
+
+/**
+ * 実在するが「家の近く」を指すには大きすぎる結果。
+ * 都道府県の代表点は、歩いて行ける避難場所を探す起点には使えない。
+ */
+const TOO_COARSE_TYPES = ["administrative_area_level_1"];
+
+/**
+ * 表示用に住所を整える。
+ * `formatted_address` は「日本、〒112-0012 東京都文京区…」の形で返ってくるが、
+ * 国名と郵便番号は画面では読みづらいだけなので落とす。
+ */
+function tidyAddress(formatted: string) {
+  return formatted
+    .replace(/^日本[、,]\s*/, "")
+    .replace(/^〒\d{3}-\d{4}\s*/, "")
+    .trim();
+}
+
+/**
+ * 住所検索の結果。
+ * 「見つからない」と「大きすぎて使えない」は、画面での案内が変わるので分けている。
+ */
+export type GeocodeResult =
+  | { ok: true; position: LatLng; label: string }
+  | { ok: false; reason: "notfound" | "too-coarse" };
+
 /** 住所や地名から緯度経度を引く（自宅付近の指定に使う） */
-export async function geocodeAddress(
-  query: string,
-): Promise<{ position: LatLng; label: string } | null> {
-  if (!hasMapsKey()) return null;
+export async function geocodeAddress(query: string): Promise<GeocodeResult> {
+  if (!hasMapsKey()) return { ok: false, reason: "notfound" };
   const maps = await loadMaps();
   const geocoder = new maps.Geocoder();
   const { results } = await geocoder.geocode({
@@ -232,11 +314,24 @@ export async function geocodeAddress(
     region: "JP",
     componentRestrictions: { country: "JP" },
   });
-  const first = results[0];
-  if (!first) return null;
+
+  const first = results.find(
+    (r) => !r.types.some((t) => FALLBACK_TYPES.includes(t) || TOO_COARSE_TYPES.includes(t)),
+  );
+
+  if (!first) {
+    // 使える結果が無い。都道府県をそのまま入れたのなら「もっとくわしく」、
+    // 国に落ちた（＝打ち間違い）なら「見つからなかった」と伝える。
+    const coarse = results.some(
+      (r) => !r.partial_match && r.types.some((t) => TOO_COARSE_TYPES.includes(t)),
+    );
+    return { ok: false, reason: coarse ? "too-coarse" : "notfound" };
+  }
+
   return {
+    ok: true,
     position: { lat: first.geometry.location.lat(), lng: first.geometry.location.lng() },
-    label: first.formatted_address,
+    label: tidyAddress(first.formatted_address),
   };
 }
 
@@ -256,15 +351,158 @@ const WALK_SPEED = 1.2;
  */
 export async function fetchRoutes(home: LatLng, shelter: Shelter): Promise<RouteOption[]> {
   if (hasMapsKey()) {
+    // 1. Routes API（新）。2025 年以降に作った Google Cloud プロジェクトは
+    //    旧 Directions API を有効にできないので、まずこちらを試す。
+    try {
+      const routes = await fetchRoutesFromRoutesApi(home, shelter);
+      if (routes.length >= 2) return routes;
+    } catch {
+      // 次の手段へ
+    }
+
+    // 2. 旧 Directions API。以前から有効にしているプロジェクト向け。
     try {
       const routes = await fetchRoutesFromDirections(home, shelter);
       if (routes.length >= 2) return routes;
     } catch {
-      // 取れなければデモ経路に落ちる
+      // どちらも使えなければデモ経路に落ちる
     }
   }
   await wait(300);
   return demoRoutes(home, shelter);
+}
+
+/* --- Routes API（新） ------------------------------------------------ */
+
+const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
+
+type RoutesApiRoute = {
+  distanceMeters?: number;
+  /** "423s" の形 */
+  duration?: string;
+  polyline?: { encodedPolyline?: string };
+  legs?: { steps?: unknown[] }[];
+};
+
+/** Routes API を1回叩く。経由点を渡すと、そこを通る別ルートになる。 */
+async function callRoutesApi(
+  origin: LatLng,
+  destination: LatLng,
+  via?: LatLng,
+): Promise<RoutesApiRoute[]> {
+  const point = (p: LatLng) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+
+  const res = await fetch(ROUTES_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": MAPS_API_KEY,
+      // 必要な項目だけを取る（課金は FieldMask の範囲で決まる）
+      "X-Goog-FieldMask": [
+        "routes.distanceMeters",
+        "routes.duration",
+        "routes.polyline.encodedPolyline",
+        "routes.legs.steps.navigationInstruction",
+      ].join(","),
+    },
+    body: JSON.stringify({
+      origin: point(origin),
+      destination: point(destination),
+      ...(via ? { intermediates: [point(via)] } : {}),
+      travelMode: "WALK",
+      // 経由点を指定するときは代替ルートを求められない
+      computeAlternativeRoutes: !via,
+      languageCode: "ja",
+      regionCode: "JP",
+      units: "METRIC",
+    }),
+  });
+
+  if (!res.ok) throw new Error(`routes-api-${res.status}`);
+  const json = (await res.json()) as { routes?: RoutesApiRoute[] };
+  return json.routes ?? [];
+}
+
+/**
+ * 迂回ルートを引くための経由点。
+ *
+ * 家と避難場所を結ぶ直線の中点から、直線に垂直な向きへずらした地点を返す。
+ * この点を経由地にして Routes API を叩くと、**実際の道に沿った**別ルートが返る。
+ * 距離が短いと Routes API は代替ルートを返してくれないので、その埋め合わせに使う。
+ */
+function detourVia(home: LatLng, to: LatLng): LatLng {
+  const latM = 111_132;
+  const lngM = 111_320 * Math.cos((home.lat * Math.PI) / 180);
+  // 家 → 避難場所のベクトル（東・北方向のメートル）
+  const east = (to.lng - home.lng) * lngM;
+  const north = (to.lat - home.lat) * latM;
+  const len = Math.hypot(east, north) || 1;
+  // ずらす量。近すぎても遠すぎても遠回りしすぎるので幅を決める。
+  const off = Math.min(500, Math.max(150, len * 0.4));
+  // 垂直方向は (-north, east)
+  return {
+    lat: (home.lat + to.lat) / 2 + ((east / len) * off) / latM,
+    lng: (home.lng + to.lng) / 2 + ((-north / len) * off) / lngM,
+  };
+}
+
+async function fetchRoutesFromRoutesApi(
+  home: LatLng,
+  shelter: Shelter,
+): Promise<RouteOption[]> {
+  // polyline の復号に geometry ライブラリを使う
+  const maps = await loadMaps();
+  const decode = (encoded: string): LatLng[] =>
+    maps.geometry.encoding.decodePath(encoded).map((p) => ({ lat: p.lat(), lng: p.lng() }));
+
+  const toOption = (
+    r: RoutesApiRoute,
+    kind: RouteOption["kind"],
+    eventCount: number,
+  ): RouteOption => {
+    const meters = r.distanceMeters ?? 0;
+    const seconds = Number.parseInt(r.duration ?? "", 10) || Math.round(meters / WALK_SPEED);
+    const turns = r.legs?.reduce((s, l) => s + (l.steps?.length ?? 0), 0) ?? 0;
+    const path = r.polyline?.encodedPolyline ? decode(r.polyline.encodedPolyline) : [];
+    return {
+      id: `${kind}-${Math.round(meters)}`,
+      kind,
+      label: kind === "short" ? "最短[さいたん]ルート" : "迂回[うかい]しやすいルート",
+      notes: routeNotes(kind, meters, turns, eventCount),
+      distanceM: meters,
+      durationS: seconds,
+      path: path.length > 1 ? path : [home, shelter.position],
+      eventCount,
+    };
+  };
+
+  const found = await callRoutesApi(home, shelter.position);
+  if (found.length === 0) return [];
+
+  const sorted = [...found].sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
+  const shortest = sorted[0];
+
+  // 代替が返っていればいちばん違うものを使う。
+  // 徒歩の短い距離では1本しか返らないので、そのときは経由点でもう1本引く。
+  let alternative = sorted.length > 1 ? sorted[sorted.length - 1] : null;
+  if (!alternative) {
+    try {
+      const [detour] = await callRoutesApi(
+        home,
+        shelter.position,
+        detourVia(home, shelter.position),
+      );
+      if (detour && (detour.distanceMeters ?? 0) > (shortest.distanceMeters ?? 0)) {
+        alternative = detour;
+      }
+    } catch {
+      // 迂回が引けなければ最短だけ返す（呼び出し側が次の手段に移る）
+    }
+  }
+
+  const options = [toOption(shortest, "short", 3)];
+  if (alternative) options.push(toOption(alternative, "safe", 2));
+  return options;
 }
 
 /** Maps JS の DirectionsService（徒歩・代替経路あり）から取る */

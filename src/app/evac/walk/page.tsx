@@ -15,16 +15,28 @@ import { SCENARIO_BADGE, type EvacChoice } from "@/lib/evac-content";
 import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
 import { useHaptics } from "@/lib/settings";
 
+/** 自動で歩くときの1歩の間隔（ms）。1歩ぶんは約70m。 */
+const STEP_MS = 2000;
+
+/** この先の曲がりを案内し始める角度（度） */
+const TURN_THRESHOLD_DEG = 25;
+
+/** 2つの方位の差（-180〜180）。＋が右まわり。 */
+function turnBetween(from: number, to: number) {
+  return ((to - from + 540) % 360) - 180;
+}
+
 /**
  * フェーズ2 ③：自宅付近から避難場所まで、ストリートビューで実際に歩く。
  *
- * 経路を約70mごとに区切り、「進む」でパノラマを次の地点へ移す。
- * 判断地点に着いた回だけ、下部シートに想定シナリオと3択が出る。
+ * 経路を約70mごとに区切り、「歩きだす」で自動的に next の地点へ進んでいく。
+ * 判断地点に着いたら **その場で自動的に止まり**、下部シートに想定シナリオと3択が出る。
+ * （歩いている本人が危ないものに気づいて足を止める、という体験に合わせている）
  *
  * 画面の並び（仕様 7）:
  *   [ 想定シナリオ帯 ]
- *   [ ストリートビュー ＋ HUD（危険範囲・番号はイベント時だけ） ]
- *   [ 下部：進む／判断シート ]  ← パノラマの上には重ねない（帰属表示を隠さない）
+ *   [ ストリートビュー ＋ HUD（進む向き・危険範囲はイベント時だけ） ]
+ *   [ 下部：歩く／判断シート ]  ← パノラマの上には重ねない（帰属表示を隠さない）
  */
 export default function EvacWalkPage() {
   const router = useRouter();
@@ -34,6 +46,8 @@ export default function EvacWalkPage() {
 
   const [steps, setSteps] = useState<WalkStep[] | null>(null);
   const [index, setIndex] = useState(0);
+  /** 自動で歩いている最中か */
+  const [walking, setWalking] = useState(false);
   /** 迂回して切り替わったあとの経路。null なら最初に選んだ経路のまま。 */
   const [reroutedTo, setReroutedTo] = useState<string | null>(null);
   const [extraSeconds, setExtraSeconds] = useState(0);
@@ -82,6 +96,27 @@ export default function EvacWalkPage() {
       : null;
 
   const arrived = steps !== null && index >= steps.length - 1 && !pendingEvent && !feedback;
+
+  /**
+   * 自動で歩く。
+   *
+   * 判断地点に着くと `pendingEvent` が立つので、次の一歩を予約せずに止まる。
+   * `walking` は立てたままにしておき、答え終わって「先へ進む」を押したら
+   * そのまま歩きを続けられるようにしている。
+   */
+  useEffect(() => {
+    if (!walking || !steps) return;
+    if (pendingEvent || feedback || arrived) return;
+    const t = setTimeout(() => {
+      setIndex((i) => Math.min(i + 1, steps.length - 1));
+    }, STEP_MS);
+    return () => clearTimeout(t);
+  }, [walking, index, steps, pendingEvent, feedback, arrived]);
+
+  // 危ないところで足が止まったことを、短い振動でも伝える
+  useEffect(() => {
+    if (pendingEvent) vibrate(24);
+  }, [pendingEvent, vibrate]);
 
   const onChoose = useCallback(
     async (choice: EvacChoice, timedOut: boolean) => {
@@ -134,6 +169,10 @@ export default function EvacWalkPage() {
     );
   }
 
+  // この先で道が曲がるか。次の地点との方位差から出す。
+  const nextStep = steps[index + 1] ?? null;
+  const turn = nextStep ? turnBetween(step.heading, nextStep.heading) : 0;
+
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
@@ -156,6 +195,9 @@ export default function EvacWalkPage() {
             kind={step.event?.kind ?? null}
             zone={pendingEvent ? pendingEvent.zone : null}
             zoneNumber={decisionNo}
+            showArrow={!pendingEvent && !feedback && !arrived}
+            turn={Math.abs(turn) >= TURN_THRESHOLD_DEG ? turn : null}
+            walking={walking && !pendingEvent && !feedback && !arrived}
             height={250}
           >
             {/* HUD。下端は Google の帰属表示のために空けている。 */}
@@ -186,10 +228,6 @@ export default function EvacWalkPage() {
                 </button>
               </span>
             </div>
-
-            <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-6 rounded-chip bg-black/55 px-2 py-1 text-11 font-bold text-white">
-              ↑ <Furigana text="進[すす]む向[む]き" />
-            </span>
           </StreetStage>
 
           {/* 家からの進み具合 */}
@@ -248,7 +286,7 @@ export default function EvacWalkPage() {
             </p>
           ) : null}
           <Button onClick={forward}>
-            <Furigana text="先[さき]へ進[すす]む" />
+            <Furigana text={walking ? "歩[ある]きを続[つづ]ける" : "先[さき]へ進[すす]む"} />
           </Button>
         </div>
       ) : arrived ? (
@@ -269,14 +307,30 @@ export default function EvacWalkPage() {
             <Furigana text="ふりかえりを見[み]る" />
           </Button>
         </div>
+      ) : walking ? (
+        <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
+          <p className="text-13 text-ink-muted">
+            <Furigana text="避難場所[ひなんばしょ]へ歩[ある]いています。危[あぶ]ないところがあると、その場[ば]で止[と]まります。" />
+          </p>
+          <Button variant="outline" onClick={() => setWalking(false)}>
+            <Furigana text="いったん止[と]まる" />
+          </Button>
+        </div>
       ) : (
         <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
           <p className="text-13 text-ink-muted">
             <Furigana text="ストリートビューを見回[みまわ]して、進[すす]む道[みち]を確[たし]かめてね。" />
           </p>
-          <Button onClick={forward}>
-            <Furigana text="次[つぎ]の地点[ちてん]まで進[すす]む" />
+          <Button onClick={() => setWalking(true)}>
+            <Furigana text={index === 0 ? "歩[ある]きだす" : "歩[ある]きを再開[さいかい]する"} />
           </Button>
+          <button
+            type="button"
+            onClick={forward}
+            className="font-display text-13 font-bold text-primary-ink underline underline-offset-2"
+          >
+            <Furigana text="一歩[いっぽ]だけ進[すす]む" />
+          </button>
         </div>
       )}
 

@@ -83,6 +83,7 @@ export default function EvacRoutesPage() {
               selectedShelterId={shelter?.id ?? null}
               routes={routes}
               activeRouteId={startRouteId}
+              onSelectRoute={(id) => select(routes.find((r) => r.id === id)!)}
               height={220}
             />
 

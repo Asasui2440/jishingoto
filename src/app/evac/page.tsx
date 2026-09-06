@@ -19,7 +19,7 @@ import {
   type LatLng,
   type Shelter,
 } from "@/lib/evac-content";
-import { formatDistance, useEvac } from "@/lib/evac";
+import { formatDistance, getEvac, useEvac } from "@/lib/evac";
 
 /**
  * フェーズ2 ①：自宅付近の指定と、避難場所の確認。
@@ -31,29 +31,48 @@ export default function EvacStartPage() {
   const router = useRouter();
   const { home, homeLabel, shelter, update, reset } = useEvac();
 
-  const [shelters, setShelters] = useState<Shelter[] | null>(null);
+  /** 取得できた一覧と、それがどの地点のものか。 */
+  const [found, setFound] = useState<{ key: string; list: Shelter[] } | null>(null);
   const [geoState, setGeoState] = useState<"idle" | "loading" | "denied">("idle");
   const [address, setAddress] = useState("");
-  const [addressState, setAddressState] = useState<"idle" | "loading" | "notfound">("idle");
+  const [addressState, setAddressState] = useState<
+    "idle" | "loading" | "notfound" | "too-coarse"
+  >("idle");
 
-  // 初回に体験を初期化する（フェーズ1の /camera と同じ考え方）
+  // 初回に体験を初期化する（フェーズ1の /camera と同じ考え方）。
+  //
+  // 判定は `getEvac()` でストアの「いまの値」を直接読む。
+  // レンダー由来の `home` を見てはいけない: hydration の第1レンダーは
+  // serverSnapshot（home: null）なので、この画面に戻ってくるたびに
+  // 指定済みの現在地をデモ地点で上書きしてしまう。
   useEffect(() => {
-    if (!home) update({ home: DEMO_HOME, homeLabel: DEMO_AREA_LABEL, startedAt: Date.now() });
-    // 初回だけ
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!getEvac().home) {
+      update({ home: DEMO_HOME, homeLabel: DEMO_AREA_LABEL, startedAt: Date.now() });
+    }
+  }, [update]);
 
   const spot = home ?? DEMO_HOME;
+  const spotKey = `${spot.lat},${spot.lng}`;
 
+  /**
+   * いま指定している地点の避難場所。まだ取れていなければ null（＝探している最中）。
+   *
+   * 一覧に「どの地点のものか」を持たせて突き合わせている。
+   * こうしておくと、地点を変えた瞬間に前の場所の候補が消えるので、
+   * 別の街の避難場所が「近く」として残って見えることがない。
+   */
+  const shelters = found?.key === spotKey ? found.list : null;
+
+  // 指定した地点が変わるたびに、その地点の近くを探し直す。
   useEffect(() => {
     let alive = true;
     void fetchShelters(spot).then((list) => {
-      if (alive) setShelters(list);
+      if (alive) setFound({ key: spotKey, list });
     });
     return () => {
       alive = false;
     };
-  }, [spot.lat, spot.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [spotKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 地点を変えたら、避難場所の選択はいったん外す（近くの候補が変わるため）
   const pickHome = useCallback(
@@ -83,11 +102,11 @@ export default function EvacStartPage() {
     setAddressState("loading");
     try {
       const hit = await geocodeAddress(q);
-      if (hit) {
+      if (hit.ok) {
         pickHome(hit.position, hit.label);
         setAddressState("idle");
       } else {
-        setAddressState("notfound");
+        setAddressState(hit.reason);
       }
     } catch {
       setAddressState("notfound");
@@ -158,6 +177,10 @@ export default function EvacStartPage() {
             <p className="text-11 text-danger">
               <Furigana text="その住所[じゅうしょ]は見[み]つかりませんでした。地図[ちず]をタップしても指定[してい]できます。" />
             </p>
+          ) : addressState === "too-coarse" ? (
+            <p className="text-11 text-danger">
+              <Furigana text="範囲[はんい]が広[ひろ]すぎます。町名[ちょうめい]や駅名[えきめい]など、もう少[すこ]しくわしく入[い]れてください。" />
+            </p>
           ) : null}
 
           <EvacMap
@@ -210,6 +233,21 @@ export default function EvacStartPage() {
           </p>
           {shelters === null ? (
             <p className="text-13 text-ink-muted">近くの避難場所をさがしています...</p>
+          ) : shelters.length === 0 ? (
+            <Card className="bg-canvas p-[18px] shadow-none">
+              <p className="text-13 leading-[1.6] text-ink-muted">
+                <Furigana text="この地点[ちてん]の近[ちか]くでは、公的[こうてき]データから避難場所[ひなんばしょ]を見[み]つけられませんでした。住[す]んでいる自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。" />
+              </p>
+              <div className="mt-3">
+                <Button
+                  size="md"
+                  variant="outline"
+                  onClick={() => pickHome(DEMO_HOME, DEMO_AREA_LABEL)}
+                >
+                  <Furigana text="デモ地点[ちてん]でためす" />
+                </Button>
+              </div>
+            </Card>
           ) : (
             <ul className="flex flex-col gap-2">
               {shelters.map((s) => {

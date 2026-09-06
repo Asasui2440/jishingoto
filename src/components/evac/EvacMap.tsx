@@ -28,6 +28,7 @@ type Props = {
   walker?: LatLng | null;
   onPickHome?: (p: LatLng) => void;
   onSelectShelter?: (id: string) => void;
+  onSelectRoute?: (id: string) => void;
   height?: number;
   className?: string;
 };
@@ -79,6 +80,7 @@ function GoogleMapView({
   walker,
   onPickHome,
   onSelectShelter,
+  onSelectRoute,
   height = 240,
   className = "",
 }: Props) {
@@ -91,6 +93,12 @@ function GoogleMapView({
   useEffect(() => {
     clickRef.current = onPickHome;
   }, [onPickHome]);
+  // 経路のクリックも同様。呼び出し側が毎回新しい関数を渡してきても、
+  // 経路や避難場所を描き直さずに済むようにする。
+  const routeClickRef = useRef(onSelectRoute);
+  useEffect(() => {
+    routeClickRef.current = onSelectRoute;
+  }, [onSelectRoute]);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -162,9 +170,11 @@ function GoogleMapView({
         path: route.path,
         strokeColor: ROUTE_COLORS[route.kind],
         strokeOpacity: active ? 1 : 0.45,
-        strokeWeight: active ? 6 : 4,
+        strokeWeight: active ? 8 : 5,
         zIndex: active ? 2 : 1,
+        clickable: !!routeClickRef.current,
       });
+      line.addListener("click", () => routeClickRef.current?.(route.id));
       overlays.current.push(line);
     }
 
@@ -193,7 +203,10 @@ function GoogleMapView({
       for (const p of pts) bounds.extend(p);
       map.fitBounds(bounds, 40);
     } else if (pts.length === 1) {
+      // 1点だけのとき（候補を探し直している最中など）は、
+      // 前の fitBounds で引いたズームが残らないように戻す。
       map.setCenter(pts[0]);
+      map.setZoom(16);
     }
   }, [
     mapReady,
@@ -231,6 +244,7 @@ function DemoMapView({
   walker,
   onPickHome,
   onSelectShelter,
+  onSelectRoute,
   height = 240,
   className = "",
   loading = false,
@@ -318,16 +332,31 @@ function DemoMapView({
         ))}
 
         {routes.map((r) => (
-          <path
+          <g
             key={r.id}
-            d={toPath(r.path)}
-            fill="none"
-            stroke={ROUTE_COLORS[r.kind]}
-            strokeWidth={r.id === activeRouteId ? 6 : 4}
-            strokeOpacity={r.id === activeRouteId ? 1 : 0.45}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+            onClick={onSelectRoute ? (e) => { e.stopPropagation(); onSelectRoute(r.id); } : undefined}
+            className={onSelectRoute ? "cursor-pointer" : ""}
+          >
+            {/* タップしやすい透明な太線 */}
+            {onSelectRoute ? (
+              <path
+                d={toPath(r.path)}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+                strokeLinecap="round"
+              />
+            ) : null}
+            <path
+              d={toPath(r.path)}
+              fill="none"
+              stroke={ROUTE_COLORS[r.kind]}
+              strokeWidth={r.id === activeRouteId ? 7 : 5}
+              strokeOpacity={r.id === activeRouteId ? 1 : 0.45}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </g>
         ))}
 
         {shelters.map((s) => {
