@@ -140,6 +140,8 @@ type Props = {
   walking?: boolean;
   /** 矢印をタップしたとき。渡すと矢印が押せるようになる（自分で進む） */
   onAdvance?: () => void;
+  /** 避難場所に着いたか。着いたときの演出に使う */
+  arrived?: boolean;
   height?: number;
   children?: React.ReactNode;
 };
@@ -168,6 +170,7 @@ export function StreetStage({
   turn = null,
   walking = false,
   onAdvance,
+  arrived = false,
   height = 260,
   children,
 }: Props) {
@@ -350,33 +353,38 @@ export function StreetStage({
                     {rel > 0 ? "→ こっち" : "こっち ←"}
                   </span>
                 ) : (
-                  <svg
-                    width="44"
-                    height="60"
-                    viewBox="0 0 44 60"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className={walking ? "animate-pulse" : ""}
+                  // 路面に描かれたように見せる。面を寝かせて、奥ほど小さく薄くする。
+                  <span
+                    className="flex flex-col items-center"
+                    style={{ transform: "perspective(120px) rotateX(58deg)" }}
                   >
-                    <filter id="street-arrow-shadow">
-                      <feDropShadow
-                        dx="0"
-                        dy="2"
-                        stdDeviation="3"
-                        floodColor="#000"
-                        floodOpacity="0.45"
-                      />
-                    </filter>
-                    <path
-                      d="M22 4 L38 26 H28 V56 H16 V26 H6 Z"
-                      fill="white"
-                      fillOpacity="0.92"
-                      stroke="rgba(0,0,0,0.25)"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                      filter="url(#street-arrow-shadow)"
-                    />
-                  </svg>
+                    {[0, 1, 2].map((i) => (
+                      <svg
+                        key={i}
+                        width={46 - i * 8}
+                        height={20 - i * 3}
+                        viewBox="0 0 46 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="animate-road-arrow -mt-1"
+                        style={{
+                          // 手前から順に光らせて、進む向きへ流れて見えるようにする
+                          animationDelay: `${(2 - i) * 0.18}s`,
+                          filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
+                        }}
+                      >
+                        <path
+                          d="M2 18 L23 3 L44 18"
+                          fill="none"
+                          stroke="white"
+                          strokeOpacity="0.95"
+                          strokeWidth="7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ))}
+                  </span>
                 )}
                 <span className="rounded-chip bg-black/65 px-2 py-1 font-display text-11 font-black text-white">
                   {walking ? "歩いています" : offscreen ? "むきをかえる" : "タップで進む"}
@@ -390,6 +398,35 @@ export function StreetStage({
             );
           })()
         : null}
+
+      {/* 避難場所に着いたとき。広がる輪と、着いたことを示すバッジ。 */}
+      {arrived ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 grid place-items-center"
+        >
+          <span className="relative grid place-items-center">
+            {[0, 1].map((i) => (
+              <span
+                key={i}
+                className="animate-arrive-ring absolute size-20 rounded-full border-4 border-safe"
+                style={{ animationDelay: `${i * 0.55}s` }}
+              />
+            ))}
+            <span className="animate-arrive-badge grid size-16 place-items-center rounded-full bg-safe shadow-[0_4px_16px_rgba(0,0,0,0.45)]">
+              <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden>
+                <path
+                  d="M8 17.5 L14.5 24 L26 11"
+                  stroke="white"
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </span>
+        </div>
+      ) : null}
 
       {/*
         HUD（現在地・残り距離など）。下端は帰属表示のために空けておく。

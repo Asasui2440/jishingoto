@@ -10,7 +10,12 @@ import { Meter } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { buildWalkSteps, fetchDecisionPoints, type WalkStep } from "@/lib/evac-api";
+import {
+  buildWalkSteps,
+  fetchDecisionPoints,
+  fetchDetourFrom,
+  type WalkStep,
+} from "@/lib/evac-api";
 import { SCENARIO_BADGE, type EvacChoice } from "@/lib/evac-content";
 import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
 import { useHaptics } from "@/lib/settings";
@@ -124,8 +129,14 @@ export default function EvacWalkPage() {
       const pointId = step.pointId;
       vibrate(12);
 
-      const other = routes.find((r) => r.id !== routeId) ?? null;
-      const rerouted = choice.reroute && other !== null;
+      // 迂回するときは、いまいる場所から避難場所までを引き直す。
+      // もう1本の候補ルートへ飛び移ると、そのルートの同じ進捗地点は
+      // 数百m先にあるのでワープしてしまうため。
+      const detour =
+        choice.reroute && shelter ? await fetchDetourFrom(step.position, shelter) : null;
+      // 引き直せない環境（キーなしなど）は、これまでどおり別ルートへ切り替える
+      const other = !detour && choice.reroute ? (routes.find((r) => r.id !== routeId) ?? null) : null;
+      const rerouted = detour !== null || other !== null;
 
       decide({
         pointId,
@@ -138,8 +149,15 @@ export default function EvacWalkPage() {
       setAnswered((prev) => [...prev, pointId]);
       setExtraSeconds((s) => s + choice.extraSeconds);
 
-      if (rerouted && other) {
-        // 迂回したら、この先の道のりと判断地点を別ルートのものに差し替える
+      if (detour) {
+        const points = await fetchDecisionPoints(detour);
+        // 引き直した道は現在地から始まるので、先頭は重複する。落とす。
+        const detourSteps = buildWalkSteps(detour, points).slice(1);
+        update({ routes: [...routes, detour] });
+        setSteps([...steps.slice(0, index + 1), ...detourSteps]);
+        setReroutedTo(detour.id);
+        pushTakenRoute(detour.id);
+      } else if (other) {
         const altPoints = await fetchDecisionPoints(other);
         const altSteps = buildWalkSteps(other, altPoints).filter((s) => s.t > step.t);
         setSteps([...steps.slice(0, index + 1), ...altSteps]);
@@ -149,7 +167,7 @@ export default function EvacWalkPage() {
 
       setFeedback({ choice, timedOut, rerouted });
     },
-    [decide, index, pushTakenRoute, routeId, routes, step, steps, vibrate],
+    [decide, index, pushTakenRoute, routeId, routes, shelter, step, steps, update, vibrate],
   );
 
   const forward = () => {
@@ -200,6 +218,7 @@ export default function EvacWalkPage() {
             walking={walking && !pendingEvent && !feedback && !arrived}
             // 自動で歩いている間は押せなくする（自分で進むのは手動のときだけ）
             onAdvance={!walking && !pendingEvent && !feedback && !arrived ? forward : undefined}
+            arrived={arrived}
             height={250}
           >
             {/* HUD。下端は Google の帰属表示のために空けている。 */}

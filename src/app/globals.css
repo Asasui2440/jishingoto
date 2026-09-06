@@ -199,6 +199,26 @@ ruby > rt {
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* --- 進む向きの矢印 ------------------------------------------------- */
+/* 地面に置いたように見せたいので、寝かせた面のまま前後に流す */
+@keyframes road-arrow {
+  0%   { opacity: 0.35; transform: translateY(6px); }
+  50%  { opacity: 1;    transform: translateY(-4px); }
+  100% { opacity: 0.35; transform: translateY(6px); }
+}
+
+/* --- 避難場所に着いたとき ------------------------------------------- */
+@keyframes arrive-ring {
+  0%   { opacity: 0.9; transform: scale(0.4); }
+  100% { opacity: 0;   transform: scale(2.4); }
+}
+
+@keyframes arrive-badge {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 @utility animate-quake {
   animation: quake-shake 0.4s linear infinite;
 }
@@ -225,6 +245,15 @@ ruby > rt {
 }
 @utility animate-zone-label {
   animation: zone-label-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.42s both;
+}
+@utility animate-road-arrow {
+  animation: road-arrow 1.6s ease-in-out infinite;
+}
+@utility animate-arrive-ring {
+  animation: arrive-ring 1.1s ease-out infinite;
+}
+@utility animate-arrive-badge {
+  animation: arrive-badge 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

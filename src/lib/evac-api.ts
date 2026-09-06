@@ -652,6 +652,54 @@ function demoRoutes(home: LatLng, shelter: Shelter): RouteOption[] {
   return [build(shortPath, "short", 3), build(safePath, "safe", 2)];
 }
 
+/**
+ * いまいる地点から避難場所まで、別の道を引き直す（迂回）。
+ *
+ * 迂回を選んだときに、もう1本の候補ルートへ飛び移ると、
+ * 別ルートの「同じ進捗の地点」は数百m先にあるためワープしてしまう。
+ * 実際に起きるのは「いまいる場所から、別の道で避難場所へ向かう」なので、
+ * 現在地を起点に引き直す。こうすると次の一歩が数十m先になり、
+ * ストリートビューも隣のパノラマを辿って歩ける。
+ */
+export async function fetchDetourFrom(
+  from: LatLng,
+  shelter: Shelter,
+): Promise<RouteOption | null> {
+  if (!hasMapsKey()) return null;
+  try {
+    const [found] = await callRoutesApi(
+      from,
+      shelter.position,
+      detourVia(from, shelter.position),
+    );
+    if (!found?.polyline?.encodedPolyline) return null;
+
+    const maps = await loadMaps();
+    const path = maps.geometry.encoding
+      .decodePath(found.polyline.encodedPolyline)
+      .map((p) => ({ lat: p.lat(), lng: p.lng() }));
+    if (path.length < 2) return null;
+
+    const meters = found.distanceMeters ?? pathLengthM(path);
+    const seconds =
+      Number.parseInt(found.duration ?? "", 10) || Math.round(meters / WALK_SPEED);
+    const turns = found.legs?.reduce((s, l) => s + (l.steps?.length ?? 0), 0) ?? 0;
+
+    return {
+      id: `detour-${Math.round(meters)}-${Math.round(from.lat * 1e5)}`,
+      kind: "safe",
+      label: "迂回[うかい]した道[みち]",
+      notes: routeNotes("safe", meters, turns, 1),
+      distanceM: meters,
+      durationS: seconds,
+      path,
+      eventCount: 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* 判断地点                                                             */
 /* ------------------------------------------------------------------ */
