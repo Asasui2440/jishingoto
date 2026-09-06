@@ -167,6 +167,38 @@ ruby > rt {
   to   { opacity: 1; }
 }
 
+/* --- 想定範囲を「見つけた」瞬間の演出 ------------------------------- */
+/* 画像を解析しているわけではない。歩いていて気づいて足が止まる、という
+   体験に見た目を合わせるための動き。 */
+
+/* 枠が大きい状態から縮んで定まる */
+@keyframes zone-lock {
+  0%   { opacity: 0; transform: scale(1.45); }
+  55%  { opacity: 1; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 気づいた瞬間のフラッシュ */
+@keyframes zone-flash {
+  0%   { opacity: 0; }
+  12%  { opacity: 0.45; }
+  100% { opacity: 0; }
+}
+
+/* 枠の中を1度だけ走るスキャン線 */
+@keyframes zone-scan {
+  0%   { top: 0%; opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* 枠が定まってから出るラベル */
+@keyframes zone-label-in {
+  0%   { opacity: 0; transform: translateY(5px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @utility animate-quake {
   animation: quake-shake 0.4s linear infinite;
 }
@@ -181,6 +213,18 @@ ruby > rt {
 }
 @utility animate-fade {
   animation: fade-in 0.3s ease-out both;
+}
+@utility animate-zone-lock {
+  animation: zone-lock 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-zone-flash {
+  animation: zone-flash 0.5s ease-out both;
+}
+@utility animate-zone-scan {
+  animation: zone-scan 0.7s ease-in-out 0.1s both;
+}
+@utility animate-zone-label {
+  animation: zone-label-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.42s both;
 }
 
 @media (prefers-reduced-motion: reduce) {

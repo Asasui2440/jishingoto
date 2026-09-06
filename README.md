@@ -13,6 +13,13 @@ Figma:
 npm run dev
 ```
 
+フェーズ2で本物の地図・ストリートビューを出すときは、`.env.local` にキーを置く
+（`.env.example` を参照。**無くても動く**：デモ表示のイラストに切り替わる）。
+
+```
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+```
+
 http://localhost:3000 をスマホ幅（〜402px）で開くのが想定。
 PC のブラウザでも中央に寄せて表示される。
 
@@ -29,15 +36,29 @@ PC のブラウザでも中央に寄せて表示される。
 | `/result` | `result-checklist` (8:509) | 4軸の評価とチェックリスト |
 | `/share` | `share-card` (8:592) | シェアカードの生成と共有 |
 
+### フェーズ2（ひなん経路シミュレーション）
+
+| ルート | 内容 |
+|---|---|
+| `/evac` | 住所・現在地・地図タップで自宅付近を指定し、近くの避難場所を確認 |
+| `/evac/routes` | 徒歩の候補経路2本の比較・制限時間の設定 |
+| `/evac/walk` | ストリートビューで経路を歩き、途中で判断（2〜3件） |
+| `/evac/report` | 結果レポート |
+
+入口はトップの「ひなん経路をためす（フェーズ2）」。
+**→ 詳しくは [docs/PHASE2.md](docs/PHASE2.md)**（API・安全表現・保存方針）
+
 ## 構成
 
 ```
 src/
   app/            各画面（すべてクライアントコンポーネント）
+    evac/         フェーズ2（ひなん経路シミュレーション）
   components/
     icons.tsx     Figma から書き出した SVG（自動生成・直接編集しない）
     ui/           Screen / Button / Card / Furigana など共通パーツ
     SettingsSheet.tsx
+    evac/         フェーズ2の地図・ストリートビュー・判断シート
   lib/
     api.ts        ★ バックエンドとの境界（いまはモック）
     content.ts    設問・危険の種類・チェックリストなどの文言データ
@@ -47,6 +68,10 @@ src/
     camera.ts     MediaDevices のラッパー
     audio.ts      Web Audio による地鳴り・効果音
     share-card.ts Canvas でのシェア画像生成
+    gmaps.ts      Maps JavaScript API のローダー（キーが無ければ読み込まない）
+    evac-api.ts   ★ フェーズ2のバックエンド境界（避難場所・経路・判断地点）
+    evac-content.ts フェーズ2の避難場所・判断イベント・文言
+    evac.ts       フェーズ2の状態と集計
 public/figma/     Figma から書き出した画像とアイコン
 ```
 
@@ -146,9 +171,22 @@ export async function generateAftermath(photo: string | null, risks: Risk[]): Pr
 - 多言語は `Settings.locale` に口だけ用意してある（`ja` / `easy` / `en`）。
   文言の辞書はまだ入れていない。
 
+### フェーズ2の安全表現
+実在の場所を題材にするぶん、断定しない書き方を徹底している。詳細は
+[docs/PHASE2.md](docs/PHASE2.md) にまとめたが、要点は3つ。
+
+- 危険はすべて「〜した想定」。画面上部に「想定シナリオ」の帯を常時出す。
+- ストリートビューに重ねるのは半透明の想定範囲と番号だけ。
+  実在の建物が壊れて見える加工はしない。Google の帰属表示も隠さない。
+- 経路に「安全です」と書かない。距離・時間・イベント数・曲がる回数など、
+  経路データから言えることだけを並べる。
+
+ストリートビューの画像は保存もキャッシュもせず、パノラマ ID にも依存しない
+（毎回 緯度経度から取り直す）。
+
 ## まだ入っていないもの
 
 - 3D（Three.js / React Three Fiber / Drei / GLTF）を使った部屋の再現と演出
-- Geolocation / Google Maps を使った避難ルート
 - 多言語の文言辞書（`Settings.locale` の受け口だけある）
 - 実際の AI 解析（`src/lib/api.ts` はすべてモック）
+- ハザードマップの重ね合わせ、夜間・雨天の想定（フェーズ2）

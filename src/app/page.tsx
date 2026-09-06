@@ -76,6 +76,11 @@ export default function OnboardingPage() {
           <Furigana text="体験[たいけん]を始[はじ]める" />
         </Button>
 
+        {/* フェーズ2。部屋のつぎは、外に出てからの判断をためす。 */}
+        <Button variant="outline" size="md" onClick={() => router.push("/evac")}>
+          <Furigana text="ひなん経路[けいろ]をためす（フェーズ2）" />
+        </Button>
+
         <Card className="flex flex-col gap-3 p-[18px]">
           {INFO.map(({ Icon, bg, fg, title, body }) => (
             <div key={title} className="flex items-center gap-3">
