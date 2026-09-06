@@ -11,6 +11,118 @@ const ZONE_LABELS: Record<EventKind, string> = {
   closed: "想定：通行止め",
 };
 
+/* ------------------------------------------------------------------ */
+/* 隣のパノラマを辿って歩く                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ストリートビューのパノラマは道沿いに 10m 前後の間隔で並んでいて、
+ * それぞれが隣への `links` を持っている。これを辿ると、
+ * Google マップ本家と同じ「歩いている」動きになる。
+ *
+ * 緯度経度から `getPanorama()` で取り直すと毎回ワープしてしまううえ、
+ * 1歩ごとにサービス呼び出しが要る。`setPano()` なら滑らかで、呼び出しも減る。
+ */
+
+/** 1歩ぶんの移動を待つ上限 */
+const HOP_TIMEOUT_MS = 900;
+/** 1回の前進で辿る最大の歩数 */
+const MAX_HOPS = 12;
+/** 目的地にこれだけ近づけたら着いたとみなす（m） */
+const ARRIVE_M = 18;
+/** 目的地の方向からこれ以上ずれる道しかなければ、辿るのをやめる（度） */
+const MAX_TURN_DEG = 70;
+/** 辿りきれずこれ以上離れていたら、位置で補正する（m） */
+const SNAP_M = 45;
+
+/** 隣のパノラマへ1歩移動して、移動が終わるまで待つ */
+function hopTo(pano: google.maps.StreetViewPanorama, panoId: string): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let done = false;
+    let listener: google.maps.MapsEventListener | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      listener?.remove();
+      if (timer) clearTimeout(timer);
+      resolve();
+    };
+
+    listener = pano.addListener("position_changed", finish);
+    // イベントが来なくても止まらないように
+    timer = setTimeout(finish, HOP_TIMEOUT_MS);
+    pano.setPano(panoId);
+  });
+}
+
+/**
+ * いまのパノラマから、目的地に向かって隣へ隣へと辿る。
+ *
+ * 辿れる道が無い・目的地から逸れる道しかない場合は途中でやめて、
+ * 最後に位置で補正する。経路から外れたまま歩き続けないようにするため。
+ */
+async function walkTo(
+  pano: google.maps.StreetViewPanorama,
+  maps: typeof google.maps,
+  target: LatLng,
+  facing: number,
+  isCurrent: () => boolean,
+) {
+  const { computeHeading, computeDistanceBetween } = maps.geometry.spherical;
+  const dest = new maps.LatLng(target.lat, target.lng);
+
+  for (let hop = 0; hop < MAX_HOPS; hop++) {
+    if (!isCurrent()) return;
+
+    const here = pano.getPosition();
+    if (!here) break;
+    const left = computeDistanceBetween(here, dest);
+    if (left <= ARRIVE_M) break;
+
+    const links = pano.getLinks();
+    if (!links || links.length === 0) break;
+
+    // 目的地の方角にいちばん近い道を選ぶ
+    const want = computeHeading(here, dest);
+    let best: google.maps.StreetViewLink | null = null;
+    let bestDiff = Number.POSITIVE_INFINITY;
+    for (const link of links) {
+      if (!link?.pano || typeof link.heading !== "number") continue;
+      const diff = Math.abs(((link.heading - want + 540) % 360) - 180);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = link;
+      }
+    }
+    if (!best?.pano || bestDiff > MAX_TURN_DEG) break;
+
+    await hopTo(pano, best.pano);
+
+    // 近づいていなければ堂々巡り。抜ける。
+    const now = pano.getPosition();
+    if (!now || computeDistanceBetween(now, dest) >= left) break;
+  }
+
+  if (!isCurrent()) return;
+
+  // 辿りきれなかったぶんは位置で補正して、経路の上に戻す
+  const here = pano.getPosition();
+  if (!here || computeDistanceBetween(here, dest) > SNAP_M) {
+    const service = new maps.StreetViewService();
+    const { data } = await service.getPanorama({
+      location: target,
+      radius: 120,
+      source: maps.StreetViewSource.OUTDOOR,
+    });
+    if (!isCurrent()) return;
+    if (data.location?.latLng) pano.setPosition(data.location.latLng);
+  }
+
+  pano.setPov({ heading: facing, pitch: 0 });
+}
+
 type Props = {
   position: LatLng;
   /** 進行方向（度）。パノラマの初期の向きに使う */
@@ -66,24 +178,30 @@ export function StreetStage({
   // イベントが変わるたびに key を変えて、枠の出現アニメーションを出し直す
   const zoneKey = zone ? `${kind ?? "-"}:${zoneNumber ?? 0}:${zone.x},${zone.y}` : "";
 
+  // 前進が重ならないようにする世代番号。新しい目的地が来たら古い歩行は打ち切る。
+  const moveIdRef = useRef(0);
+
   useEffect(() => {
     if (!hasMapsKey()) return;
+    const moveId = ++moveIdRef.current;
+    const isCurrent = () => moveIdRef.current === moveId;
     let alive = true;
 
     void loadMaps()
       .then(async (maps) => {
-        // パノラマは緯度経度から探す（ID には依存しない）
-        const service = new maps.StreetViewService();
-        const { data } = await service.getPanorama({
-          location: { lat, lng },
-          radius: 120,
-          source: maps.StreetViewSource.OUTDOOR,
-        });
-        if (!alive || !boxRef.current || !data.location?.latLng) {
-          throw new Error("no-pano");
-        }
+        if (!alive || !boxRef.current) throw new Error("gone");
 
         if (!panoRef.current) {
+          // 最初の1回だけ、緯度経度からパノラマを探す（ID は保存しない）
+          const service = new maps.StreetViewService();
+          const { data } = await service.getPanorama({
+            location: { lat, lng },
+            radius: 120,
+            source: maps.StreetViewSource.OUTDOOR,
+          });
+          if (!alive || !boxRef.current || !data.location?.latLng) {
+            throw new Error("no-pano");
+          }
           panoRef.current = new maps.StreetViewPanorama(boxRef.current, {
             position: data.location.latLng,
             pov: { heading, pitch: 0 },
@@ -100,8 +218,8 @@ export function StreetStage({
             showRoadLabels: false,
           });
         } else {
-          panoRef.current.setPosition(data.location.latLng);
-          panoRef.current.setPov({ heading, pitch: 0 });
+          // 2回目以降は隣のパノラマを辿って歩く（ワープさせない）
+          await walkTo(panoRef.current, maps, { lat, lng }, heading, isCurrent);
         }
         if (alive) setMode("pano");
       })
