@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import roomDesk from "@/../public/figma/img/room-desk.jpg";
 import {
   CheckCircleWhiteIcon,
@@ -15,6 +15,7 @@ import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { TitleBlock } from "@/components/ui/Bits";
 import { useHaptics } from "@/lib/settings";
+import { preparePhoto } from "@/lib/photo";
 import { useSession } from "@/lib/session";
 
 /** 新しく足すぼかしの大きさ（％） */
@@ -24,10 +25,27 @@ export default function PrivacyBlurPage() {
   const router = useRouter();
   const { photoUrl, blurRegions, update } = useSession();
   const vibrate = useHaptics();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const proceed = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (photoUrl) {
+        const masked = URL.createObjectURL(await preparePhoto(photoUrl, blurRegions));
+        update({ photoUrl: masked, blurRegions: [] });
+        if (photoUrl.startsWith("blob:")) URL.revokeObjectURL(photoUrl);
+      }
+      router.push("/analyzing");
+    } catch (e) { setError(e instanceof Error ? e.message : "写真を加工できませんでした。"); }
+    finally { setBusy(false); }
+  };
   const canvasRef = useRef<HTMLDivElement>(null);
 
   /** 写真をタップした位置にぼかしを足す */
   const addBlur = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (busy) return;
     const box = canvasRef.current?.getBoundingClientRect();
     if (!box) return;
     const x = ((e.clientX - box.left) / box.width) * 100;
@@ -40,8 +58,8 @@ export default function PrivacyBlurPage() {
         ...prev.blurRegions,
         {
           id: `u${Date.now()}`,
-          x: Math.max(0, x - NEW_BLUR.w / 2),
-          y: Math.max(0, y - NEW_BLUR.h / 2),
+          x: Math.min(100 - NEW_BLUR.w, Math.max(0, x - NEW_BLUR.w / 2)),
+          y: Math.min(100 - NEW_BLUR.h, Math.max(0, y - NEW_BLUR.h / 2)),
           w: NEW_BLUR.w,
           h: NEW_BLUR.h,
           shape: "rect",
@@ -51,6 +69,7 @@ export default function PrivacyBlurPage() {
   };
 
   const removeBlur = (id: string) => {
+    if (busy) return;
     vibrate();
     update((prev) => ({ ...prev, blurRegions: prev.blurRegions.filter((b) => b.id !== id) }));
   };
@@ -65,18 +84,18 @@ export default function PrivacyBlurPage() {
         />
       </div>
 
-      <div className="h-[340px] px-5">
+      <div className="px-5">
         <div
           ref={canvasRef}
           onClick={addBlur}
-          className="relative h-full w-full cursor-crosshair overflow-hidden rounded-panel bg-ink"
+          className="relative w-full cursor-crosshair overflow-hidden rounded-panel bg-ink"
         >
           {photoUrl ? (
             // 撮影した写真は blob: URL なので next/image の最適化は通さない
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt="撮影した部屋の写真" className="size-full object-cover" />
+            <img src={photoUrl} alt="撮影した部屋の写真" className="block h-auto w-full" />
           ) : (
-            <Image src={roomDesk} alt="部屋のサンプル写真" fill sizes="362px" className="object-cover" />
+            <Image src={roomDesk} alt="部屋のサンプル写真" sizes="362px" className="object-cover" />
           )}
 
           {blurRegions.map((b) => (
@@ -96,7 +115,7 @@ export default function PrivacyBlurPage() {
             >
               <span className="flex flex-col items-center gap-0.5">
                 <EyeOffIcon className="size-4 text-ink" />
-                <span className="font-display text-11 font-bold text-ink">ぼかし済</span>
+                <span className="font-display text-11 font-bold text-ink">かくす場所</span>
               </span>
             </button>
           ))}
@@ -112,7 +131,7 @@ export default function PrivacyBlurPage() {
 
       <div className="px-6 text-center">
         <p className="font-display text-15 font-bold text-primary-ink">
-          <Furigana text="「ぼかし」がちゃんと入[はい]っているかたしかめてね！" />
+          <Furigana text="顔[かお]・名前[なまえ]・住所[じゅうしょ]をタップしてかくしてね。" />
         </p>
         <p className="mt-2 text-xs text-ink-muted">
           <Furigana text="かくしたい場所[ばしょ]をタップすると、じぶんで新[あたら]しくぼかすこともできるよ。" />
@@ -120,11 +139,13 @@ export default function PrivacyBlurPage() {
       </div>
 
       <div className="flex flex-col gap-3 px-6 pb-5">
-        <Button onClick={() => router.push("/analyzing")}>
+        <p className="text-xs text-ink-muted">自動検出は行いません。選んだ範囲を塗りつぶした写真を、解析と画像生成のためOpenAIに送信します。AIの利用にはAPI料金がかかります。</p>
+        {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+        <Button disabled={busy} onClick={() => void proceed()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" />
-          OK、このまますすむ
+          {busy ? "写真を準備中..." : photoUrl ? "同意して写真を送信する" : "サンプルで体験する"}
         </Button>
-        <Button variant="outline" onClick={() => router.push("/camera")}>
+        <Button disabled={busy} variant="outline" onClick={() => router.push("/camera")}>
           <RefreshCwIcon className="size-5 text-primary-ink" />
           <Furigana text="もういちどさつえいする" />
         </Button>

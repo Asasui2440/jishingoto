@@ -39,7 +39,7 @@ src/
     ui/           Screen / Button / Card / Furigana など共通パーツ
     SettingsSheet.tsx
   lib/
-    api.ts        ★ バックエンドとの境界（いまはモック）
+    api.ts        バックエンドとの境界（同一オリジンのAPI）
     content.ts    設問・危険の種類・チェックリストなどの文言データ
     session.tsx   体験1回ぶんの状態と集計
     settings.tsx  ふりがな・文字サイズ・音の設定
@@ -50,26 +50,20 @@ src/
 public/figma/     Figma から書き出した画像とアイコン
 ```
 
-## バックエンドをつなぐとき
+## OpenAIバックエンド
 
-**→ 詳しい仕様は [docs/BACKEND_API.md](docs/BACKEND_API.md)**
-（エンドポイントごとの入出力、JSON の形、CORS、つなぎこみ手順）
+部屋の画像認識と、確認した危険に基づく地震後の想定画像生成を実装済み。
+Next.js内のAPIなので `npm run dev` でフロントとバックエンドが起動する。
 
-差し替えるのは **`src/lib/api.ts` の中身だけ** でいいようにしてある。
-シグネチャはそのままに、`fetch` に置き換える。
+有料APIは初期状態で無効。利用するときだけ `OPENAI_ENABLED=true` を明示的に設定する。
+`.env.local` の `OPENAI_API_KEY=` にキーを設定して起動する。キーはサーバーだけで使用し、Gitには保存しない。
+画像認識は `OPENAI_VISION_MODEL`（既定 `gpt-5.4`）、画像生成は `OPENAI_IMAGE_MODEL`（既定 `gpt-image-2`）で変更できる。
 
-```ts
-export async function analyzeRoom(photo?: Blob): Promise<Risk[]>
-export async function detectBlurRegions(photo?: Blob): Promise<BlurRegion[]>
-export async function fetchQuestions(risks: Risk[]): Promise<Question[]>
-export async function generateAftermath(photo: string | null, risks: Risk[]): Promise<Aftermath>
-```
+撮影 → 端末内で個人情報を隠す → OpenAIへの送信に同意 → 画像解析 → 危険を確認 → クイズ → 有料の生成ボタン → 想定画像生成、の流れ。
+サンプルモードはAPIを呼ばない。AIの出力は学習用の想定であり、実際の被害予測・耐震診断ではない。
 
-- `Risk` / `Question` / `BlurRegion` の型は `src/lib/content.ts` と `src/lib/api.ts` にある。
-- 体験1回ぶんの状態は `sessionStorage`（`jishingoto.session.v1`）に入る。
-  撮影した写真だけは `blob:` URL なので保存対象から外している。
-- 設問データはいま `content.ts` にベタ書きだが、`fetchQuestions` が
-  同じ形を返せばそのまま差し替えられる。
+詳細な入出力、エラー、公開前の制約は [docs/BACKEND_API.md](docs/BACKEND_API.md)。
+`npm test` でバックエンドの自動テストを実行できる。
 
 ## 実装メモ
 
@@ -133,9 +127,9 @@ export async function generateAftermath(photo: string | null, risks: Risk[]): Pr
 ### 「もし地震がきたら」の予想図
 リザルトの先頭に、部屋がどうなるかの予想図を出す（`src/components/AftermathCard.tsx`）。
 
-画像は **バックエンドで AI に生成してもらう想定**で、`api.ts` の `generateAftermath()` が
+画像は **バックエンドのOpenAI APIで生成**し、`api.ts` の `generateAftermath()` が
 `{ imageUrl, events }` を返す。`imageUrl` が入ればそれを表示し、
-いまは `null` なので元の写真に「何がどうなったか」のマーカーを重ねて代用している。
+生成失敗時はエラーと元の写真を表示して再試行できる。サンプルモードは生成しない。
 
 ### ふりがな・多言語・年齢層
 - `content.ts` の文言は `漢字[かんじ]` 記法で書く。`<Furigana>` が `<ruby>` に変換し、
@@ -151,4 +145,5 @@ export async function generateAftermath(photo: string | null, risks: Risk[]): Pr
 - 3D（Three.js / React Three Fiber / Drei / GLTF）を使った部屋の再現と演出
 - Geolocation / Google Maps を使った避難ルート
 - 多言語の文言辞書（`Settings.locale` の受け口だけある）
-- 実際の AI 解析（`src/lib/api.ts` はすべてモック）
+- 顔・個人情報の自動検出（現在は送信前に手動で範囲を選択）
+- 公開運用向けのユーザー認証と利用枠管理

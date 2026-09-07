@@ -1,88 +1,59 @@
-/**
- * バックエンドとの境界。
- *
- * いまは全部モックだが、シグネチャは実装が入れ替わっても変わらない想定。
- * 実装が用意できたら、この中身を fetch に置き換えるだけで済むようにしている。
- */
+/** Same-origin backend boundary. API keys are never sent to the browser. */
 import { DETECTED_RISKS, QUESTIONS, type Question, type Risk } from "./content";
+export type BlurRegion = { id: string; x: number; y: number; w: number; h: number; shape: "rect" | "circle" };
+export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string }[] };
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Privacy regions are selected locally, before any photo is uploaded. */
+export async function detectBlurRegions(): Promise<BlurRegion[]> { return []; }
 
-/** 撮影した写真から、ぼかすべき領域（顔・書類など）を返す */
-export type BlurRegion = {
-  id: string;
-  /** ％指定。写真の左上が (0, 0) */
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  shape: "rect" | "circle";
-};
-
-export async function detectBlurRegions(_photo?: Blob): Promise<BlurRegion[]> {
-  await wait(600);
-  return [
-    { id: "b1", x: 18, y: 14, w: 20, h: 20, shape: "circle" },
-    { id: "b2", x: 52, y: 62, w: 26, h: 15, shape: "rect" },
-  ];
+async function post<T>(path: string, body: FormData, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/${path}`, { method: "POST", body, signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(240_000)]) : AbortSignal.timeout(240_000) });
+  } catch {
+    throw new Error("通信が中断されました。接続を確認して再試行してください。");
+  }
+  let data;
+  try { data = await response.json(); }
+  catch { throw new Error("サーバーの応答を読み取れませんでした。再試行してください。"); }
+  if (!response.ok) throw new Error(data.error?.message || "AIの処理に失敗しました。");
+  return data;
 }
 
-/** 部屋の写真を解析して、危険ポイントを返す */
-export async function analyzeRoom(_photo?: Blob): Promise<Risk[]> {
-  await wait(400);
-  return DETECTED_RISKS.map((r) => ({ ...r }));
+export async function analyzeRoom(photo?: Blob, signal?: AbortSignal): Promise<Risk[]> {
+  if (!photo) return DETECTED_RISKS.map((r) => ({ ...r }));
+  const body = new FormData();
+  body.set("photo", photo, "room.jpg");
+  return post<Risk[]>("analyze", body, signal);
 }
 
-/**
- * 出題する設問を返す。
- *
- * 「あぶない」と確認した危険にひもづく設問を先に出し、
- * そのあとどの部屋でも共通の設問を出す。
- * こうすると、自分の部屋で見つけた場所がそのまま問題になる。
- */
+/** Keep the authored questions and scoring stable; select by confirmed risk kind. */
 export async function fetchQuestions(risks: Risk[]): Promise<Question[]> {
-  await wait(200);
   const kinds = new Set(risks.filter((r) => r.confirmed).map((r) => r.kind));
-
   const forRisks = QUESTIONS.filter((q) => q.riskKind && kinds.has(q.riskKind));
   const common = QUESTIONS.filter((q) => !q.riskKind);
-
-  // 危険をひとつも確認していないときは、危険ひもづきの設問も一通り出す
   const leading = forRisks.length > 0 ? forRisks : QUESTIONS.filter((q) => q.riskKind);
   return [...leading, ...common];
 }
 
-/**
- * 「もし地震がきたら、この部屋はどうなるか」の画像を作る。
- *
- * バックエンドで、撮影した部屋の写真と確認済みの危険をもとに
- * AI に生成してもらう想定。返すのは画像の URL。
- *
- * いまはモックなので、元の写真をそのまま返して
- * 画面側で「何が倒れたか」のマーカーを重ねている。
- */
-export type Aftermath = {
-  /** 生成された画像。null ならモック（画面側は元の写真を使う） */
-  imageUrl: string | null;
-  /** 何が起きたかの短い説明。危険ごとに1つ */
-  events: { riskId: string; text: string }[];
-};
-
-const AFTERMATH_TEXT: Record<Risk["kind"], string> = {
-  fall: "たおれて、逃[に]げ道[みち]をふさいだ",
-  break: "われて、床[ゆか]にガラスが散[ち]らばった",
-  block: "まわりのモノがくずれて、通[とお]れなくなった",
-};
-
-export async function generateAftermath(
-  _photo: string | null,
-  risks: Risk[],
-): Promise<Aftermath> {
-  await wait(1400);
-  return {
-    imageUrl: null,
-    events: risks
-      .filter((r) => r.confirmed)
-      .map((r) => ({ riskId: r.id, text: `${r.name}が${AFTERMATH_TEXT[r.kind]}` })),
-  };
+// Keep only the most recent result in memory, including in-flight work. React
+// remounts/result-page revisits must not silently generate another paid image.
+let latest: { key: string; promise: Promise<Aftermath> } | undefined;
+export async function generateAftermath(photo: string | null, risks: Risk[]): Promise<Aftermath> {
+  const confirmed = risks.filter((r) => r.confirmed);
+  if (!photo || !confirmed.length) return { imageUrl: null, events: [] };
+  const key = JSON.stringify([photo, confirmed]);
+  if (latest?.key === key) return latest.promise;
+  const promise = (async () => {
+    const response = await fetch(photo);
+    if (!response.ok) throw new Error("写真が見つかりません。もう一度撮影してください。");
+    const body = new FormData();
+    body.set("photo", await response.blob(), "room.jpg");
+    body.set("risks", JSON.stringify(confirmed));
+    return post<Aftermath>("aftermath", body);
+  })();
+  latest = { key, promise };
+  try { return await promise; }
+  catch (error) { if (latest?.promise === promise) latest = undefined; throw error; }
 }

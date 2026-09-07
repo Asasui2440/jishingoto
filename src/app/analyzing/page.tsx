@@ -26,6 +26,8 @@ export default function AnalysisLoadingPage() {
   const router = useRouter();
   const { photoUrl, startedAt, update } = useSession();
   const [step, setStep] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [cancelled, setCancelled] = useState(false);
 
   // 体験を始めた時刻から選ぶので、毎回ちがう豆知識が出て、
@@ -36,20 +38,30 @@ export default function AnalysisLoadingPage() {
     if (cancelled) return;
     if (step >= ANALYSIS_STEPS.length) {
       let alive = true;
-      void analyzeRoom().then((risks) => {
+      const controller = new AbortController();
+      void (async () => {
+        const photo = photoUrl ? await fetch(photoUrl, { signal: controller.signal }).then((r) => {
+          if (!r.ok) throw new Error("写真が見つかりません。もう一度撮影してください。");
+          return r.blob();
+        }) : undefined;
+        if (!alive) return;
+        const risks = await analyzeRoom(photo, controller.signal);
         if (!alive) return;
         update({ risks });
         router.replace("/risks");
+      })().catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : "解析に失敗しました。");
       });
       return () => {
         alive = false;
+        controller.abort();
       };
     }
     const id = setTimeout(() => setStep((s) => s + 1), STEP_MS);
     return () => clearTimeout(id);
     // update / router は安定なので、進行に必要な値だけを見る
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, cancelled]);
+  }, [step, cancelled, attempt, photoUrl]);
 
   const progress = Math.min(1, (step + 0.35) / ANALYSIS_STEPS.length);
 
@@ -137,6 +149,12 @@ export default function AnalysisLoadingPage() {
       </div>
 
       <div className="px-6 pb-5">
+        {!photoUrl ? <p className="mb-3 text-sm text-ink-muted">サンプルデータで体験中です。</p> : null}
+        {error ? <div role="alert" className="mb-3 flex flex-col gap-3">
+          <p className="text-sm text-danger">{error}</p>
+          <Button onClick={() => { setError(null); setAttempt((n) => n + 1); }}>再試行する</Button>
+          <Button variant="outline" onClick={() => router.push("/camera")}>写真を選び直す</Button>
+        </div> : null}
         <Button
           variant="quiet"
           onClick={() => {

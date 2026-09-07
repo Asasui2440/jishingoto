@@ -8,13 +8,7 @@ import { Furigana } from "@/components/ui/Furigana";
 import { generateAftermath, type Aftermath } from "@/lib/api";
 import { RISK_KINDS, type Risk } from "@/lib/content";
 
-/**
- * 「もし地震がきたら、この部屋はこうなるかも」の予想図。
- *
- * 画像はバックエンドで AI に生成してもらう想定（`generateAftermath`）。
- * まだ実装がないので、いまは元の写真に「何がどうなったか」を重ねて出している。
- * 実装が入って `imageUrl` が返るようになれば、そちらに差し替わる。
- */
+/** AI-generated hypothetical room image, with explicit retry on failure. */
 export function AftermathCard({
   photoUrl,
   risks,
@@ -22,17 +16,26 @@ export function AftermathCard({
   photoUrl: string | null;
   risks: Risk[];
 }) {
+  const [requested, setRequested] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Aftermath | null>(null);
 
   useEffect(() => {
+    if (!requested) return;
     let alive = true;
     void generateAftermath(photoUrl, risks).then((r) => {
       if (alive) setResult(r);
+    }).catch((e) => {
+      if (alive) {
+        setError(e instanceof Error ? e.message : "画像生成に失敗しました。");
+        setResult({ imageUrl: null, events: [] });
+      }
     });
     return () => {
       alive = false;
     };
-  }, [photoUrl, risks]);
+  }, [photoUrl, risks, attempt, requested]);
 
   const confirmed = risks.filter((r) => r.confirmed);
 
@@ -46,13 +49,19 @@ export function AftermathCard({
       </div>
 
       <div className="relative aspect-[4/3] w-full bg-ink">
-        {result === null ? (
+        {!requested ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-canvas p-5 text-center">
+            <p className="text-sm text-ink-muted">画像生成にはOpenAI APIの利用料金がかかります。</p>
+            <button type="button" disabled={!photoUrl || !confirmed.length} className="rounded-panel bg-primary px-4 py-3 font-bold text-ink disabled:opacity-45" onClick={() => setRequested(true)}>有料の画像生成を開始する</button>
+            {!confirmed.length ? <p className="text-xs text-ink-muted">危険ポイントを確認すると生成できます。</p> : null}
+          </div>
+        ) : result === null ? (
           // 生成待ち
           <div className="absolute inset-0 grid place-items-center bg-canvas">
             <div className="flex flex-col items-center gap-2">
               <span className="size-8 animate-spin rounded-full border-[3px] border-border border-t-primary-mid" />
               <p className="text-11 text-ink-soft">
-                <Furigana text="AIが予想図[よそうず]をつくっています..." />
+                <Furigana text="AIが想定画像[そうていがぞう]をつくっています（数分[すうふん]かかることがあります）..." />
               </p>
             </div>
           </div>
@@ -92,6 +101,12 @@ export function AftermathCard({
         )}
       </div>
 
+      <p className="px-4 py-3 text-xs text-ink-muted">AIによる想定イメージです。実際の被害や建物の安全性を予測・判定するものではありません。</p>
+      {error ? <div role="alert" className="px-4 pb-3 text-sm text-danger">
+        <p>{error} 元の写真を表示しています。</p>
+        <button type="button" className="mt-2 underline" onClick={() => { setError(null); setResult(null); setAttempt((n) => n + 1); }}>画像生成を再試行する（API料金がかかります）</button>
+      </div> : null}
+      {!photoUrl ? <p className="px-4 pb-3 text-sm text-ink-muted">サンプル表示です。自分の部屋の写真を使うとAI画像を生成できます。</p> : null}
       {result && result.events.length > 0 ? (
         <ul className="flex flex-col gap-1.5 px-4 py-3">
           {result.events.map((e) => (
@@ -107,7 +122,7 @@ export function AftermathCard({
         </ul>
       ) : null}
 
-      {result && result.events.length === 0 ? (
+      {result && !error && photoUrl && confirmed.length === 0 ? (
         <p className="px-4 py-3 text-13 text-ink-muted">
           <Furigana text="あぶない場所[ばしょ]をひとつも確認[かくにん]しなかったので、予想図[よそうず]は出[だ]せなかったよ。" />
         </p>

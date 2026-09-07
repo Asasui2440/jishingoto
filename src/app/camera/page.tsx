@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { useCamera } from "@/lib/camera";
-import { detectBlurRegions } from "@/lib/api";
+import { preparePhoto } from "@/lib/photo";
 import { useHaptics } from "@/lib/settings";
 import { useSession } from "@/lib/session";
 
@@ -31,6 +31,7 @@ export default function CameraGuidePage() {
   const { videoRef, state, start, capture } = useCamera();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void start();
@@ -40,11 +41,17 @@ export default function CameraGuidePage() {
   const usingFallback = state === "denied" || state === "unavailable";
 
   const proceed = async (photoUrl: string | null) => {
+    if (busy) return;
     setBusy(true);
+    setError(null);
     vibrate([10, 40, 10]);
-    const blurRegions = await detectBlurRegions();
-    update({ photoUrl, blurRegions, startedAt: Date.now() });
-    router.push("/privacy");
+    try {
+      const normalized = photoUrl ? URL.createObjectURL(await preparePhoto(photoUrl)) : null;
+      if (photoUrl?.startsWith("blob:")) URL.revokeObjectURL(photoUrl);
+      update({ photoUrl: normalized, blurRegions: [], risks: [], answers: [], checked: [], finishedAt: null, startedAt: Date.now() });
+      router.push("/privacy");
+    } catch (e) { setError(e instanceof Error ? e.message : "写真を開けませんでした。"); }
+    finally { setBusy(false); }
   };
 
   const onShoot = async () => {
@@ -136,6 +143,7 @@ export default function CameraGuidePage() {
       </div>
 
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
+        {error ? <p role="alert" className="text-sm text-white">{error}</p> : null}
         {usingFallback ? (
           <>
             <Button onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -152,6 +160,7 @@ export default function CameraGuidePage() {
             />
             <button
               type="button"
+              disabled={busy}
               onClick={() => void proceed(null)}
               className="font-display text-sm font-bold text-white underline underline-offset-2"
             >
