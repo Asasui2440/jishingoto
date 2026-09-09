@@ -30,6 +30,7 @@ function QuestionView({
   total,
   shake,
   onAnswer,
+  photoUrl,
 }: {
   question: Question;
   index: number;
@@ -37,8 +38,9 @@ function QuestionView({
   /** 地震の演出を出すか。最初の1問だけ true */
   shake: boolean;
   onAnswer: (choice: Choice, timedOut: boolean) => void;
+  photoUrl: string | null;
 }) {
-  const { sound } = useSettings();
+  const { sound, audience } = useSettings();
   const vibrate = useHaptics();
   const [remaining, setRemaining] = useState(question.seconds > 0 ? question.seconds : null);
   const [shaking, setShaking] = useState(shake);
@@ -87,6 +89,9 @@ function QuestionView({
         </div>
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
+          <p className="mb-2 text-13 font-bold text-primary-ink" aria-live="polite">
+            <Furigana text={question.phase === "after" ? "② ゆれがおさまったあと → まわりを確認[かくにん]" : "① 地震[じしん]が発生[はっせい] → 身[み]を守[まも]る"} adult={question.phase === "after" ? "② 揺れが収まった後：周囲の確認・避難の判断" : "① 地震発生：揺れている間の初動"} />
+          </p>
           <Meter value={(index + 1) / total} height={6} track="var(--color-border)" />
           <p className="mt-1 text-right text-11 text-ink-soft">
             {index + 1} / {total}
@@ -102,19 +107,25 @@ function QuestionView({
               <Furigana text={kind.label} />
             </Tag>
             <span className="font-display text-13 font-bold text-ink-muted">
-              きみの部屋の「<Furigana text={question.place} />」の話
+              {audience === "adult" ? "あなたの部屋で検出した「" : "きみの部屋の「"}
+              <Furigana text={question.place} adult={question.adultPlace} />」{audience === "adult" ? "について" : "の話"}
             </span>
           </div>
         ) : null}
 
         <Card className="p-4">
           <p className="font-display text-lg font-bold text-ink">
-            <Furigana text={question.situation} />
+            <Furigana text={question.situation} adult={question.adultSituation} />
           </p>
         </Card>
 
         <div className="relative h-[190px] w-full overflow-hidden rounded-panel bg-ink">
-          <Image src={roomQuiz} alt="" fill sizes="354px" className="object-cover" priority />
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoUrl} alt="あなたの部屋" className="size-full object-cover" />
+          ) : (
+            <Image src={roomQuiz} alt="部屋のサンプル" fill sizes="354px" className="object-cover" priority />
+          )}
 
           {question.highlight ? (
             <>
@@ -137,7 +148,7 @@ function QuestionView({
                   transform: "translate(-50%, -50%)",
                 }}
               >
-                {question.highlight.label}
+                <Furigana text={question.highlight.label} />
               </Tag>
             </>
           ) : null}
@@ -191,7 +202,7 @@ function QuestionView({
 
 export default function QuizPage() {
   const router = useRouter();
-  const { answer, update } = useSession();
+  const { answer, photoUrl, update } = useSession();
   const { sound } = useSettings();
   const vibrate = useHaptics();
 
@@ -201,18 +212,21 @@ export default function QuizPage() {
   // 部屋で確認した危険にひもづく設問を取りに行く
   useEffect(() => {
     const risks = getSession().risks;
-    if (risks.length === 0) {
+    if (!getSession().analysisSource) {
       router.replace("/analyzing");
       return;
     }
     let alive = true;
     void fetchQuestions(risks).then((qs) => {
-      if (alive) setQuestions(qs);
+      if (alive) {
+        setQuestions(qs);
+        update({ questions: qs });
+      }
     });
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [router, update]);
 
   const total = questions?.length ?? 0;
 
@@ -262,6 +276,7 @@ export default function QuizPage() {
       total={total}
       shake={index === 0}
       onAnswer={onAnswer}
+      photoUrl={photoUrl}
     />
   );
 }

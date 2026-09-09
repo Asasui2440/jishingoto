@@ -17,6 +17,21 @@ export const DISCLAIMER =
 /** 危険の種類。色とラベルはこれで決まる。 */
 export type RiskKind = "fall" | "break" | "block";
 
+/** 画像解析で見つけた物体。設問を部屋に合わせて選ぶために使う。 */
+export type RoomObjectType =
+  | "bookshelf"
+  | "cupboard"
+  | "elevated_objects"
+  | "tall_furniture"
+  | "tv"
+  | "window"
+  | "doorway"
+  | "hanging_object"
+  | "desk"
+  | "bed"
+  | "loose_objects"
+  | "other";
+
 export const RISK_KINDS: Record<
   RiskKind,
   { label: string; accent: string; soft: string; text: string }
@@ -45,7 +60,13 @@ export type Risk = {
   id: string;
   /** 家具などの名前 */
   name: string;
+  /** 漢字中心の大人向け名称。 */
+  adultName?: string;
+  /** 元画像に対する対象領域（％）。未取得の場合は中心付近を目安表示。 */
+  bounds?: { x: number; y: number; w: number; h: number };
   kind: RiskKind;
+  /** 写っている物体の種類。設問パターンとのマッチングに使う */
+  objectType?: RoomObjectType;
   /** AI の自信度 0–1。ユーザーが自分で足したものは undefined */
   confidence?: number;
   /** 写真上の位置（％）。マーカーの表示に使う */
@@ -59,9 +80,9 @@ export type Risk = {
 
 /** AI 解析の結果として返ってくる想定のダミーデータ */
 export const DETECTED_RISKS: Risk[] = [
-  { id: "bookshelf", name: "大きな本棚", kind: "fall", confidence: 0.9, x: 16, y: 30, confirmed: false },
-  { id: "window", name: "まどガラス", kind: "break", confidence: 0.7, x: 50, y: 20, confirmed: false },
-  { id: "doorway", name: "ドアのまわり", kind: "block", confidence: 0.55, x: 80, y: 40, confirmed: false },
+  { id: "bookshelf", name: "大きな本棚", kind: "fall", objectType: "bookshelf", confidence: 0.9, x: 16, y: 30, bounds: { x: 1, y: 9, w: 23, h: 87 }, confirmed: false },
+  { id: "window", name: "まどガラス", kind: "break", objectType: "window", confidence: 0.7, x: 50, y: 20, bounds: { x: 32, y: 20, w: 27, h: 42 }, confirmed: false },
+  { id: "doorway", name: "ドアのまわり", kind: "block", objectType: "doorway", confidence: 0.55, x: 80, y: 40, bounds: { x: 65, y: 2, w: 34, h: 96 }, confirmed: false },
 ];
 
 export const CONFIDENCE_LABEL = (c: number) => (c >= 0.8 ? "高" : c >= 0.5 ? "中" : "低");
@@ -111,7 +132,10 @@ export type Choice = {
 };
 
 export type Question = {
+  phase?: "during" | "after";
   id: string;
+  /** この写真で検出した危険の id。動的に作った設問で使う */
+  sourceRiskId?: string;
   /** 出題の軸。リザルトの集計に使う */
   axis: Axis;
   /**
@@ -122,9 +146,12 @@ export type Question = {
   riskKind?: RiskKind;
   /** 出題前に「どの場所の話か」を示すラベル。riskKind とセットで使う */
   place?: string;
+  adultPlace?: string;
   /** 「しゅんかん判断」など、画面上部に出す小見出し */
   category: string;
   situation: string;
+  /** 固有の検出物名を含む、大人向けの完全文。 */
+  adultSituation?: string;
   /** 写真に重ねるハイライト（％指定）とラベル */
   highlight?: { x: number; y: number; w: number; h: number; label: string };
   /** 制限時間（秒）。0 なら時間制限なし */

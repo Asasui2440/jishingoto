@@ -84,9 +84,7 @@ export function EventSheet({
               type="button"
               onClick={onDisableTimer}
               className="rounded-chip bg-canvas px-2 py-1 font-display text-11 font-bold text-primary-ink"
-            >
-              なくす
-            </button>
+            ><Furigana text="なくす" /></button>
           </span>
         ) : (
           <span className="text-11 text-ink-soft">
@@ -118,7 +116,7 @@ export function EventSheet({
         onClick={() => setShowSketch((v) => !v)}
         className="self-start font-display text-11 font-bold text-primary-ink underline underline-offset-2"
       >
-        {showSketch ? "想定図をとじる" : "想定図（イラスト）を見る"}
+        <Furigana text={showSketch ? "想定図をとじる" : "想定図（イラスト）を見る"} />
       </button>
       {showSketch ? (
         <div className="overflow-hidden rounded-tile">

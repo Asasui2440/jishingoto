@@ -9,7 +9,11 @@ export type Locale = "ja" | "easy" | "en";
 /** 年齢層に応じた UI スケール */
 export type UiScale = "normal" | "large" | "xlarge";
 
+/** 表示する文章の対象。adult は漢字中心の標準的な防災表現。 */
+export type Audience = "child" | "adult";
+
 export type Settings = {
+  audience: Audience;
   locale: Locale;
   /** 漢字にふりがなを振るか（子ども・日本語学習者向け） */
   furigana: boolean;
@@ -21,6 +25,7 @@ export type Settings = {
 };
 
 const DEFAULT_SETTINGS: Settings = {
+  audience: "child",
   locale: "ja",
   furigana: false,
   uiScale: "normal",
@@ -45,8 +50,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.dataset.uiScale = settings.uiScale;
     root.dataset.furigana = settings.furigana ? "on" : "off";
+    root.dataset.audience = settings.audience;
     root.lang = settings.locale === "en" ? "en" : "ja";
-  }, [settings.uiScale, settings.furigana, settings.locale]);
+  }, [settings.audience, settings.uiScale, settings.furigana, settings.locale]);
 
   return <>{children}</>;
 }

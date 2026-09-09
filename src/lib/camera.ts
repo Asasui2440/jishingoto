@@ -4,6 +4,53 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type CameraState = "idle" | "starting" | "live" | "denied" | "unavailable";
 
+const MAX_PHOTO_EDGE = 1280;
+
+/** API に送りやすい大きさへ縮小し、画面遷移後も使える data URL にする。 */
+export async function preparePhoto(file: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_PHOTO_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+type MaskRegion = { x: number; y: number; w: number; h: number; shape: "rect" | "circle" };
+
+/** 指定領域を画像データ自体から塗りつぶし、API へ元の情報を送らないようにする。 */
+export async function applyPrivacyMasks(dataUrl: string, regions: MaskRegion[]): Promise<string> {
+  if (regions.length === 0) return dataUrl;
+  const image = new Image();
+  image.src = dataUrl;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext("2d");
+  if (!context) return dataUrl;
+  context.drawImage(image, 0, 0);
+  for (const region of regions) {
+    const x = region.x / 100 * canvas.width;
+    const y = region.y / 100 * canvas.height;
+    const width = region.w / 100 * canvas.width;
+    const height = region.h / 100 * canvas.height;
+    context.save();
+    context.fillStyle = "#d7d4cc";
+    if (region.shape === "circle") {
+      context.beginPath();
+      context.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      context.fill();
+    } else {
+      context.fillRect(x, y, width, height);
+    }
+    context.restore();
+  }
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
 /**
  * 背面カメラのプレビューを <video> に流す。
  *
@@ -57,7 +104,7 @@ export function useCamera() {
       canvas.toBlob(resolve, "image/jpeg", 0.85),
     );
     if (!blob) return null;
-    return { blob, url: URL.createObjectURL(blob) };
+    return { blob, url: canvas.toDataURL("image/jpeg", 0.82) };
   }, [state]);
 
   useEffect(() => stop, [stop]);

@@ -1,6 +1,7 @@
 "use client";
 
-import { plain } from "@/components/ui/Furigana";
+import { adultText, plain } from "./adult-copy";
+import type { Audience } from "./settings";
 import { AXIS_LABEL, safetyBand, type Axis } from "./content";
 
 export type ShareRow = { label: string; score: number };
@@ -41,10 +42,11 @@ function roundRect(
  */
 export function drawShareCard(
   canvas: HTMLCanvasElement,
-  { rows, date }: { rows: ShareRow[]; date: Date },
+  { rows, date, audience = "child" }: { rows: ShareRow[]; date: Date; audience?: Audience },
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const copy = audience === "adult" ? adultText : plain;
 
   canvas.width = W;
   canvas.height = H;
@@ -76,7 +78,7 @@ export function drawShareCard(
   ctx.font = font(30, "400");
   ctx.textAlign = "right";
   ctx.fillText(
-    `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} 挑戦！`,
+    `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${copy("挑戦！")}`,
     W - 104,
     163,
   );
@@ -85,8 +87,8 @@ export function drawShareCard(
   ctx.textAlign = "center";
   ctx.fillStyle = COLORS.primaryInk;
   ctx.font = font(60, "900");
-  ctx.fillText("じぶんの部屋の安全チェック、", W / 2, 300);
-  ctx.fillText("したよ！", W / 2, 380);
+  ctx.fillText(copy("じぶんの部屋の安全チェック、"), W / 2, 300);
+  ctx.fillText(copy("したよ！"), W / 2, 380);
 
   ctx.fillStyle = COLORS.inkMuted;
   ctx.font = font(32, "400");
@@ -106,10 +108,10 @@ export function drawShareCard(
     ctx.textAlign = "left";
     ctx.fillStyle = COLORS.inkMuted;
     ctx.font = font(38, "700");
-    ctx.fillText(plain(row.label), 152, y);
+    ctx.fillText(copy(row.label), 152, y);
 
     // 評価バッジ
-    const label = plain(band.label);
+    const label = copy(band.label);
     ctx.font = font(30, "700");
     const badgeW = ctx.measureText(label).width + 56;
     // safetyBand は CSS 変数を返すので、描画用に実際の色へ置き換える
@@ -128,8 +130,8 @@ export function drawShareCard(
   ctx.textAlign = "center";
   ctx.fillStyle = COLORS.primaryInk;
   ctx.font = font(34, "700");
-  ctx.fillText("みんなもスマホで「ジシンゴト」を", W / 2, H - 230);
-  ctx.fillText("検索してみてね！", W / 2, H - 180);
+  ctx.fillText(copy("みんなもスマホで「ジシンゴト」を"), W / 2, H - 230);
+  ctx.fillText(copy("検索してみてね！"), W / 2, H - 180);
 
   ctx.fillStyle = COLORS.primary;
   roundRect(ctx, W / 2 - 120, H - 140, 240, 12, 6);

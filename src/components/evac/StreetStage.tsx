@@ -1,5 +1,7 @@
 "use client";
 
+import { Furigana } from "@/components/ui/Furigana";
+
 import { useEffect, useRef, useState } from "react";
 import { HazardSketch } from "./HazardSketch";
 import type { EventKind, LatLng } from "@/lib/evac-content";
@@ -350,7 +352,7 @@ export function StreetStage({
                 {offscreen ? (
                   // 進む道が視野の外。振り向く向きを示す。
                   <span className="rounded-chip bg-primary px-2.5 py-1.5 font-display text-13 font-black text-ink shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
-                    {rel > 0 ? "→ こっち" : "こっち ←"}
+                    <Furigana text={rel > 0 ? "→ こっち" : "こっち ←"} />
                   </span>
                 ) : (
                   // 路面に描かれたように見せる。面を寝かせて、奥ほど小さく薄くする。
@@ -387,11 +389,11 @@ export function StreetStage({
                   </span>
                 )}
                 <span className="rounded-chip bg-black/65 px-2 py-1 font-display text-11 font-black text-white">
-                  {walking ? "歩いています" : offscreen ? "むきをかえる" : "タップで進む"}
+                  <Furigana text={walking ? "歩いています" : offscreen ? "むきをかえる" : "タップで進む"} />
                 </span>
                 {turn !== null && !offscreen ? (
                   <span className="rounded-chip bg-primary px-2 py-1 font-display text-11 font-black text-ink">
-                    {turn > 0 ? "この先 みぎにまがる →" : "← この先 ひだりにまがる"}
+                    <Furigana text={turn > 0 ? "この先 みぎにまがる →" : "← この先 ひだりにまがる"} />
                   </span>
                 ) : null}
               </Tag>

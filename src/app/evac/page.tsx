@@ -170,7 +170,7 @@ export default function EvacStartPage() {
               onClick={() => void searchAddress()}
               className="h-12 shrink-0 rounded-field bg-primary px-4 font-display text-15 font-bold text-ink"
             >
-              {addressState === "loading" ? "検索中" : "さがす"}
+              <Furigana text={addressState === "loading" ? "検索中" : "さがす"} />
             </button>
           </div>
           {addressState === "notfound" ? (
@@ -232,7 +232,7 @@ export default function EvacStartPage() {
             <Furigana text={SHELTER_CAUTION} />
           </p>
           {shelters === null ? (
-            <p className="text-13 text-ink-muted">近くの避難場所をさがしています...</p>
+            <p className="text-13 text-ink-muted"><Furigana text="近くの避難場所をさがしています..." /></p>
           ) : shelters.length === 0 ? (
             <Card className="bg-canvas p-[18px] shadow-none">
               <p className="text-13 leading-[1.6] text-ink-muted">

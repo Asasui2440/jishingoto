@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { useCamera } from "@/lib/camera";
+import { preparePhoto, useCamera } from "@/lib/camera";
 import { detectBlurRegions } from "@/lib/api";
 import { useHaptics } from "@/lib/settings";
 import { useSession } from "@/lib/session";
@@ -39,10 +39,10 @@ export default function CameraGuidePage() {
   // カメラが使えないときはサンプル写真で先に進める
   const usingFallback = state === "denied" || state === "unavailable";
 
-  const proceed = async (photoUrl: string | null) => {
+  const proceed = async (photoUrl: string | null, photo?: Blob) => {
     setBusy(true);
     vibrate([10, 40, 10]);
-    const blurRegions = await detectBlurRegions();
+    const blurRegions = await detectBlurRegions(photo);
     update({ photoUrl, blurRegions, startedAt: Date.now() });
     router.push("/privacy");
   };
@@ -50,12 +50,12 @@ export default function CameraGuidePage() {
   const onShoot = async () => {
     if (busy) return;
     const shot = await capture();
-    void proceed(shot?.url ?? null);
+    void proceed(shot?.url ?? null, shot?.blob);
   };
 
-  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) void proceed(URL.createObjectURL(file));
+    if (file) void proceed(await preparePhoto(file), file);
   };
 
   return (
@@ -111,9 +111,7 @@ export default function CameraGuidePage() {
           </div>
 
           {usingFallback ? (
-            <p className="absolute right-3 bottom-3 rounded-full bg-black/65 px-3 py-1.5 text-11 text-white">
-              カメラが使えないので サンプル写真
-            </p>
+            <p className="absolute right-3 bottom-3 rounded-full bg-black/65 px-3 py-1.5 text-11 text-white"><Furigana text="カメラが使えないので サンプル写真" /></p>
           ) : null}
         </div>
       </div>
@@ -131,11 +129,14 @@ export default function CameraGuidePage() {
           <div className="grid size-[72px] place-items-center rounded-tile border-2 border-danger bg-white/5">
             <XCircleRedIcon className="size-10" />
           </div>
-          <p className="font-display text-xs font-bold text-ink-faint">ちかすぎる (ダメ)</p>
+          <p className="font-display text-xs font-bold text-ink-faint">
+            <Furigana text="ちかすぎる (ダメ)" />
+          </p>
         </div>
       </div>
 
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
+        <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline">APIを使わずテストする</button>
         {usingFallback ? (
           <>
             <Button onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -155,7 +156,7 @@ export default function CameraGuidePage() {
               onClick={() => void proceed(null)}
               className="font-display text-sm font-bold text-white underline underline-offset-2"
             >
-              サンプルの部屋ですすむ
+              <Furigana text="サンプルの部屋[へや]ですすむ" />
             </button>
           </>
         ) : (
