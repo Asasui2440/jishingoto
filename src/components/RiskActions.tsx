@@ -14,7 +14,7 @@ import { roomAdvice, roomObjectType } from "@/lib/room-guidance";
 const ADVICE = {
   fall: {
     image: "/illustrations/actions/lower-items.webp",
-    imageAlt: "一人の大人が本棚の一番下の段に重い本を移すイラスト",
+    imageAlt: "大人が本棚の一番下の段に重い本をしまい、子どもが見守るイラスト",
     headline: "重[おも]いものは、低[ひく]い場所[ばしょ]へ",
     adultHeadline: "重い物は低い位置へ移す",
     danger: "転倒・落下により負傷したり、避難経路を塞いだりする可能性があります。",
@@ -24,7 +24,7 @@ const ADVICE = {
   },
   break: {
     image: "/illustrations/actions/check-breakables.webp",
-    imageAlt: "一人の大人が割れ物をベッドや通り道から離れた低い収納へ移すイラスト",
+    imageAlt: "親子で割れものとベッド、通り道の位置関係を確認するイラスト",
     headline: "われるものと、寝[ね]る場所[ばしょ]をチェック",
     adultHeadline: "割れ物と就寝場所・通路の位置を確認",
     danger: "破損した破片で負傷したり、安全に移動できなくなったりする可能性があります。",
@@ -34,7 +34,7 @@ const ADVICE = {
   },
   block: {
     image: "/illustrations/actions/clear-exit.webp",
-    imageAlt: "一人の大人が床の物を収納し、ドアまでの通り道を空けるイラスト",
+    imageAlt: "親子でおもちゃを片づけ、ドアまでの通り道を空けるイラスト",
     headline: "出口[でぐち]までの道[みち]を、すっきり",
     adultHeadline: "通路と出入口の物を片付ける",
     danger: "物が散乱・移動すると、出入口や避難経路が塞がれる可能性があります。",
