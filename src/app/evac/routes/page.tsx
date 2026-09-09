@@ -73,7 +73,7 @@ export default function EvacRoutesPage() {
         </header>
 
         {loading ? (
-          <p className="text-13 text-ink-muted">経路をさがしています...</p>
+          <p className="text-13 text-ink-muted"><Furigana text="経路をさがしています..." /></p>
         ) : (
           <>
             <EvacMap
@@ -115,7 +115,7 @@ export default function EvacRoutesPage() {
                               : "var(--color-safe-soft)"
                           }
                         >
-                          {openedIds.includes(r.id) ? "比べた" : "みてみる"}
+                          <Furigana text={openedIds.includes(r.id) ? "比べた" : "みてみる"} />
                         </Tag>
                       </span>
 

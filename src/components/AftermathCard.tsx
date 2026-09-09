@@ -5,15 +5,17 @@ import { useEffect, useState } from "react";
 import roomRisk from "@/../public/figma/img/room-risk.jpg";
 import { AlertOctagonIcon } from "@/components/icons";
 import { Furigana } from "@/components/ui/Furigana";
-import { generateAftermath, type Aftermath } from "@/lib/api";
+import { type Aftermath } from "@/lib/api";
+import { prepareAftermath, preparedAftermath } from "@/lib/room-preparation";
 import { RISK_KINDS, type Risk } from "@/lib/content";
+import { useSettings } from "@/lib/settings";
+import { RoomTiming } from "@/components/RoomTiming";
 
 /**
  * 「もし地震がきたら、この部屋はこうなるかも」の予想図。
  *
- * 画像はバックエンドで AI に生成してもらう想定（`generateAftermath`）。
- * まだ実装がないので、いまは元の写真に「何がどうなったか」を重ねて出している。
- * 実装が入って `imageUrl` が返るようになれば、そちらに差し替わる。
+ * OpenAI の画像編集 API が利用できるときはアニメ調の予想図を生成し、
+ * 利用できないときは元写真へのマーカー表示へフォールバックする。
  */
 export function AftermathCard({
   photoUrl,
@@ -22,11 +24,12 @@ export function AftermathCard({
   photoUrl: string | null;
   risks: Risk[];
 }) {
-  const [result, setResult] = useState<Aftermath | null>(null);
+  const { audience } = useSettings();
+  const [result, setResult] = useState<Aftermath | null>(() => preparedAftermath(photoUrl, risks.filter((risk) => risk.confirmed)));
 
   useEffect(() => {
     let alive = true;
-    void generateAftermath(photoUrl, risks).then((r) => {
+    void prepareAftermath(photoUrl, risks.filter((risk) => risk.confirmed)).then((r) => {
       if (alive) setResult(r);
     });
     return () => {
@@ -45,6 +48,15 @@ export function AftermathCard({
         </h2>
       </div>
 
+      <RoomTiming />
+      {result ? (
+        <p className="border-b border-border bg-primary-soft px-4 py-2 text-11 font-bold text-primary-ink">
+          {result.source === "test" ? "APIなしのテスト用画像です。生成結果の代わりに固定の元写真を表示しています。" : result.source === "ai"
+            ? "写真からAIが想像した一例です。下の危険候補の説明とは別に作成しており、修正した候補は画像には反映されません。実際の被害を断定するものではありません。"
+            : "AI画像を作成できなかったため、写真に危険候補を重ねています。"}
+        </p>
+      ) : null}
+
       <div className="relative aspect-[4/3] w-full bg-ink">
         {result === null ? (
           // 生成待ち
@@ -59,7 +71,7 @@ export function AftermathCard({
         ) : result.imageUrl ? (
           // バックエンドが生成した画像
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={result.imageUrl} alt="地震のあとの部屋の予想図" className="size-full object-cover" />
+          <img src={result.imageUrl} alt={result.source === "test" ? "生成結果の代わりに表示する固定テスト写真" : audience === "adult" ? "地震発生後の室内予測画像" : "地震のあとの部屋の予想図"} className="size-full object-cover" />
         ) : (
           <>
             {photoUrl ? (
@@ -83,7 +95,7 @@ export function AftermathCard({
                     style={{ background: kind.accent }}
                   />
                   <span className="rounded-chip bg-black/70 px-2 py-0.5 font-display text-11 font-bold whitespace-nowrap text-white">
-                    <Furigana text={r.name} />
+                    <Furigana text={r.name} adult={r.adultName} />
                   </span>
                 </span>
               );
@@ -100,16 +112,16 @@ export function AftermathCard({
                 ▸
               </span>
               <span>
-                <Furigana text={e.text} />
+                <Furigana text={e.text} adult={e.adultText} />
               </span>
             </li>
           ))}
         </ul>
       ) : null}
 
-      {result && result.events.length === 0 ? (
+      {result && result.events.length === 0 && !result.imageUrl ? (
         <p className="px-4 py-3 text-13 text-ink-muted">
-          <Furigana text="あぶない場所[ばしょ]をひとつも確認[かくにん]しなかったので、予想図[よそうず]は出[だ]せなかったよ。" />
+          <Furigana text="予想図[よそうず]を作成[さくせい]できませんでした。写真[しゃしん]を見[み]ながら、部屋[へや]の備[そな]えを確認[かくにん]してね。" />
         </p>
       ) : null}
     </section>

@@ -13,6 +13,18 @@ Figma:
 npm run dev
 ```
 
+Phase 1 の実画像解析とアニメ予想図を使うには、`.env.local` にサーバー用キーを設定する。
+キーは Route Handler の中だけで使用し、ブラウザには配布しない。
+
+```text
+OPENAI_API_KEY=...
+OPENAI_VISION_MODEL=gpt-5.6-luna # 任意
+OPENAI_IMAGE_MODEL=gpt-image-2   # 任意
+```
+
+写真はブラウザで最大 1280px に縮小し、プライバシー確認画面で指定した領域を
+画像データ自体からマスクしてから OpenAI API へ送る。写真は Web Storage へ保存しない。
+
 フェーズ2で本物の地図・ストリートビューを出すときは、`.env.local` にキーを置く
 （`.env.example` を参照。**無くても動く**：デモ表示のイラストに切り替わる）。
 
@@ -60,7 +72,7 @@ src/
     SettingsSheet.tsx
     evac/         フェーズ2の地図・ストリートビュー・判断シート
   lib/
-    api.ts        ★ バックエンドとの境界（いまはモック）
+    api.ts        ★ OpenAI Route Handler と画面の境界（失敗時はデモへフォールバック）
     content.ts    設問・危険の種類・チェックリストなどの文言データ
     session.tsx   体験1回ぶんの状態と集計
     settings.tsx  ふりがな・文字サイズ・音の設定
@@ -188,5 +200,4 @@ export async function generateAftermath(photo: string | null, risks: Risk[]): Pr
 
 - 3D（Three.js / React Three Fiber / Drei / GLTF）を使った部屋の再現と演出
 - 多言語の文言辞書（`Settings.locale` の受け口だけある）
-- 実際の AI 解析（`src/lib/api.ts` はすべてモック）
 - ハザードマップの重ね合わせ、夜間・雨天の想定（フェーズ2）

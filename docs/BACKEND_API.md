@@ -208,35 +208,32 @@ Content-Type: application/json
 ### 3-4. 「もし地震がきたら」の予想図
 
 ```
-POST /aftermath
-Content-Type: application/json（または multipart）
+POST /api/room/aftermath
+Content-Type: application/json
 ```
 
 | | |
 |---|---|
-| 呼ばれる場所 | `/result` を開いた直後 |
-| フロントの関数 | `generateAftermath(photo, risks)` |
+| 呼ばれる場所 | `/privacy` の OK 後、マスク済み画像の確定直後（解析と並行） |
+| フロントの関数 | `prepareRoom(photo)` → `generateAftermath(photo)` |
 
-**リクエスト**: 撮影した写真と、`confirmed: true` の `Risk[]`
+**リクエスト**: `{ "image": "data:image/jpeg;base64,..." }`（マスク済み写真のみ）。危険候補の解析完了を待たない。
 
 **レスポンス**
 
 ```jsonc
 {
-  "imageUrl": "https://.../generated/abc123.png",
-  "events": [
-    { "riskId": "bookshelf", "text": "大きな本棚がたおれて、逃げ道をふさいだ" },
-    { "riskId": "window",    "text": "まどガラスがわれて、床にガラスが散らばった" }
-  ]
+  "imageUrl": "data:image/png;base64,..."
 }
 ```
 
-- `imageUrl` は **確認された危険が実際に倒れた／割れた状態の部屋** の生成画像。
+- `imageUrl` は写真から想像した地震後の一例。実際の被害を予測・断定しない。
   縦横比は **4:3** で表示する（`object-cover` なので多少ずれても破綻はしない）。
-- `imageUrl` に `null` を返すと、フロントは元の写真にマーカーを重ねて代用する。
-  **生成に失敗したときは `null` を返してほしい**（画面は壊れない）。
-- `events` の `riskId` はリクエストで渡した `Risk.id` と対応させる。
-- 生成中はフロントがスピナーを出す。**10秒程度までなら許容**。
+- API失敗時はフロントが `imageUrl: null` に変換し、元写真へのマーカー表示で代用する。
+- `events` はフロントで最新の危険候補から組み立てる。画像の描写を説明するものではなく、別途考えられる危険の説明。
+- 写真をキーとして生成中のPromise・完了画像をメモリ内で共有し、候補の修正・削除や結果画面の表示で再生成しない。別写真・マスク変更・セッションリセット時は新規生成。
+- 生成中はスピナーを表示。API自体の生成時間は残るが、解析待ち時間をなくす。
+- 画像編集APIの仕様参考：[OpenAI公式ドキュメント](https://developers.openai.com/api/docs/guides/image-generation)。
 
 ---
 
@@ -322,11 +319,10 @@ Access-Control-Allow-Headers: Content-Type
 
 ## 6. 注意点
 
-- **写真は外に出さない前提で作ってある。** オンボーディングで
-  「個人情報や位置情報はアプリの外に送信されないよ」と書いているので、
-  写真をサーバーに送るなら、この文言を実態に合わせて直す必要がある。
-- **保存は端末内だけ。** 体験1回ぶんの状態は `sessionStorage`、
-  表示設定は `localStorage` に入る。サーバーには何も保存していない。
+- **写真は OpenAI API へ送信する。** ブラウザで縮小し、プライバシー確認画面で
+  指定した領域を画像データ自体からマスクしてから、解析と予想図生成に使用する。
+- **写真は保存しない。** 写真は `sessionStorage` の対象外で、画面を閉じると破棄される。
+  そのほかの体験状態は `sessionStorage`、表示設定は `localStorage` に入る。
   ユーザー登録や履歴を作るなら、`src/lib/session.tsx` の設計から見直しが必要。
 - **`confirmed` はユーザーのもの。** 解析結果をそのまま確定にせず、
   必ずユーザーが画面で選ぶ設計にしている。

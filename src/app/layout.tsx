@@ -48,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // 設定を読み込む前でも ruby が崩れないよう、既定値を先に置いておく
       data-furigana="off"
       data-ui-scale="normal"
+      data-audience="child"
     >
       <body className="min-h-full">
         <SettingsProvider>

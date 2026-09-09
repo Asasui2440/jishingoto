@@ -10,6 +10,8 @@ import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { AXIS_LABEL, safetyBand, type Axis } from "@/lib/content";
 import { axisRows, drawShareCard } from "@/lib/share-card";
 import { getSession, scoreByAxis, useSession } from "@/lib/session";
+import { useSettings } from "@/lib/settings";
+import { adultText } from "@/lib/adult-copy";
 
 const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 const SHARE_TEXT = "じぶんの部屋の安全チェック、したよ！ #ジシンゴト";
@@ -24,6 +26,8 @@ function shareUrl() {
 
 export default function SharePage() {
   const router = useRouter();
+  const { audience } = useSettings();
+  const shareText = audience === "adult" ? adultText(SHARE_TEXT) : SHARE_TEXT;
   const { answers, risks } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [saving, setSaving] = useState(false);
@@ -38,9 +42,9 @@ export default function SharePage() {
   // 画面に見えているカードと同じ内容を、書き出し用に Canvas にも描いておく
   useEffect(() => {
     if (canvasRef.current) {
-      drawShareCard(canvasRef.current, { rows: axisRows(scores), date });
+      drawShareCard(canvasRef.current, { rows: axisRows(scores), date, audience });
     }
-  }, [scores, date]);
+  }, [scores, date, audience]);
 
   const download = () => {
     const canvas = canvasRef.current;
@@ -68,7 +72,7 @@ export default function SharePage() {
           <h1 className="font-display text-lg font-bold text-ink">
             <Furigana text="けっかを友達[ともだち]にシェア" />
           </h1>
-          <button type="button" onClick={() => router.push("/result")} aria-label="とじる">
+          <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"}>
             <XCircleDarkIcon className="size-6 text-ink" />
           </button>
         </div>
@@ -82,7 +86,7 @@ export default function SharePage() {
               ジシンゴト
             </span>
             <span className="text-11 text-ink-soft">
-              {date.getFullYear()}/{date.getMonth() + 1}/{date.getDate()} 挑戦！
+              {date.getFullYear()}/{date.getMonth() + 1}/{date.getDate()} <Furigana text="挑戦！" />
             </span>
           </div>
 
@@ -130,7 +134,7 @@ export default function SharePage() {
             variant="line"
             onClick={() =>
               openShare(
-                `https://line.me/R/msg/text/?${encodeURIComponent(`${SHARE_TEXT}\n${shareUrl()}`)}`,
+                `https://line.me/R/msg/text/?${encodeURIComponent(`${shareText}\n${shareUrl()}`)}`,
               )
             }
           >
@@ -141,7 +145,7 @@ export default function SharePage() {
             variant="x"
             onClick={() =>
               openShare(
-                `https://x.com/intent/post?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(shareUrl())}`,
+                `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl())}`,
               )
             }
           >
@@ -157,7 +161,7 @@ export default function SharePage() {
           onClick={() => router.push("/")}
           className="mx-auto p-2 font-display text-sm font-bold text-primary-ink underline underline-offset-2"
         >
-          ホームにもどる
+          <Furigana text="ホームにもどる" />
         </button>
       </div>
 

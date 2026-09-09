@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { XCircleDarkIcon } from "@/components/icons";
 import { useSettings, type UiScale } from "@/lib/settings";
+import { adultText } from "@/lib/adult-copy";
 
 const SCALES: { value: UiScale; label: string; sample: string }[] = [
   { value: "normal", label: "ふつう", sample: "16" },
@@ -68,6 +69,7 @@ function Toggle({
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const titleId = useId();
   const settings = useSettings();
+  const adult = settings.audience === "adult";
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
-        aria-label="とじる"
+        aria-label={adult ? "閉じる" : "とじる"}
         onClick={onClose}
         className="animate-fade absolute inset-0 bg-ink/45"
       />
@@ -98,21 +100,23 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="font-display text-lg font-bold text-ink">
-            ひょうじの設定
+            {adult ? "表示設定" : "ひょうじの設定"}
           </h2>
-          <button type="button" onClick={onClose} aria-label="とじる" className="p-1">
+          <button type="button" onClick={onClose} aria-label={adult ? "閉じる" : "とじる"} className="p-1">
             <XCircleDarkIcon className="size-6" />
           </button>
         </div>
 
         <div className="divide-y divide-border">
-          <Row label="ふりがな" hint="漢字に読みがなをつける">
-            <Toggle
-              label="ふりがな"
-              checked={settings.furigana}
-              onChange={(v) => settings.update({ furigana: v })}
-            />
-          </Row>
+          {!adult ? (
+            <Row label="ふりがな" hint="漢字に読みがなをつける">
+              <Toggle
+                label="ふりがな"
+                checked={settings.furigana}
+                onChange={(v) => settings.update({ furigana: v })}
+              />
+            </Row>
+          ) : null}
 
           <div className="py-3">
             <p className="font-display text-15 font-bold text-ink">文字の大きさ</p>
@@ -134,14 +138,16 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                     ].join(" ")}
                   >
                     <span style={{ fontSize: `${s.sample}px` }}>あ</span>
-                    <span className="mt-0.5 block text-11">{s.label}</span>
+                    <span className="mt-0.5 block text-11">
+                      {adult ? adultText(s.label) : s.label}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <Row label="音・振動" hint="地震の効果音とバイブレーション">
+          <Row label="音・振動" hint={adult ? "地震の効果音と端末の振動" : "地震の効果音とバイブレーション"}>
             <Toggle
               label="音・振動"
               checked={settings.sound}

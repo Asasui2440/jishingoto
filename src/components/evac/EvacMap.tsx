@@ -189,7 +189,7 @@ function GoogleMapView({
       );
     }
     for (const m of markers) pin(m.position, m.color, m.label, m.title, m.onClick);
-    if (walker) pin(walker, "#e53e3e", "現", "いまいる場所");
+    if (walker) pin(walker, "#e53e3e", "現", "現在地");
 
     // 全体が入るように寄せる
     const pts = [

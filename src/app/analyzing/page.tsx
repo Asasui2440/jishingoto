@@ -15,9 +15,10 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { Meter, TitleBlock } from "@/components/ui/Bits";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { analyzeRoom } from "@/lib/api";
+import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
+import { RoomTiming } from "@/components/RoomTiming";
 
 /** 1ステップあたりの見せかけの所要時間 */
 const STEP_MS = 1400;
@@ -36,9 +37,13 @@ export default function AnalysisLoadingPage() {
     if (cancelled) return;
     if (step >= ANALYSIS_STEPS.length) {
       let alive = true;
-      void analyzeRoom().then((risks) => {
+      void prepareRoom(photoUrl).then((analysis) => {
         if (!alive) return;
-        update({ risks });
+        update({
+          risks: analysis.risks,
+          analysisSource: analysis.source,
+          analysisWarning: analysis.warning ?? null,
+        });
         router.replace("/risks");
       });
       return () => {
@@ -49,7 +54,7 @@ export default function AnalysisLoadingPage() {
     return () => clearTimeout(id);
     // update / router は安定なので、進行に必要な値だけを見る
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, cancelled]);
+  }, [step, cancelled, photoUrl]);
 
   const progress = Math.min(1, (step + 0.35) / ANALYSIS_STEPS.length);
 
@@ -125,6 +130,7 @@ export default function AnalysisLoadingPage() {
       </div>
 
       <div className="px-6">
+        <RoomTiming />
         <div className="rounded-card border border-safe bg-safe-soft p-4">
           <p className="flex items-center gap-1.5 font-display text-sm font-bold text-safe">
             <LightbulbTealIcon className="size-[18px] shrink-0" />

@@ -14,13 +14,17 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { TitleBlock } from "@/components/ui/Bits";
-import { useHaptics } from "@/lib/settings";
+import { useHaptics, useSettings } from "@/lib/settings";
 import { useSession } from "@/lib/session";
+import { applyPrivacyMasks } from "@/lib/camera";
+import { prepareRoom } from "@/lib/room-preparation";
+import { setRoomTestOptions } from "@/lib/room-test";
 
 /** 新しく足すぼかしの大きさ（％） */
 const NEW_BLUR = { w: 22, h: 18 };
 
 export default function PrivacyBlurPage() {
+  const { audience } = useSettings();
   const router = useRouter();
   const { photoUrl, blurRegions, update } = useSession();
   const vibrate = useHaptics();
@@ -55,6 +59,16 @@ export default function PrivacyBlurPage() {
     update((prev) => ({ ...prev, blurRegions: prev.blurRegions.filter((b) => b.id !== id) }));
   };
 
+  const continueWithMaskedPhoto = async () => {
+    setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
+    if (photoUrl) {
+      const masked = await applyPrivacyMasks(photoUrl, blurRegions);
+      update({ photoUrl: masked });
+      void prepareRoom(masked);
+    }
+    router.push("/analyzing");
+  };
+
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
@@ -72,7 +86,7 @@ export default function PrivacyBlurPage() {
           className="relative h-full w-full cursor-crosshair overflow-hidden rounded-panel bg-ink"
         >
           {photoUrl ? (
-            // 撮影した写真は blob: URL なので next/image の最適化は通さない
+            // 撮影した写真は data URL なので next/image の最適化は通さない
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="撮影した部屋の写真" className="size-full object-cover" />
           ) : (
@@ -87,7 +101,7 @@ export default function PrivacyBlurPage() {
                 e.stopPropagation();
                 removeBlur(b.id);
               }}
-              aria-label="このぼかしを消す"
+              aria-label={audience === "adult" ? "このマスクを削除する" : "このぼかしを消す"}
               className={[
                 "absolute grid place-items-center border-2 border-white bg-primary/85 backdrop-blur-md",
                 b.shape === "circle" ? "rounded-full" : "rounded-field",
@@ -117,13 +131,14 @@ export default function PrivacyBlurPage() {
         <p className="mt-2 text-xs text-ink-muted">
           <Furigana text="かくしたい場所[ばしょ]をタップすると、じぶんで新[あたら]しくぼかすこともできるよ。" />
         </p>
+        <p className="mt-2 text-11 text-ink-soft">
+          <Furigana text="ぼかした画像[がぞう]だけを、解析[かいせき]と予想図[よそうず]の作成[さくせい]のためOpenAI APIへ送[おく]ります。端末[たんまつ]には保存[ほぞん]しません。" />
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 px-6 pb-5">
-        <Button onClick={() => router.push("/analyzing")}>
-          <CheckCircleWhiteIcon className="size-5 text-ink" />
-          OK、このまますすむ
-        </Button>
+        <Button onClick={() => void continueWithMaskedPhoto()}>
+          <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>
           <RefreshCwIcon className="size-5 text-primary-ink" />
           <Furigana text="もういちどさつえいする" />

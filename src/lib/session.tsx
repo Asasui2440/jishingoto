@@ -2,8 +2,11 @@
 
 import { useCallback } from "react";
 import type { BlurRegion } from "./api";
-import { QUESTIONS, type Axis, type Risk } from "./content";
+import { QUESTIONS, type Axis, type Question, type Risk } from "./content";
 import { createPersistentStore, useStore } from "./store";
+import { adultText } from "./adult-copy";
+import type { Audience } from "./settings";
+import { clearRoomPreparation } from "./room-preparation";
 
 /** ユーザーが1問に答えた記録 */
 export type Answer = {
@@ -17,10 +20,15 @@ export type Answer = {
 };
 
 export type Session = {
-  /** 撮影した写真（object URL）。リロードすると失われるので任意扱い */
+  /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
   blurRegions: BlurRegion[];
   risks: Risk[];
+  /** この部屋の危険に合わせて選んだ設問 */
+  questions: Question[];
+  /** 実際の AI 解析か、API 未設定時のデモか */
+  analysisSource: "ai" | "demo" | null;
+  analysisWarning: string | null;
   answers: Answer[];
   /** チェックリストでチェックを入れた項目 */
   checked: string[];
@@ -33,13 +41,16 @@ const EMPTY: Session = {
   photoUrl: null,
   blurRegions: [],
   risks: [],
+  questions: [],
+  analysisSource: null,
+  analysisWarning: null,
   answers: [],
   checked: [],
   startedAt: null,
   finishedAt: null,
 };
 
-// photoUrl は blob: URL なので、保存しても次のセッションでは使えない
+// 写真は data URL でも永続化しない。端末に部屋の写真を残さないため。
 const store = createPersistentStore<Session>("jishingoto.session.v1", EMPTY, "session", [
   "photoUrl",
 ]);
@@ -80,7 +91,10 @@ export function useSession() {
     [set],
   );
 
-  const reset = useCallback(() => set(() => ({ ...EMPTY, startedAt: Date.now() })), [set]);
+  const reset = useCallback(() => {
+    clearRoomPreparation();
+    set(() => ({ ...EMPTY, startedAt: Date.now() }));
+  }, [set]);
 
   return { ...session, update: set, answer, toggleChecked, reset };
 }
@@ -95,7 +109,7 @@ export function useSession() {
  * 設問ごとの ◯✕ ではなく、軸ごとにまとめた安全度として見せることで
  * 「どれが正解だったか」を直接つきつけない形にしている。
  */
-export function scoreByAxis(answers: Answer[], risks: Risk[]): Record<Axis, number | null> {
+export function scoreByAxis(answers: Answer[], _risks: Risk[]): Record<Axis, number | null> {
   const axes: Axis[] = ["initial", "judgement", "room", "evacuation"];
   const out = {} as Record<Axis, number | null>;
 
@@ -109,11 +123,7 @@ export function scoreByAxis(answers: Answer[], risks: Risk[]): Record<Axis, numb
         : null;
   }
 
-  // 「部屋のそなえ」は設問だけでなく、部屋の中で見つかった危険の数も反映する
-  if (risks.length > 0 && out.room !== null) {
-    const confirmed = risks.filter((r) => r.confirmed).length;
-    out.room = Math.max(1, out.room - Math.min(2, Math.floor(confirmed / 2)));
-  }
+  // 認識した家具の数は危険性の確定ではないため、回答の評価を減点しない。
 
   return out;
 }
@@ -128,13 +138,15 @@ export function overallSafety(answers: Answer[]): number {
  * 「できたこと」。安全度の高かった選択から拾う。
  * 低い選択を名指しで責めないよう、ここでは肯定的なものだけを出す。
  */
-export function strengths(answers: Answer[]): string[] {
+export function strengths(answers: Answer[], questions: typeof QUESTIONS = QUESTIONS, audience: Audience = "child"): string[] {
   const out: string[] = [];
   for (const a of answers) {
     if (a.safety < 0.7) continue;
-    const q = QUESTIONS.find((x) => x.id === a.questionId);
+    const q = questions.find((x) => x.id === a.questionId);
     const c = q?.choices.find((x) => x.id === a.choiceId);
-    if (q && c) out.push(`${q.category}のばめんで「${c.label}」をえらべた`);
+    if (q && c) out.push(audience === "adult"
+      ? `${adultText(q.category)}の場面で「${adultText(c.label)}」を選択しました。`
+      : `${q.category}のばめんで「${c.label}」をえらべた`);
   }
   return out;
 }
