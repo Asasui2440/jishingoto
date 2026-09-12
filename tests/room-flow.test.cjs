@@ -24,18 +24,65 @@ const { fetchQuestions } = load("src/lib/api.ts");
 const { safetyProductsFor } = load("src/lib/recommendations.ts");
 const risk = (objectType, kind = "fall", confirmed = true) => ({ id: objectType, name: "対象", adultName: "対象物", objectType, kind, confirmed, x: 50, y: 50 });
 
-test("every current room quiz has a matching safe-action review illustration", async () => {
-  const { reviewIllustration } = load("src/lib/review-illustrations.ts");
-  for (const fixtures of [[], [risk("bookshelf")], [risk("window", "break")], [risk("desk")], [risk("elevated_objects")], [risk("doorway", "block")]]) {
-    const qs = await fetchQuestions(fixtures);
-    for (const q of qs) {
-      const scene = reviewIllustration(q);
-      assert(scene, `missing illustration for ${q.id}`);
-      assert(["shelter", "protect-head", "safe-exit", "check-information"].includes(scene.image));
-      if (q.id === "q2") assert.match(scene.headline, /火/);
-      if (q.phase === "after") assert.match(scene.timing, /収ま/);
+test("short earthquake audio schedules volume changes within the sound duration", () => {
+  const originalWindow = global.window;
+  let times = [];
+  const node = () => ({ connect(next) { return next; } });
+  class FakeAudioContext {
+    sampleRate = 100;
+    currentTime = 0;
+    destination = {};
+    createBuffer(_channels, frames) { return { getChannelData: () => new Float32Array(frames) }; }
+    createBufferSource() { return { ...node(), start() {}, stop() {} }; }
+    createBiquadFilter() { return { ...node(), frequency: {} }; }
+    createGain() { return { ...node(), gain: { setValueAtTime(_v, t) { times.push(t); }, linearRampToValueAtTime(_v, t) { times.push(t); } } }; }
+  }
+  global.window = { AudioContext: FakeAudioContext };
+  try {
+    const { playRumble } = load("src/lib/audio.ts");
+    for (const duration of [0.35, 1, 6]) {
+      times = [];
+      playRumble(duration);
+      assert(times.every((t, i) => Number.isFinite(t) && t >= 0 && t <= duration && (i === 0 || t >= times[i - 1])));
+      assert.equal(times.at(-1), duration);
+    }
+  } finally { global.window = originalWindow; }
+});
+
+test("glass doors and dish cupboards keep object-specific advice and illustrations", () => {
+  const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
+  for (const objectType of ["doorway", "window", "other"]) {
+    const door = { ...risk(objectType, "block"), name: "ガラスの扉[とびら]" };
+    assert.match(roomAdviceImage(door).src, /glass-door/);
+    for (const audience of ["child", "adult"]) {
+      assert.match(roomAdvice(door, audience).headline, /ガラス/);
+      assert.doesNotMatch(roomAdvice(door, audience).steps.join(""), /おもちゃ/);
     }
   }
+  const cupboard = { ...risk("other", "break"), name: "ガラス扉の食器棚" };
+  assert.match(roomAdviceImage(cupboard).src, /cupboard-dishes/);
+  assert.match(roomAdvice(cupboard, "child").headline, /食器/);
+  assert.match(roomAdviceImage(risk("bookshelf")).src, /lower-items/);
+  assert.match(roomAdviceImage({ ...risk("doorway", "block"), name: "木のドア" }).src, /clear-path/);
+});
+
+test("every correct action uses its corresponding generated illustration", async () => {
+  const { reviewIllustration, reviewImagePath } = load("src/lib/review-illustrations.ts");
+  const { SCENARIOS } = load("src/lib/scenarios.ts");
+  const questions = [...SCENARIOS];
+  for (const fixtures of [[], [risk("bookshelf")], [risk("window", "break")], [risk("desk")], [risk("elevated_objects")], [risk("doorway", "block")]]) {
+    questions.push(...await fetchQuestions(fixtures));
+  }
+  for (const q of questions) {
+    const scene = reviewIllustration(q);
+    if (q.id === "home-kitchen-after") { assert.equal(scene, null); continue; }
+    assert(scene, `missing illustration for ${q.id}`);
+    assert(fs.existsSync(`public${reviewImagePath(scene.image)}`), scene.image);
+    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, `${q.id}-${q.id === "shelter-damaged" ? "v5" : "v4"}`);
+    if (q.phase === "after") assert.match(scene.timing, /収ま/);
+    assert.deepEqual(reviewIllustration({ ...q, choices: [...q.choices].reverse() }), scene);
+  }
+  assert.equal(reviewIllustration({ choices: [{ id: "wait", safety: 0.95 }] }).image, "kitchen-cover-v4");
   assert.equal(reviewIllustration({ choices: [] }), null);
   assert.equal(reviewIllustration({ choices: [{ id: "unknown-future-choice", safety: 1 }] }), null);
 });
@@ -83,11 +130,11 @@ test("elevated objects never get a floor-scatter question; furniture advice is s
   assert.match(roomAdvice(risk("tv")).detail, /滑り止め/);
   assert.match(roomAdvice(risk("bookshelf")).headline, /本/);
   assert.match(roomAdvice(risk("bed")).detail, /非常用の靴/);
-  assert.match(EXIT_EXPLANATION.join(""), /靴下だけでは/);
+  assert.match(EXIT_EXPLANATION.join(""), /靴下や薄いスリッパ/);
   assert.match(EXIT_EXPLANATION.join(""), /安全に近づけるなら扉/);
 });
 
-test("masked photo starts image generation before analysis resolves; edits reuse the image", async () => {
+test("room analysis does not generate an unrelated image; an explicit preview can reuse its image", async () => {
   const { prepareRoom, prepareAftermath, preparedAftermath, clearRoomPreparation } = load("src/lib/room-preparation.ts");
   const originalFetch = global.fetch;
   const requests = [];
@@ -97,14 +144,14 @@ test("masked photo starts image generation before analysis resolves; edits reuse
     const photo = "data:image/jpeg;base64,bWFza2Vk";
     const analysis = prepareRoom(photo);
     assert.equal(prepareRoom(photo), analysis);
-    assert.deepEqual(requests.map((r) => r.url), ["/api/room/aftermath", "/api/room/analyze"]);
-    assert.deepEqual(requests[0].body, { image: photo });
-    requests[1].resolve(Response.json({ risks: [risk("bookshelf")] }));
+    assert.deepEqual(requests.map((r) => r.url), ["/api/room/analyze"]);
+    requests[0].resolve(Response.json({ risks: [risk("bookshelf")] }));
     await analysis;
     const edited = [{ ...risk("window", "break"), name: "修正した窓" }];
     const result = prepareAftermath(photo, edited);
     assert.equal(requests.length, 2);
-    requests[0].resolve(Response.json({ imageUrl: "data:image/png;base64,aW1hZ2U=" }));
+    assert.deepEqual(requests[1].body, { image: photo });
+    requests[1].resolve(Response.json({ imageUrl: "data:image/png;base64,aW1hZ2U=" }));
     assert.equal((await result).events[0].riskId, "window");
     assert.equal(preparedAftermath(photo, edited).events[0].riskId, "window");
     assert.equal((await prepareAftermath(photo, [])).events.length, 0);
@@ -112,11 +159,10 @@ test("masked photo starts image generation before analysis resolves; edits reuse
     clearRoomPreparation();
     assert.equal(preparedAftermath(photo, edited), null);
     const next = prepareRoom(photo);
-    assert.equal(requests.length, 4);
-    requests[2].resolve(Response.json({ error: "failed" }, { status: 502 }));
-    requests[3].resolve(Response.json({ risks: [] }));
+    assert.equal(requests.length, 3);
+    requests[2].resolve(Response.json({ risks: [] }));
     await next;
-    assert.equal((await prepareAftermath(photo, [])).source, "preview");
+    assert.equal(requests.length, 3);
   } finally {
     clearRoomPreparation();
     global.fetch = originalFetch;
@@ -169,7 +215,7 @@ test("all room combinations follow during → after, including zero confirmed ri
   fixtures.push([risk("doorway", "block"), risk("window", "break"), risk("bookshelf"), risk("bed")]);
   for (const risks of fixtures) {
     const qs = await fetchQuestions(risks);
-    assert(qs.length >= 4 && qs.length <= 5);
+    assert(qs.length >= 3 && qs.length <= 5);
     assert.equal(qs[0].phase, "during");
     assert.equal(qs.at(-1).phase, "after");
     let after = false;
@@ -189,4 +235,132 @@ test("purchase candidates require confirmed, identifiable, matching objects", ()
   assert.equal(safetyProductsFor([risk("bookshelf")])[0].id, "furniture-anchor");
   assert.equal(safetyProductsFor([risk("window", "break")])[0].id, "safety-film");
   assert.equal(safetyProductsFor([risk("tv")])[0].id, "tv-belt");
+});
+
+test("photo questions exclude extra scenarios; only home adds after-shaking kitchen checks", async () => {
+  for (const setting of ["home", "classroom", "office"]) {
+    for (let seed = 1; seed <= 30; seed++) {
+      let state = seed;
+      const random = () => { state = (1664525 * state + 1013904223) >>> 0; return state / 2 ** 32; };
+      const qs = await fetchQuestions([risk("bookshelf"), risk("tv", "fall", false)], setting, random);
+      assert(qs.length >= 2 && qs.length <= 5);
+      assert.equal(qs[0].phase, "during");
+      assert.equal(qs.at(-1).phase, "after");
+      assert(qs.every((q) => !q.id.startsWith("shelter-") && !q.category.includes("別[べつ]の場面")));
+      assert(qs.every((q) => q.sourceRiskId !== "tv"));
+      const nonPhoto = qs.filter((q) => !q.sourceRiskId);
+      assert.deepEqual(nonPhoto.map((q) => q.id), setting === "home" ? ["home-kitchen-after", "q5"] : ["q5"]);
+      for (const q of nonPhoto) assert.equal(q.phase, "after");
+    }
+  }
+});
+
+test("a detected desk always gets the first protection question", async () => {
+  for (const random of [() => 0, () => 0.4, () => 0.999]) {
+    const qs = await fetchQuestions([risk("bookshelf"), risk("window", "break"), risk("doorway", "block"), risk("desk")], "office", random);
+    assert.equal(qs[0].sourceRiskId, "desk");
+    assert.equal(qs[0].choices.find((c) => c.safety >= 0.9).id, "under-desk");
+    assert.equal(qs.filter((q) => q.sourceRiskId).length, 3);
+  }
+});
+
+test("exit choices start with checking the floor, not assuming shoes are available", async () => {
+  const qs = await fetchQuestions([risk("doorway", "block")]);
+  const choice = qs.find((q) => q.sourceRiskId === "doorway").choices.find((c) => c.safety >= 0.9);
+  assert.match(choice.label, /まず足元/);
+  assert.match(choice.explanation.join(""), /すぐ履けるとは限りません/);
+  assert.match(choice.explanation.join(""), /切迫した危険/);
+});
+
+test("specific product examples include verification conditions and official sources", () => {
+  for (const item of [risk("bookshelf"), risk("tv"), risk("window", "break"), risk("cupboard")]) {
+    const products = safetyProductsFor([item]);
+    assert(products.length);
+    for (const product of products) {
+      assert(product.examples.length);
+      for (const example of product.examples) {
+        assert(example.check.length > 15);
+        assert(example.specification.length > 5);
+        assert.match(example.url, /^https:\/\/(www\.)?(elecom\.co\.jp|irisohyama\.co\.jp|nitoms\.com)\//);
+      }
+    }
+  }
+});
+
+test("every active question has one actionable recommended answer with conditions", async () => {
+  const { SCENARIOS } = load("src/lib/scenarios.ts");
+  const generated = await fetchQuestions([
+    risk("desk"), risk("window", "break"), risk("doorway", "block"), risk("bookshelf"),
+  ], "home", () => 0.4);
+  for (const question of [...SCENARIOS, ...generated]) {
+    const recommended = question.choices.filter((choice) => choice.safety >= 0.9);
+    assert.equal(recommended.length, 1, `recommended answer count for ${question.id}`);
+    assert(recommended[0].label.length >= 8, `answer is too vague for ${question.id}`);
+    assert(recommended[0].explanation.join("").length >= 35, `reason is too vague for ${question.id}`);
+  }
+  const desk = (await fetchQuestions([risk("desk")], "home", () => 0.4)).find((question) => question.sourceRiskId === "desk");
+  assert.match(desk.choices.find((choice) => choice.id === "under-desk").explanation.join(""), /ガラスの机.*無理/);
+});
+
+test("child advice is short, specific, and keeps adult-help and shaking conditions", () => {
+  const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
+  const plain = text => text.replace(/\[[^\]]*\]/g, "");
+  const shelf = roomAdvice(risk("elevated_objects"), "child");
+  assert.match(plain(shelf.headline), /低い所/);
+  assert.match(plain(shelf.detail), /家族/);
+  assert.match(plain(shelf.detail), /揺れている間/);
+  for (const type of ["bookshelf", "cupboard", "tv", "elevated_objects", "doorway", "window", "bed"]) {
+    assert(plain(roomAdvice(risk(type), "child").detail).length < 90);
+    assert(fs.existsSync(`public${roomAdviceImage(risk(type)).src}`));
+  }
+});
+
+test("short review notes retain nearby-desk protection and urgent-exit exceptions", async () => {
+  const { reviewNotes } = load("src/lib/review-copy.ts");
+  const plain = text => text.replace(/\[[^\]]*\]/g, "");
+  const qs = await fetchQuestions([risk("desk"), risk("doorway", "block")]);
+  const desk = qs.find(q => q.sourceRiskId === "desk");
+  assert.match(plain(reviewNotes(desk).join("")), /机の下/);
+  assert.match(plain(reviewNotes(desk).join("")), /ガラス/);
+  const exit = qs.find(q => q.sourceRiskId === "doorway");
+  assert.match(plain(reviewNotes(exit).join("")), /火や煙/);
+  assert.equal(reviewNotes(desk).length, 2);
+});
+
+test("quiz highlights follow the selected object's bounds, including near image edges", async () => {
+  for (const item of [
+    { ...risk("tv"), name: "テレビ", adultName: "テレビ受像機", bounds: { x: 62, y: 24, w: 32, h: 27 } },
+    { ...risk("bookshelf"), x: 99, y: 99 },
+  ]) {
+    const questions = await fetchQuestions([item], "home", () => 0);
+    const question = questions.find(q => q.sourceRiskId === item.id);
+    assert.equal(question.place, item.name);
+    assert.equal(question.highlight.label, item.name);
+    const { x, y, w, h } = question.highlight;
+    assert(x >= 0 && y >= 0 && x + w <= 100 && y + h <= 100);
+    if (item.bounds) assert.deepEqual({ x, y, w, h }, item.bounds);
+    assert.doesNotMatch(question.adultSituation, /テレビ受像機/);
+    const kitchen = questions.find(q => q.id === "home-kitchen-after");
+    assert.equal(kitchen.seconds, 12);
+    assert.equal(kitchen.sourceRiskId, undefined);
+    assert.equal(kitchen.highlight, undefined);
+  }
+});
+
+test("upper elementary reading and adult guidance remain distinct", async () => {
+  const { needsReading, upperElementaryText } = load("src/lib/reading-level.ts");
+  const { reviewNotes } = load("src/lib/review-copy.ts");
+  const { roomAdvice } = load("src/lib/room-guidance.ts");
+  const { TRIVIA } = load("src/lib/trivia.ts");
+  assert.equal(needsReading("家族"), false);
+  assert.equal(needsReading("安全"), false);
+  assert.equal(needsReading("地震"), true);
+  assert.equal(upperElementaryText("まどガラス"), "窓[まど]ガラス");
+  assert(TRIVIA.length >= 7);
+  assert(TRIVIA.every(t => t.adultBody && t.adultNote && t.source.url.startsWith("https://")));
+  const questions = await fetchQuestions([risk("desk"), risk("doorway", "block")]);
+  for (const question of questions) assert.doesNotMatch(reviewNotes(question, "adult").join(""), /おとな|だよ|してね|しよう|家族に知らせ/);
+  for (const type of ["bookshelf", "tv", "elevated_objects", "doorway"]) {
+    assert.doesNotMatch(JSON.stringify(roomAdvice(risk(type), "adult")), /大人と|大人が|おとな|だよ|してね/);
+  }
 });

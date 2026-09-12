@@ -1,0 +1,85 @@
+{
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "id": "protect-head-v4",
+      "prompt": "One warm anime earthquake safety illustration landscape 3:2. Exactly ONE Japanese boy aged 10, fourth grade, yellow long sleeved shirt blue trousers. Full body side profile, kneeling low on clear floor, head bent down, both forearms covering his head and back of neck. ONE head with one continuous short black hairstyle, two hands and two arms. Natural realistic school-age proportions. Clear open interior space, furniture far away. No other people, no text, no logos.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-dee48896-3cf7-44f6-8ce6-152cb8350e87.png"
+    },
+    {
+      "id": "shelter-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. An adult parent and fourth-grade child each crouch entirely under a spacious sturdy wooden dining table, gripping a table leg, protecting head. All bodies fit under tabletop. Side view. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-4c6db635-9ef5-4bdd-8c7f-2223240aeac1.png"
+    },
+    {
+      "id": "safe-exit-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. After shaking, parent and child wearing thick closed shoes use a flashlight to check a clear floor route to open exit. Small shards far to the side, never under feet. No cleaning glass. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-efd617ff-51e1-4178-b30e-a12cc45dca9c.png"
+    },
+    {
+      "id": "check-information-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Parent and child sit in a safe clear home area checking an official emergency information app on phone together, radio nearby. Screen simple icons with no text. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-925ddf63-46e4-44fa-a203-a2769f58c4e9.png"
+    },
+    {
+      "id": "window-distance-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Parent and child crouch low covering heads with forearms in clear interior space FAR from large window visible in background. No touching glass or curtains. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-8b49fcab-f714-4213-9f78-004d99f24dc8.png"
+    },
+    {
+      "id": "kitchen-cover-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. During shaking, parent and child crouch protecting heads in open floor space far from stove and pot in distant kitchen background. No reaching stove, no firefighting. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-818d6b19-7407-4797-9c87-1ffe83cd3348.png"
+    },
+    {
+      "id": "shelter-damaged-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. After earthquake, parent and child in closed shoes calmly move away from cracked damaged house toward wide clear open space. No entering building, no falling rubble near them. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-b96fbcd9-9e92-4fe0-9e28-5528edad0e04.png"
+    },
+    {
+      "id": "shelter-home-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Parent and child resting safely inside intact home, emergency water and food kit and portable radio nearby, checking information together. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-cfe9722e-3275-4999-aaed-ba7e4b0cb05f.png"
+    },
+    {
+      "id": "shelter-tsunami-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Parent and child promptly evacuating uphill along inland path, distant coast below behind them. Both closed shoes, heading toward higher ground. No waiting, no wave spectacle. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-e7494186-c254-4807-b657-11aec3f67652.png"
+    },
+    {
+      "id": "home-bed-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Fourth-grade child lying in bed shielding head and neck with pillow, curled posture, remaining on bed during shaking. No adult needed. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-0cfa7d09-04ec-4dbf-8288-8aa4e28c78af.png"
+    },
+    {
+      "id": "classroom-desk-v4",
+      "prompt": "Use case illustration-story. Landscape 3:2 warm clean Japanese anime editorial earthquake safety educational illustration, natural proportions, muted teal and yellow palette, simple readable scene. Exactly two Japanese fourth-grade students age10 similar height, yellow and light blue clothes, BOTH crouching entirely under their own sturdy school desks gripping table legs, heads below desktop protected by tabletop. No adults. No text, no logos, no collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-4d96a38e-42f3-4916-9d47-593375d2c9d1.png"
+    },
+    {
+      "id": "classroom-exit-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. After shaking, teacher guides fourth-grade pupils calmly and orderly from school hallway toward open schoolyard, spaced walking, no pushing. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-c5a7df95-bdcc-480d-8a0b-f1947b348c79.png"
+    },
+    {
+      "id": "classroom-reunion-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Fourth-grade pupil stays with teacher in open safe schoolyard assembly area, talks to teacher, other pupils waiting calmly. No child leaving alone. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-5d41aa9b-b6f5-4234-a42c-8f0f5ea7ecfd.png"
+    },
+    {
+      "id": "office-copier-v4",
+      "prompt": "Use case illustration-story. Landscape 3:2 warm clean Japanese anime editorial earthquake safety educational illustration, natural proportions, muted teal and yellow palette, simple readable scene. Exactly ONE adult Japanese employee age35 in teal office shirt and trousers crouching low shielding head and neck with forearms on clear office floor a wide safe distance from wheeled heavy copier in background. No children. No touching copier. No text, no logos, no collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-cb1bccd0-64cf-4638-bb36-e9c6dcd39e37.png"
+    },
+    {
+      "id": "office-elevator-v4",
+      "prompt": "Use case illustration-story. Landscape 3:2 warm clean Japanese anime editorial earthquake safety educational illustration, natural proportions, muted teal and yellow palette, simple readable scene. Exactly TWO adult Japanese office employees ages30-40, both adult height, teal shirt and mustard blouse with ID lanyards. After earthquake they follow a staff member's pointing gesture toward a safe stairwell leading DOWN, closed elevator behind to left. Clear floor, no shaking motion lines, no children, no debris on route. No text, no logos, no collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-1b7a20dd-ed55-4596-830b-6043f82d112a.png"
+    },
+    {
+      "id": "office-stay-v4",
+      "prompt": "Use case: illustration-story. One landscape 3:2 Japanese earthquake safety app illustration. Attached image is STYLE REFERENCE ONLY: warm hand-drawn anime editorial art, teal and yellow, clean lines, natural anatomy, sparse background. Adult office coworkers remain in safe intact office checking radio and phone emergency information, water and supplies nearby, calm waiting. No children. Wherever parent/child appear: adult parent teal clothing, child yellow clothing visibly Japanese fourth grader age 9–10, about 140cm, longer limbs school-age proportions, NOT toddler or chibi. Clear readable correct action, no text, letters, logos, panels or collage.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-d4345e2f-9be9-4403-b54b-271a7173c361.png"
+    }
+  ]
+}

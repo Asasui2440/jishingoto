@@ -1,0 +1,53 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "name": "furniture-anchor",
+      "prompt": "Square product-category educational illustration on warm ivory background: a pair of white telescopic earthquake furniture restraint poles, wide flat pads on both ends, and a separate small metal L bracket. Clean hand drawn Japanese disaster education style, dark outlines, pastel yellow teal accents, simple cel shading, centered isolated objects with generous margin. No brand, text, letters, numbers, logos, people. Depict generic equipment, not a particular branded product.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-ae7809f9-f005-4140-98a3-3f4e7855ca8c.png",
+      "path": "public/illustrations/products/furniture-anchor.png"
+    },
+    {
+      "name": "tv-belt",
+      "prompt": "Square educational product illustration: rear three-quarter view of a small flat screen television securely connected by two visible black woven safety straps with mounting plates to a low wooden TV stand. Make belts the focal point. Clean Japanese hand drawn disaster education style, crisp outlines, warm ivory background, pastel teal and ochre, simple cel shading. No text, labels, logos or people. Generic category, not exact branded product.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-ef71c6ba-4fd8-4bca-80f9-95a18f7d8218.png",
+      "path": "public/illustrations/products/tv-belt.png"
+    },
+    {
+      "name": "safety-film",
+      "prompt": "Square educational product illustration of a window glass panel with a transparent shatter prevention film being peeled slightly back at one corner, plus a roll of clear film beside it. Crisp dark outlines, pale blue glass, warm ivory background, pastel Japanese illustrated disaster education style, simple cel shading. No text, logo, numbers, people. Generic category, no brand.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-1cf4a22b-fde7-473d-a9da-de56cad046b0.png",
+      "path": "public/illustrations/products/safety-film.png"
+    },
+    {
+      "name": "cupboard-film",
+      "prompt": "Square educational product illustration of a small wooden cupboard with glass doors, transparent safety film visibly lifted at one glass corner and a clear film roll alongside. Warm ivory backdrop, dark clear outlines, pale blue glass, ochre wood, Japanese hand drawn educational style simple cel shading. No text, people, logo. Generic product category illustration.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-3ac688e4-33c4-40a5-9573-a19ed2db8904.png",
+      "path": "public/illustrations/products/cupboard-film.png"
+    },
+    {
+      "name": "hanging-wire",
+      "prompt": "Square educational product illustration of a coiled braided metal safety wire with a carabiner at each end and a small mounting eye plate beside it, centered on warm ivory backdrop. Crisp readable outlines, gray steel and pastel teal accents, simple cel shading, Japanese hand drawn disaster education style. No text, logo, people. Generic equipment category illustration.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-0978eba9-39c7-40d5-bfa9-9856d852ba9f.png",
+      "path": "public/illustrations/products/hanging-wire.png"
+    },
+    {
+      "name": "protect-head-v5",
+      "prompt": "Landscape 3:2 Japanese hand drawn earthquake safety educational illustration. A person in a yellow shirt kneels low and covers head AND back of neck with both arms in a clear empty area. CRITICAL no desk or table anywhere, no accessible shelter furniture; this illustrates the fallback only when there is no sturdy table nearby. No windows or tall furniture close to person, no falling items overhead. Simple clean outlines, flat warm pastel colors, cel shading, sober attentive expression, no text.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-b12b580a-8f25-4bbd-83fa-de1836d189a3.png",
+      "path": "public/illustrations/review/protect-head-v5.png"
+    },
+    {
+      "name": "shelter-damaged-v5",
+      "prompt": "Landscape 3:2 Japanese hand drawn earthquake evacuation educational illustration. Adult in teal top and child in yellow top with serious attentive expressions walking together toward the foreground into a broad unobstructed open evacuation area. A damaged house is SMALL AND FAR in the deep background at least several building heights away; clearly large open separation from any walls, roof, windows or debris. No backpacks or luggage, no cheerful picnic expression, no running, no dramatic collapse. Characters fully on clear safe open ground. Clear 2D outlines, warm pastel cel shading, no text, no logo.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-df80c3ea-3f96-4928-99fe-66eae60d1944.png",
+      "path": "public/illustrations/review/shelter-damaged-v5.png"
+    },
+    {
+      "name": "safe-exit-v5",
+      "prompt": "Landscape 3:2 Japanese hand drawn earthquake safety educational illustration. Indoors AFTER shaking, person sitting still on a clean rug at the edge of a room, checking floor ahead with a flashlight already in hand. A few small broken fragments are visible farther away on the floor; the person remains on the safe clear area and does not step into debris or reach for shoes. No shoes being put on, no scattered shards under person's feet, no running. Focus on observing the floor and identifying an unobstructed route before moving. Teal top, sober attentive face, warm muted cel shading, crisp illustrated outlines, no text.",
+      "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-84d30940-bbb2-48fb-81df-87a82c45233d.png",
+      "path": "public/illustrations/review/safe-exit-v5.png"
+    }
+  ]
+}

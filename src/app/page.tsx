@@ -18,12 +18,12 @@ type InfoItem = { Icon: typeof CameraBlueIcon; bg: string; fg: string; title: st
 
 const INFO = {
   child: [
-    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋[へや]の写真[しゃしん]を撮[と]って、安全[あんぜん]をチェックするよ", body: "AI（人工知能[じんこうちのう]）が、危[あぶ]ないところを自動[じどう]で見[み]つけるよ" },
-    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "写真[しゃしん]はすぐ消[け]せるから安心[あんしん]してね", body: "ぼかした写真[しゃしん]だけを、解析[かいせき]と予想図[よそうず]のためOpenAI APIへ送[おく]るよ。端末[たんまつ]には保存[ほぞん]しないよ" },
+    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋の写真から、地震[じしん]への備[そな]えを考えよう", body: "AIが見つけた危険[きけん]な場所を確認[かくにん]し、行動をシミュレーション" },
+    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "送信前に、顔や住所を隠[かく]せます", body: "必要[ひつよう]のない情報[じょうほう]を隠[かく]した写真を、部屋の確認[かくにん]と予想図[よそうず]づくりに使います" },
   ],
   adult: [
     { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "室内写真から地震時の危険箇所を確認", body: "AIが家具の転倒、ガラスの飛散、避難経路の閉塞などを検出します" },
-    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "写真は端末に保存されず、いつでも削除可能", body: "マスク後の写真だけを解析と予想図作成のためOpenAI APIへ送信し、人物の特定や住所の読み取りは行いません" },
+    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "送信前に個人情報をマスク", body: "確認後の写真をOpenAIへ送り、室内の解析と予想図の生成に使用します" },
   ],
 } satisfies Record<Audience, InfoItem[]>;
 
@@ -54,7 +54,7 @@ export default function OnboardingPage() {
         </header>
 
         <div role="radiogroup" aria-label="表示モード" className="grid grid-cols-2 gap-1 rounded-tile bg-border p-1">
-          {([ ["child", "こども向け"], ["adult", "大人向け"] ] as const).map(([value, label]) => {
+          {([ ["child", "小学校高学年"], ["adult", "大人向け"] ] as const).map(([value, label]) => {
             const active = audience === value;
             return (
               <button
@@ -85,7 +85,7 @@ export default function OnboardingPage() {
 
         <Button onClick={start}>
           <ArrowRightIcon className="size-5 text-ink" />
-          {adult ? "安全診断を始める" : <Furigana text="体験[たいけん]を始[はじ]める" />}
+          <Furigana text="体験[たいけん]を始[はじ]める" adult="体験を始める" />
         </Button>
 
         <Button variant="outline" size="md" onClick={() => router.push("/evac")}>

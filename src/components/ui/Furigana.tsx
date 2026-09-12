@@ -1,5 +1,6 @@
 "use client";
 
+import { needsReading, upperElementaryText } from "@/lib/reading-level";
 import { Fragment } from "react";
 import { useSettings } from "@/lib/settings";
 import { adultText, plain } from "@/lib/adult-copy";
@@ -27,13 +28,14 @@ export function Furigana({ text, adult }: { text: string; adult?: string }) {
   const { audience } = useSettings();
   if (audience === "adult") return <>{adult === undefined ? adultText(text) : plain(adult)}</>;
 
-  const parts = text.split(TOKEN).filter(Boolean);
+  const parts = upperElementaryText(text).split(TOKEN).filter(Boolean);
 
   return (
     <>
       {parts.map((part, i) => {
         const match = part.match(PARSE);
         if (!match) return <Fragment key={i}>{part}</Fragment>;
+        if (!needsReading(match[1])) return <Fragment key={i}>{match[1]}</Fragment>;
         return (
           // rp（非対応ブラウザ用の括弧）は入れていない。
           // textContent に「(かんじ)」が混ざって、ボタンの読み上げ名が

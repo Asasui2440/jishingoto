@@ -1,5 +1,6 @@
 "use client";
 
+import { AftermathShare } from "@/components/AftermathShare";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ShieldCheck2Icon, XCircleDarkIcon } from "@/components/icons";
@@ -27,8 +28,8 @@ function shareUrl() {
 export default function SharePage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const shareText = audience === "adult" ? adultText(SHARE_TEXT) : SHARE_TEXT;
-  const { answers, risks } = useSession();
+  const shareText = audience === "adult" ? adultText(SHARE_TEXT) : "自分の部屋の安全をチェックしました！ #ジシンゴト";
+  const { answers, risks, photoUrl, checked } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [saving, setSaving] = useState(false);
 
@@ -116,6 +117,9 @@ export default function SharePage() {
             })}
           </div>
 
+          <p className="mt-3 text-sm font-bold text-safe">✓ 室内の備え：{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
+          <AftermathShare photoUrl={photoUrl} risks={risks} />
+
           <p className="mt-4 text-center font-display text-13 font-bold text-primary-ink">
             <Furigana text="みんなもスマホで「ジシンゴト」を検索[けんさく]してみてね！" />
           </p>
@@ -124,7 +128,7 @@ export default function SharePage() {
         <div className="flex items-center gap-2 rounded-field bg-safe-soft p-3">
           <ShieldCheck2Icon className="size-4 shrink-0" />
           <p className="text-11 font-semibold text-ink-muted">
-            <Furigana text="この画像[がぞう]にはお部屋[へや]の写真[しゃしん]や個人情報[こじんじょうほう]は一切[いっさい]ふくまれません" />
+            <Furigana text="下のボタンは結果サマリー用です。予想図[よそうず]は、画像の下の「予想図を共有」から送れます。" />
           </p>
         </div>
 
@@ -138,7 +142,7 @@ export default function SharePage() {
               )
             }
           >
-            LINEで送る
+            結果をLINEで送る
           </Button>
           <Button
             size="md"
@@ -149,11 +153,16 @@ export default function SharePage() {
               )
             }
           >
-            X（旧Twitter）にポスト
+            結果をXにポスト
           </Button>
           <Button size="md" variant="outline" onClick={download} disabled={saving}>
-            <Furigana text={saving ? "作成中[さくせいちゅう]..." : "画像[がぞう]としてスマホに保存[ほぞん]する"} />
+            <Furigana text={saving ? "作成中[さくせいちゅう]..." : "結果サマリーを画像で保存"} />
           </Button>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => router.push("/result")}>戻る</Button>
+          <Button onClick={() => router.push("/evac")}>フェーズ2へ</Button>
         </div>
 
         <button

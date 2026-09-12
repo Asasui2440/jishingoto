@@ -9,6 +9,7 @@ import {
 } from "./content";
 import { adultText } from "./adult-copy";
 import { roomObjectType, EXIT_EXPLANATION } from "./room-guidance";
+import { HOME_KITCHEN_AFTER, shuffleChoices, type RoomSetting } from "./scenarios";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -37,20 +38,25 @@ export async function analyzeRoom(photoUrl: string | null): Promise<RoomAnalysis
   }
 }
 
-const SIMPLE_CHOICES: Record<"move" | "exit" | "desk" | "tidy", Choice[]> = {
+const SIMPLE_CHOICES: Record<"protect" | "move" | "exit" | "desk" | "tidy", Choice[]> = {
+  protect: [
+    { id: "protect-head", label: "低[ひく]い姿勢[しせい]になり、頭[あたま]と首[くび]を守[まも]る", detail: "無理[むり]に走[はし]らず、その場[ば]で身[み]を守[まも]る", safety: 0.95, explanation: ["強[つよ]いゆれの間[あいだ]は、まず低[ひく]い姿勢[しせい]になり、手[て]や持[も]っている物[もの]で頭[あたま]と首[くび]を守[まも]ります。すぐ近[ちか]くに丈夫[じょうぶ]で安全[あんぜん]に入[はい]れる机[つくえ]があれば、その下[した]に入[はい]って脚[あし]を持[も]ちます。", "落[お]ちる・たおれる・動[うご]く物[もの]が近[ちか]いときは、無理[むり]に走[はし]らず、動[うご]ける範囲[はんい]で距離[きょり]をとって、ゆれがおさまるのを待[ま]ちます。"] },
+    { id: "run-immediately", label: "ゆれている間[あいだ]に外[そと]へ走[はし]る", detail: "急[いそ]いで建物[たてもの]の外[そと]へ出[で]る", safety: 0.25, explanation: ["強[つよ]いゆれの中[なか]で走[はし]ると、転[ころ]んだり落下物[らっかぶつ]に当[あ]たったりする危険[きけん]があります。", "まずその場[ば]で身[み]を守[まも]り、ゆれがおさまってから周囲[しゅうい]を確認[かくにん]します。"] },
+    { id: "stand-and-watch", label: "立[た]ったまま周[まわ]りを見[み]る", detail: "動[うご]かずに様子[ようす]を見[み]る", safety: 0.3, explanation: ["立[た]ったままでは転[ころ]びやすく、頭[あたま]も守[まも]れません。", "低[ひく]い姿勢[しせい]になり、手[て]やかばんなど使[つか]える物[もの]で頭[あたま]を守[まも]ります。"] },
+  ],
   move: [
-    { id: "move-away", label: "そこから離[はな]れて頭[あたま]を守[まも]る", detail: "低[ひく]い姿勢[しせい]で安全[あんぜん]な場所[ばしょ]へ", safety: 0.95, explanation: ["たおれたり落[お]ちたりする物[もの]から距離[きょり]をとり、頭[あたま]を守[まも]るのが基本[きほん]です。", "ゆれている間[あいだ]は無理[むり]に物[もの]を支[ささ]えず、自分[じぶん]の安全[あんぜん]を優先[ゆうせん]しましょう。"] },
+    { id: "move-away", label: "できる範囲[はんい]で離[はな]れ、頭[あたま]と首[くび]を守[まも]る", detail: "無理[むり]に走[はし]らず、低[ひく]い姿勢[しせい]をとる", safety: 0.95, explanation: ["たおれたり落[お]ちたりする物[もの]が近[ちか]いときは、無理[むり]に走[はし]らず、動[うご]ける範囲[はんい]で距離[きょり]をとります。", "低[ひく]い姿勢[しせい]で頭[あたま]と首[くび]を守[まも]り、物[もの]を手[て]で支[ささ]えに行[い]かず、ゆれがおさまるのを待[ま]ちます。"] },
     { id: "hold-object", label: "たおれないように手[て]でおさえる", detail: "その場[ば]で物[もの]を支[ささ]える", safety: 0.15, explanation: ["強[つよ]いゆれの中[なか]で物[もの]を支[ささ]えると、下敷[したじ]きやけがにつながります。", "物[もの]から離[はな]れ、頭[あたま]を守[まも]ってください。"] },
     { id: "run-out", label: "すぐに外[そと]へ走[はし]る", detail: "ゆれている間[あいだ]に出口[でぐち]へ向[む]かう", safety: 0.35, explanation: ["ゆれている間[あいだ]の移動[いどう]は転倒[てんとう]や落下物[らっかぶつ]の危険[きけん]があります。", "まずその場[ば]で身[み]を守[まも]り、ゆれがおさまってから移動[いどう]します。"] },
   ],
   exit: [
-    { id: "clear-exit", label: "足[あし]を守[まも]り、ドアまでの道[みち]と扉[とびら]を確認[かくにん]", detail: "安全[あんぜん]に近[ちか]づけたら扉[とびら]を開[あ]ける。無理[むり]なら助[たす]けを呼[よ]ぶ", safety: 0.95, explanation: EXIT_EXPLANATION },
+    { id: "clear-exit", label: "まず足元[あしもと]を確認[かくにん]し、安全[あんぜん]に通[とお]れる道[みち]を探[さが]す", detail: "あわてて歩[ある]かず、破片[はへん]や倒[たお]れた物[もの]を確認[かくにん]", safety: 0.95, explanation: EXIT_EXPLANATION },
     { id: "climb-over", label: "そのまま物[もの]をまたいで外[そと]へ出[で]る", detail: "急[いそ]いで出口[でぐち]へ", safety: 0.25, explanation: ["散[ち]らばった物[もの]や破片[はへん]で転[ころ]んだり、足[あし]をけがしたりします。", "はきものをはき、足元[あしもと]を確認[かくにん]してください。"] },
     { id: "wait-only", label: "なにもせず部屋[へや]で待[ま]つ", detail: "出口[でぐち]はふさがれたまま", safety: 0.5, explanation: ["すぐ動[うご]かないのは大切[たいせつ]ですが、出口[でぐち]がふさがれたままだと次[つぎ]の避難[ひなん]が難[むずか]しくなります。", "ゆれがおさまったら安全[あんぜん]を確[たし]かめ、逃[に]げ道[みち]をつくりましょう。"] },
   ],
   desk: [
-    { id: "under-desk", label: "机[つくえ]の下[した]で頭[あたま]を守[まも]る", detail: "机[つくえ]の脚[あし]をしっかり持[も]つ", safety: 0.95, explanation: ["じょうぶな机[つくえ]の下[した]は、落[お]ちてくる物[もの]から身[み]を守[まも]る助[たす]けになります。", "机[つくえ]が動[うご]かないよう脚[あし]を持[も]ち、ゆれがおさまるまで待[ま]ちます。"] },
-    { id: "beside-desk", label: "机[つくえ]の横[よこ]で立[た]ったまま待[ま]つ", detail: "すぐ動[うご]けるようにする", safety: 0.35, explanation: ["立[た]ったままでは転[ころ]びやすく、落下物[らっかぶつ]から頭[あたま]を守[まも]れません。", "低[ひく]い姿勢[しせい]になり、机[つくえ]の下[した]などへ移[うつ]ります。"] },
+    { id: "under-desk", label: "丈夫[じょうぶ]な机[つくえ]なら下[した]へ。無理[むり]なら頭[あたま]を守[まも]る", detail: "安全[あんぜん]に入[はい]れたら脚[あし]を持[も]つ", safety: 0.95, explanation: ["丈夫[じょうぶ]で、安全[あんぜん]に入[はい]れる机[つくえ]なら下[した]に入り、机[つくえ]が動[うご]かないよう脚[あし]を持[も]ちます。", "ガラスの机[つくえ]、こわれそうな机[つくえ]、離[はな]れた机[つくえ]には無理[むり]に向[む]かわず、その場[ば]で低[ひく]くなって頭[あたま]と首[くび]を守[まも]ります。"] },
+    { id: "beside-desk", label: "机[つくえ]の横[よこ]で立[た]ったまま待[ま]つ", detail: "すぐ動[うご]けるようにする", safety: 0.35, explanation: ["立[た]ったままでは転[ころ]びやすく、落下物[らっかぶつ]から頭[あたま]を守[まも]れません。", "まず低[ひく]い姿勢[しせい]で頭[あたま]と首[くび]を守[まも]ります。丈夫[じょうぶ]で安全[あんぜん]に入[はい]れる机[つくえ]なら下[した]を使[つか]います。"] },
     { id: "door-desk", label: "ゆれながら出口[でぐち]へ走[はし]る", detail: "机[つくえ]は使[つか]わず逃[に]げる", safety: 0.3, explanation: ["ゆれの最中[さいちゅう]に走[はし]るのは危険[きけん]です。", "まず近[ちか]くの安全[あんぜん]な場所[ばしょ]で身[み]を守[まも]ります。"] },
   ],
   tidy: [
@@ -64,10 +70,13 @@ const BASE_BY_KIND = { fall: "q1", break: "q6", block: "q3" } as const;
 
 function questionForRisk(risk: Risk, index: number): Question {
   const type: RoomObjectType = roomObjectType(risk);
-  const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { x: Math.max(0, risk.x - 13), y: Math.max(0, risk.y - 18), w: 26, h: 36, label: "ここに注意！" }, seconds: 10 };
+  const x = Math.max(0, Math.min(100, risk.x - 13));
+  const y = Math.max(0, Math.min(100, risk.y - 18));
+  const region = risk.bounds ?? { x, y, w: Math.min(26, 100 - x), h: Math.min(36, 100 - y) };
+  const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { ...region, label: risk.name }, seconds: 10 };
   if (type === "desk") return { ...common, axis: "initial", category: "しゅんかん判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
   if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が棚から落ちそうです。`, choices: SIMPLE_CHOICES.move };
-  if (type === "loose_objects" || type === "bed" || risk.kind === "block" || type === "doorway") return { ...common, phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
+  if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
   if (type === "window") {
     const base = QUESTIONS.find((question) => question.id === "q6")!;
     return { ...base, ...common, riskKind: "break", situation: `${risk.name}のすぐそばで、強[つよ]いゆれにあいました。` };
@@ -78,11 +87,11 @@ function questionForRisk(risk: Risk, index: number): Question {
 }
 
 export function withAdultSituation(question: Question, risk: Risk): Question {
-  const name = risk.adultName ?? adultText(risk.name);
+  const name = adultText(risk.adultName ?? risk.name);
   const type = roomObjectType(risk);
   let adultSituation = `${name}の近くで強い揺れが始まりました。どのように行動しますか。`;
   if (type === "desk") adultSituation = `強い揺れが発生しました。近くに${name}があります。どのように身を守りますか。`;
-  if (type === "loose_objects" || type === "bed" || risk.kind === "block") adultSituation = `揺れが収まりました。${name}の近くに物が散乱しています。どのように行動しますか。`;
+  if (type === "loose_objects" || risk.kind === "block") adultSituation = `揺れが収まりました。${name}の近くに物が散乱しています。どのように行動しますか。`;
   if (type === "doorway") adultSituation = `揺れが収まりました。${name}の近くに物が散乱しています。どのように行動しますか。`;
   if (type === "tv") adultSituation = `${name}の近くで強い揺れが始まりました。どのように行動しますか。`;
   if (type === "hanging_object") adultSituation = `${name}が大きく揺れており、落下する恐れがあります。どのように行動しますか。`;
@@ -91,17 +100,27 @@ export function withAdultSituation(question: Question, risk: Risk): Question {
   return { ...question, adultPlace: name, adultSituation };
 }
 
-/** 検出物体と設問パターンを照合し、この部屋専用の最大5問を作る。 */
-export async function fetchQuestions(risks: Risk[]): Promise<Question[]> {
+function pickMany<T>(items: T[], count: number, random: () => number): T[] {
+  const pool = [...items];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
+}
+
+/** 写真で見つけた物体を中心に出題。自宅では揺れの後の火の元確認も扱う。 */
+export async function fetchQuestions(risks: Risk[], setting: RoomSetting = "home", random = Math.random): Promise<Question[]> {
   const roomQuestions = risks.filter((risk) => risk.confirmed).map((risk, index) => withAdultSituation(questionForRisk(risk, index), risk));
-  const during = roomQuestions.filter((q) => q.axis === "initial").slice(0, 2);
-  const after = roomQuestions.filter((q) => q.axis !== "initial").slice(0, 1);
-  // 検出0件でも、初動→周囲・出口の確認→情報の判断を必ず体験する。
-  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "しゅんかん判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。近[ちか]くにじょうぶな机[つくえ]がある場面[ばめん]を考[かんが]えてね。", adultSituation: "強い揺れが発生しました。近くに頑丈な机がある場面を想定してください。どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.desk });
-  if (!after.length) after.push({ id: "after-common", axis: "evacuation", category: "ゆれがおさまったあと", situation: "ゆれがおさまりました。出口[でぐち]の近[ちか]くに物[もの]が散[ち]らばっている場面[ばめん]です。", adultSituation: "揺れが収まりました。出口付近に物が散乱している場面を想定してください。どのように行動しますか。", seconds: 12, choices: SIMPLE_CHOICES.exit });
-  const fire = QUESTIONS.find((q) => q.id === "q2")!;
+  const desk = roomQuestions.find((q) => q.choices.some((choice) => choice.id === "under-desk"));
+  const duringPool = roomQuestions.filter((q) => q.axis === "initial" && q.id !== desk?.id);
+  const during: Question[] = [...(desk ? [desk] : []), ...pickMany(duringPool, desk ? 1 : 2, random)];
+  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "しゅんかん判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
+  const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial"), 1, random);
   const information = QUESTIONS.find((q) => q.id === "q5")!;
-  return [...during, fire].map((q): Question => ({ ...q, phase: "during" })).concat([...after, information].map((q): Question => ({ ...q, phase: "after" })));
+  return during.map((q): Question => ({ ...q, phase: "during" }))
+    .concat([...afterRoom, ...(setting === "home" ? [HOME_KITCHEN_AFTER] : []), information].map((q): Question => ({ ...q, phase: "after" })))
+    .map((q) => shuffleChoices(q, random));
 }
 
 export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test" };

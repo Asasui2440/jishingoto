@@ -1,0 +1,20 @@
+[
+  {
+    "name": "room-wide-v7",
+    "prompt": "Use case: illustration-story. Educational Japanese child-friendly earthquake preparedness app illustration. Warm polished 2D anime picture book, clean teal and cream palette with orange accents, soft outlined forms. Landscape 3:2. No letters, no numbers, no captions, no watermark. A welcoming wide angle view of an entire ordinary Japanese living room, from one corner. Show full floor, unobstructed doorway, tall bookshelf, low sturdy table, sofa and window, all entirely within frame with generous margins. No people, no phone frame, no photography, no disaster damage. Convey how to capture the whole room rather than just one object.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-9efabc88-9136-4705-9b1e-b27151a1fd62.png",
+    "path": "public/illustrations/actions/room-wide-v7.png"
+  },
+  {
+    "name": "cupboard-dishes-v7",
+    "prompt": "Use case: illustration-story. Educational Japanese child-friendly earthquake preparedness app illustration. Warm polished 2D anime picture book, clean teal and cream palette with orange accents, soft outlined forms. Landscape 3:2. No letters, no numbers, no captions, no watermark. An adult crouching and carefully placing a stack of ceramic dinner plates onto a LOW shelf of a kitchen dish cupboard, young child safely watching at a little distance. Cupboard visibly contains only dishes bowls and cups, absolutely NO books or toys. Open lower door lets viewer clearly see plates being placed down. Tall cupboard entirely framed, calm preparation before an earthquake. Natural anatomy.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-3f04ba1f-f89a-4767-82df-d5d5a8d3e003.png",
+    "path": "public/illustrations/actions/cupboard-dishes-v7.png"
+  },
+  {
+    "name": "glass-door-v7",
+    "prompt": "Use case: illustration-story. Educational Japanese child-friendly earthquake preparedness app illustration. Warm polished 2D anime picture book, clean teal and cream palette with orange accents, soft outlined forms. Landscape 3:2. No letters, no numbers, no captions, no watermark. A clear GLASS INTERIOR DOOR with wooden frame, visible handle and reflective glass pane, fully shown in a tidy Japanese home. An adult nearby points toward the intact glass door while explaining it to a child standing safely back. Uncluttered clear walkway, no toys, no tidying action, no books, no shattered glass, no handling glass. The glass door is the dominant focal subject. Calm preparation before earthquake.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-3196ef0f-eb0a-459d-833e-29a334d89bbe.png",
+    "path": "public/illustrations/actions/glass-door-v7.png"
+  }
+]

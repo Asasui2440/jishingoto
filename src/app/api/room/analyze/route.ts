@@ -31,7 +31,7 @@ function sanitize(value: unknown): Risk[] {
       const y = Math.max(0, Math.min(99, Number(box.y)));
       bounds = { x, y, w: Math.min(100 - x, Number(box.w)), h: Math.min(100 - y, Number(box.h)) };
     }
-    return [{ id: `ai-${index}-${objectType}`, name: row.name.slice(0, 30), adultName: typeof row.adultName === "string" && row.adultName.trim() ? row.adultName.trim().slice(0, 60) : undefined, kind, objectType, confidence, bounds, x: bounds ? bounds.x + bounds.w / 2 : clamp(row.x, 50), y: bounds ? bounds.y + bounds.h / 2 : clamp(row.y, 50), confirmed: false }];
+    return [{ id: `ai-${index}-${objectType}`, name: row.name.replaceAll("テレビ受像機", "テレビ").slice(0, 30), adultName: typeof row.adultName === "string" && row.adultName.trim() ? row.adultName.trim().replaceAll("テレビ受像機", "テレビ").slice(0, 60) : undefined, kind, objectType, confidence, bounds, x: bounds ? bounds.x + bounds.w / 2 : clamp(row.x, 50), y: bounds ? bounds.y + bounds.h / 2 : clamp(row.y, 50), confirmed: false }];
   });
 }
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   const prompt = `この部屋の写真を地震防災の観点で観察してください。実際に画像で確認できる危険候補だけを最大8件返してください。人物の特定や住所・文字の読み取りはしないでください。
-JSONのみ: {"risks":[{"name":"子どもにも分かる日本語の短い名前","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
+JSONのみ: {"risks":[{"name":"小学校高学年にも分かる短い名前（テレビ受像機ではなくテレビなど、日常の呼び方）","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
 食器棚はcupboard。棚の上・高い場所に置かれた物はelevated_objects（床置きのloose_objectsと区別する）。loose_objectsは床に置かれた物だけに使用する。対象が棚本体か棚上の物かを名前と枠で区別する。
 kind: fall=倒れる/落ちる、break=割れる、block=出口や通路をふさぐ。棚上の物は主にfall。床や通路が写っていなければ散乱や通行障害を断定しない。固定状態や危険を断定せず、根拠が弱ければconfidenceを下げる。`;
 
