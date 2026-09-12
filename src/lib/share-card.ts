@@ -1,5 +1,6 @@
 "use client";
 
+import { upperElementaryText } from "./reading-level";
 import { adultText, plain } from "./adult-copy";
 import type { Audience } from "./settings";
 import { AXIS_LABEL, safetyBand, type Axis } from "./content";
@@ -46,7 +47,7 @@ export function drawShareCard(
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const copy = audience === "adult" ? adultText : plain;
+  const copy = audience === "adult" ? adultText : (text: string) => plain(upperElementaryText(text));
 
   canvas.width = W;
   canvas.height = H;

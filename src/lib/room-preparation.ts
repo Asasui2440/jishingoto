@@ -30,11 +30,10 @@ export function preparedAftermath(photo: string | null, risks: Risk[]) {
   return imageJob?.photo === photo && imageJob.result ? { ...imageJob.result, events: aftermathEvents(risks) } : null;
 }
 
-/** マスク確定後、解析と画像生成を同時に開始。解析結果を待たない。 */
+/** マスク確定後、部屋の危険候補だけを解析する。 */
 export function prepareRoom(photo: string | null): Promise<RoomAnalysis> {
   if (analysisJob?.photo === photo) return analysisJob.promise;
   resetRoomTimings();
-  void prepareAftermath(photo, []);
   const options = roomTestOptions();
   const finish = startRoomTiming("analysis");
   const work: Promise<RoomAnalysis> = options.mode === "fixture"

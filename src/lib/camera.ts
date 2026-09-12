@@ -13,7 +13,9 @@ export async function preparePhoto(file: Blob): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const context = canvas.getContext("2d");
+  if (!context) { bitmap.close(); throw new Error("Photo processing unavailable"); }
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   return canvas.toDataURL("image/jpeg", 0.82);
 }
@@ -30,7 +32,7 @@ export async function applyPrivacyMasks(dataUrl: string, regions: MaskRegion[]):
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
   const context = canvas.getContext("2d");
-  if (!context) return dataUrl;
+  if (!context) throw new Error("Photo masking unavailable");
   context.drawImage(image, 0, 0);
   for (const region of regions) {
     const x = region.x / 100 * canvas.width;

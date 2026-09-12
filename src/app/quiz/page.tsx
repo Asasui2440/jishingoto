@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import roomQuiz from "@/../public/figma/img/room-quiz.jpg";
+import roomQuiz from "@/../public/figma/img/room-risk.jpg";
 import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
 import { Meter, Tag } from "@/components/ui/Bits";
 import { Card } from "@/components/ui/Card";
@@ -16,7 +16,7 @@ import { getSession, useSession } from "@/lib/session";
 import { playRumble, playTick } from "@/lib/audio";
 
 /** 揺れの演出を出す長さ。最初の1問だけ鳴らす */
-const SHAKE_MS = 2600;
+const SHAKE_MS = 800;
 
 /**
  * 1問ぶんの出題。
@@ -48,8 +48,8 @@ function QuestionView({
   // 地震の演出は最初の1問だけ。毎問やると体験が間延びする。
   useEffect(() => {
     if (!shake) return;
-    const stopSound = sound ? playRumble(SHAKE_MS / 1000 + 1) : null;
-    vibrate([0, 200, 80, 200, 80, 300]);
+    const stopSound = sound ? playRumble(SHAKE_MS / 1000) : null;
+    vibrate(60);
     const id = setTimeout(() => setShaking(false), SHAKE_MS);
     return () => {
       clearTimeout(id);
@@ -107,7 +107,7 @@ function QuestionView({
               <Furigana text={kind.label} />
             </Tag>
             <span className="font-display text-13 font-bold text-ink-muted">
-              {audience === "adult" ? "あなたの部屋で検出した「" : "きみの部屋の「"}
+              {audience === "adult" ? "あなたの部屋で検出した「" : "あなたの部屋の「"}
               <Furigana text={question.place} adult={question.adultPlace} />」{audience === "adult" ? "について" : "の話"}
             </span>
           </div>
@@ -119,12 +119,15 @@ function QuestionView({
           </p>
         </Card>
 
-        <div className="relative h-[190px] w-full overflow-hidden rounded-panel bg-ink">
-          {photoUrl ? (
+        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted">{question.id === "home-kitchen-after" ? "自宅のキッチンを想定した共通の問題です。" : "どの部屋でも役立つ共通の問題です。"}</p>}
+        {(question.sourceRiskId || question.id === "home-kitchen-after") && <div className="relative w-full overflow-hidden rounded-panel bg-ink">
+          {question.id === "home-kitchen-after" ? (
+            <Image src="/illustrations/actions/kitchen-question-v8.png" alt="調理中のコンロがあるキッチンの想定イラスト" width={1536} height={1024} className="h-auto w-full" />
+          ) : photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt="あなたの部屋" className="size-full object-cover" />
+            <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
-            <Image src={roomQuiz} alt="部屋のサンプル" fill sizes="354px" className="object-cover" priority />
+            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="354px" className="h-auto w-full" priority />
           )}
 
           {question.highlight ? (
@@ -167,7 +170,7 @@ function QuestionView({
               </span>
             </div>
           ) : null}
-        </div>
+        </div>}
 
         <ul className="flex flex-col gap-2.5">
           {question.choices.map((c, i) => (
@@ -217,7 +220,7 @@ export default function QuizPage() {
       return;
     }
     let alive = true;
-    void fetchQuestions(risks).then((qs) => {
+    void fetchQuestions(risks, getSession().roomSetting).then((qs) => {
       if (alive) {
         setQuestions(qs);
         update({ questions: qs });

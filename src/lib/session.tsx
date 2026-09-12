@@ -7,6 +7,7 @@ import { createPersistentStore, useStore } from "./store";
 import { adultText } from "./adult-copy";
 import type { Audience } from "./settings";
 import { clearRoomPreparation } from "./room-preparation";
+import type { RoomSetting } from "./scenarios";
 
 /** ユーザーが1問に答えた記録 */
 export type Answer = {
@@ -20,6 +21,7 @@ export type Answer = {
 };
 
 export type Session = {
+  roomSetting: RoomSetting;
   /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
   blurRegions: BlurRegion[];
@@ -38,6 +40,7 @@ export type Session = {
 };
 
 const EMPTY: Session = {
+  roomSetting: "home",
   photoUrl: null,
   blurRegions: [],
   risks: [],
@@ -141,7 +144,7 @@ export function overallSafety(answers: Answer[]): number {
 export function strengths(answers: Answer[], questions: typeof QUESTIONS = QUESTIONS, audience: Audience = "child"): string[] {
   const out: string[] = [];
   for (const a of answers) {
-    if (a.safety < 0.7) continue;
+    if (a.timedOut || a.safety < 0.7) continue;
     const q = questions.find((x) => x.id === a.questionId);
     const c = q?.choices.find((x) => x.id === a.choiceId);
     if (q && c) out.push(audience === "adult"

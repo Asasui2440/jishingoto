@@ -1,0 +1,7 @@
+{
+  "tool": "built-in image_gen",
+  "prompt": "Landscape 3:2 Japanese 2D anime-style earthquake safety educational illustration. A child in yellow top and adult in teal top sitting safely together, seen FROM BEHIND AND SLIGHTLY TO THE SIDE, both calmly READING a smartphone screen facing THEM, never presenting the phone to the viewer. Adult holds phone naturally with one hand, child observes. Screen shows a plain modest news layout with tiny unreadable horizontal lines, no warning bell, no fake emergency alarm, no logos, no legible text. Attentive neutral expressions, not laughing. Background minimal safe uncluttered living area, soft warm ivory and teal palette, crisp outlines, flat cel shading. Focus on asking a trusted adult and checking the source before sharing information. Natural anatomically correct hands and gaze.",
+  "editPrompt": "Edit the reference image. Remove ONLY the poster with Japanese writing and arrow on the upper right wall, replacing that whole poster with a plain undecorated wall matching its surroundings. No writing, letters, symbols, captions or posters anywhere in the image. Preserve the parent and child, their natural hands holding and viewing the smartphone, camera angle from behind, colors and composition exactly. Do not change the phone news layout.",
+  "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-df10eee4-266c-4338-9ca3-79d04b26fe33.png",
+  "output": "public/illustrations/review/check-information-v6.png"
+}

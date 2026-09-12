@@ -30,11 +30,13 @@ export default function CameraGuidePage() {
   const vibrate = useHaptics();
   const { videoRef, state, start, capture } = useCamera();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"choose" | "camera">("choose");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void start();
-  }, [start]);
+    if (mode === "camera") void start();
+  }, [start, mode]);
 
   // カメラが使えないときはサンプル写真で先に進める
   const usingFallback = state === "denied" || state === "unavailable";
@@ -43,7 +45,7 @@ export default function CameraGuidePage() {
     setBusy(true);
     vibrate([10, 40, 10]);
     const blurRegions = await detectBlurRegions(photo);
-    update({ photoUrl, blurRegions, startedAt: Date.now() });
+    update({ photoUrl, blurRegions, checked: [], startedAt: Date.now() });
     router.push("/privacy");
   };
 
@@ -55,8 +57,40 @@ export default function CameraGuidePage() {
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) void proceed(await preparePhoto(file), file);
+    e.target.value = "";
+    if (!file || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await proceed(await preparePhoto(file), file);
+    } catch {
+      setError("写真[しゃしん]を読[よ]み込[こ]めませんでした。別[べつ]の写真[しゃしん]（JPEG・PNGなど）を選[えら]んでね。");
+      setBusy(false);
+    }
   };
+
+  if (mode === "choose") return (
+    <div className="flex min-h-dvh flex-col">
+      <StatusBar />
+      <main className="flex flex-1 flex-col justify-center gap-6 px-6 py-8">
+        <h1 className="text-center font-display text-28 font-bold"><Furigana text="部屋の写真を用意しよう" adult="部屋の写真を用意する" /></h1>
+        <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・背の高い家具まで広く入れた部屋のイラスト" className="h-auto w-full rounded-panel" priority />
+        <div className="rounded-panel bg-primary-soft p-4 text-base leading-relaxed">
+          <p className="font-bold"><Furigana text="部屋全体が入るように撮[と]ろう" adult="部屋全体を撮影してください" /></p>
+          <p className="mt-2"><Furigana text="床[ゆか]・出入口・背[せ]の高い家具も入れよう。無理に下がらず、安全な場所から撮[と]ること。" adult="床・出入口・背の高い家具も含めてください。無理に後退せず、安全な位置から撮影してください。" /></p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <Button onClick={() => setMode("camera")} disabled={busy}><CameraWhiteIcon className="size-5" /><Furigana text="写真[しゃしん]を撮[と]る" /></Button>
+          <Button variant="outline" size="md" className="max-w-44" onClick={() => fileRef.current?.click()} disabled={busy}><Furigana text="画像[がぞう]を選[えら]ぶ" /></Button>
+          <input ref={fileRef} type="file" accept="image/*" aria-label="画像を選ぶ" onChange={onPick} disabled={busy} hidden />
+        </div>
+        {busy && <p role="status" className="text-center text-base">画像を準備しています…</p>}
+        {error && <p role="alert" className="text-base text-danger"><Furigana text={error} /></p>}
+        <button type="button" onClick={() => router.push("/")} className="min-h-11 text-sm underline">ホームへ戻る</button>
+      </main>
+      <DisclaimerFooter />
+    </div>
+  );
 
   return (
     <div className="flex min-h-dvh flex-col justify-between bg-ink">
@@ -137,43 +171,31 @@ export default function CameraGuidePage() {
 
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
         <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline">APIを使わずテストする</button>
+        {!usingFallback ? (
+          <Button onClick={onShoot} disabled={busy || state !== "live"}>
+            <CameraWhiteIcon className="size-5 text-ink" />
+            <Furigana text="さつえいする" />
+          </Button>
+        ) : null}
+        {busy ? <p role="status" className="text-sm text-white"><Furigana text="写真[しゃしん]を準備中[じゅんびちゅう]…" /></p> : null}
+        {error ? <p role="alert" className="text-sm text-white"><Furigana text={error} /></p> : null}
         {usingFallback ? (
-          <>
-            <Button onClick={() => fileRef.current?.click()} disabled={busy}>
-              <CameraWhiteIcon className="size-5 text-ink" />
-              <Furigana text="写真[しゃしん]をえらぶ" />
-            </Button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onPick}
-              className="sr-only"
-            />
             <button
               type="button"
               onClick={() => void proceed(null)}
+              disabled={busy}
               className="font-display text-sm font-bold text-white underline underline-offset-2"
             >
               <Furigana text="サンプルの部屋[へや]ですすむ" />
             </button>
-          </>
-        ) : (
-          <>
-            <Button onClick={onShoot} disabled={busy || state !== "live"}>
-              <CameraWhiteIcon className="size-5 text-ink" />
-              <Furigana text="さつえいする" />
-            </Button>
+        ) : null}
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push("/")}
               className="font-display text-sm font-bold text-white underline underline-offset-2"
             >
-              <Furigana text="もういちどやり直[なお]す" />
+              <Furigana text="ホーム画面へ" adult="ホーム画面へ" />
             </button>
-          </>
-        )}
       </div>
 
       <DisclaimerFooter />

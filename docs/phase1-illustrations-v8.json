@@ -1,0 +1,20 @@
+[
+  {
+    "name": "shelter-neighborhood-v8",
+    "prompt": "Use case: illustration-story. Japanese earthquake learning app for upper elementary students ages 10-12 AND adults. Refined 2D anime editorial illustration, realistic proportions, restrained warm teal cream wood palette, landscape 3:2. No text, letters, numbers, labels, speech bubbles or watermark. No toddlers, chibi, toys or stuffed animals. Illustrate evacuation toward a school designated as a shelter, after an earthquake, calm realistic Japanese residential neighborhood. Broad school entrance in the middle distance leading to schoolyard and three-story school with gymnasium, modest houses, street trees, fences along the background. A 12 year old with school-age proportions and adult with small backpacks walking on a clear safe wide pedestrian path toward school gate, two other evacuees in distance. Show actual lived-in surroundings with ample space away from walls and buildings, no vast empty desert plaza, no dangerous damage or fire, no vehicles blocking route, no signs with text. Not a disaster movie.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-21d8a7d3-1b2f-4672-be06-3cf9589d90db.png",
+    "path": "public/illustrations/actions/shelter-neighborhood-v8.png"
+  },
+  {
+    "name": "clear-path-v8",
+    "prompt": "Use case: illustration-story. Japanese earthquake learning app for upper elementary students ages 10-12 AND adults. Refined 2D anime editorial illustration, realistic proportions, restrained warm teal cream wood palette, landscape 3:2. No text, letters, numbers, labels, speech bubbles or watermark. No toddlers, chibi, toys or stuffed animals. Ordinary Japanese apartment entry hallway before an earthquake. An adult places a small everyday shoulder bag onto a low closed storage shelf beside entrance, keeping wide floor and door swing completely clear. Nearby pair of shoes neatly in a shoe cubby, a folded umbrella in stand. Show full doorway and clear walkway in an authentic lived-in apartment with coat hook and simple wall art. No child, no toys, no doll, no books being moved. Purpose is safe passage by organizing everyday belongings. Mature editorial anime style.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-79ed47e0-26d9-4589-9a26-cead8cd400f2.png",
+    "path": "public/illustrations/actions/clear-path-v8.png"
+  },
+  {
+    "name": "kitchen-question-v8",
+    "prompt": "Use case: illustration-story. Japanese earthquake learning app for upper elementary students ages 10-12 AND adults. Refined 2D anime editorial illustration, realistic proportions, restrained warm teal cream wood palette, landscape 3:2. No text, letters, numbers, labels, speech bubbles or watermark. No toddlers, chibi, toys or stuffed animals. Question scene for earthquake safety lesson: a full ordinary Japanese home kitchen, three burner gas cooktop with a single stable saucepan on one burner with small normal blue flame, countertop and sink visible, cupboard with closed doors. Eye level wide viewpoint from kitchen doorway. No people, no action instructions, no arrows, no dramatic fire or smoke, no flames outside burner, no disaster damage, no toys. Focus and clear visual identity of stove with controls. No text.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-f1c3aa91-6c5a-4451-8ea5-a14a4d5dc088.png",
+    "path": "public/illustrations/actions/kitchen-question-v8.png"
+  }
+]

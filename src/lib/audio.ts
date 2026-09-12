@@ -41,9 +41,11 @@ export function playRumble(seconds = 6): () => void {
 
   const gain = ac.createGain();
   const now = ac.currentTime;
+  const fadeIn = Math.min(0.6, seconds * 0.2);
+  const fadeOut = Math.min(1.2, seconds * 0.4);
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.55, now + 0.6); // だんだん強くなる
-  gain.gain.setValueAtTime(0.55, now + seconds - 1.2);
+  gain.gain.linearRampToValueAtTime(0.55, now + fadeIn); // 短い揺れでも音量変化を時間内に収める
+  gain.gain.setValueAtTime(0.55, now + seconds - fadeOut);
   gain.gain.linearRampToValueAtTime(0, now + seconds);
 
   source.connect(filter).connect(gain).connect(ac.destination);

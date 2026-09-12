@@ -75,7 +75,7 @@ export default function PrivacyBlurPage() {
         <StatusBar />
         <TitleBlock
           title="プライバシーの確認[かくにん]"
-          lead="顔[かお]や個人情報[こじんじょうほう]がうつっていないかチェックしよう！"
+          lead="送信する前に、写真の内容を確認[かくにん]しよう。"
         />
       </div>
 
@@ -118,30 +118,33 @@ export default function PrivacyBlurPage() {
           <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-1.5">
             <MousePointerIcon className="size-3.5 text-white" />
             <span className="text-11 text-white">
-              <Furigana text="タップして「ぼかし」を追加[ついか]・消去[しょうきょ]" />
+              <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
             </span>
           </div>
         </div>
       </div>
 
-      <div className="px-6 text-center">
-        <p className="font-display text-15 font-bold text-primary-ink">
-          <Furigana text="「ぼかし」がちゃんと入[はい]っているかたしかめてね！" />
+      <div className="mx-5 rounded-panel bg-primary-soft p-5">
+        <p className="font-display text-lg font-bold text-ink">
+          <Furigana text="SNSに共有したい場合は、ここで確認" />
         </p>
-        <p className="mt-2 text-xs text-ink-muted">
-          <Furigana text="かくしたい場所[ばしょ]をタップすると、じぶんで新[あたら]しくぼかすこともできるよ。" />
+        <p className="mt-3 text-base leading-relaxed text-ink">
+          <Furigana text="顔や住所が写っていたら、タップして隠[かく]そう。もう一度タップすると元に戻せます。" adult="顔や住所が写っていたら、タップして隠してください。再度タップすると元に戻せます。" />
         </p>
-        <p className="mt-2 text-11 text-ink-soft">
-          <Furigana text="ぼかした画像[がぞう]だけを、解析[かいせき]と予想図[よそうず]の作成[さくせい]のためOpenAI APIへ送[おく]ります。端末[たんまつ]には保存[ほぞん]しません。" />
+        <p className="mt-3 text-base leading-relaxed">
+          <Furigana text="隠[かく]すところがなければ、そのまま進めます。" />
         </p>
       </div>
 
       <div className="flex flex-col gap-3 px-6 pb-5">
+        <p className="text-sm leading-relaxed text-ink-muted">
+          <Furigana text="「OK」を押すと、隠[かく]した部分を除いた画像をOpenAIに送り、部屋の確認と予想図づくりに使います。" />
+        </p>
         <Button onClick={() => void continueWithMaskedPhoto()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>
           <RefreshCwIcon className="size-5 text-primary-ink" />
-          <Furigana text="もういちどさつえいする" />
+          <Furigana text="写真[しゃしん]を選[えら]び直[なお]す" />
         </Button>
       </div>
 

@@ -1,0 +1,23 @@
+{
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "id": "lower-items-v4",
+      "folder": "actions",
+      "prompt": "Use case: precise-object-edit. Edit attached illustration. Keep the parent's identity, teal clothes, action, warm anime drawing style, room layout and landscape 3:2 composition. Change the child to a Japanese fourth-grade student age 9–10, approximately 140cm standing height, visibly longer limbs and school-age face/body proportions, no toddler/chibi. Yellow clothing. Preserve the safe preparation activity before any earthquake. Child participates or observes from safe position. No text or logos.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-a57f5321-6b78-4bca-8301-017eb016393e.png"
+    },
+    {
+      "id": "check-breakables-v4",
+      "folder": "actions",
+      "prompt": "Use case: precise-object-edit. Edit attached illustration. Keep the parent's identity, teal clothes, action, warm anime drawing style, room layout and landscape 3:2 composition. Change the child to a Japanese fourth-grade student age 9–10, approximately 140cm standing height, visibly longer limbs and school-age face/body proportions, no toddler/chibi. Yellow clothing. Preserve the safe preparation activity before any earthquake. Child participates or observes from safe position. No text or logos.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-5a838fd9-161b-4cc1-8085-a15df40fe8ed.png"
+    },
+    {
+      "id": "clear-exit-v4",
+      "folder": "actions",
+      "prompt": "Use case: precise-object-edit. Edit attached illustration. Keep the parent's identity, teal clothes, action, warm anime drawing style, room layout and landscape 3:2 composition. Change the child to a Japanese fourth-grade student age 9–10, approximately 140cm standing height, visibly longer limbs and school-age face/body proportions, no toddler/chibi. Yellow clothing. Preserve the safe preparation activity before any earthquake. Child participates or observes from safe position. No text or logos.",
+      "source": "/Users/sui/.codex/generated_images/01a0940e-75c4-73a0-b2dc-775a3522bd10/exec-c514cb95-a5bc-4d3e-8de1-cd46d39805bf.png"
+    }
+  ]
+}

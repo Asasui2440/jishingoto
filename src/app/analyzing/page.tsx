@@ -18,7 +18,6 @@ import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
-import { RoomTiming } from "@/components/RoomTiming";
 
 /** 1ステップあたりの見せかけの所要時間 */
 const STEP_MS = 1400;
@@ -28,10 +27,11 @@ export default function AnalysisLoadingPage() {
   const { photoUrl, startedAt, update } = useSession();
   const [step, setStep] = useState(0);
   const [cancelled, setCancelled] = useState(false);
+  const [triviaOffset, setTriviaOffset] = useState(0);
 
   // 体験を始めた時刻から選ぶので、毎回ちがう豆知識が出て、
   // かつ同じセッション内での再レンダーでは入れ替わらない
-  const trivia = TRIVIA[(startedAt ?? 0) % TRIVIA.length];
+  const trivia = TRIVIA[((startedAt ?? 0) + triviaOffset) % TRIVIA.length];
 
   useEffect(() => {
     if (cancelled) return;
@@ -40,6 +40,7 @@ export default function AnalysisLoadingPage() {
       void prepareRoom(photoUrl).then((analysis) => {
         if (!alive) return;
         update({
+          ...(analysis.source === "demo" ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
           risks: analysis.risks,
           analysisSource: analysis.source,
           analysisWarning: analysis.warning ?? null,
@@ -130,15 +131,20 @@ export default function AnalysisLoadingPage() {
       </div>
 
       <div className="px-6">
-        <RoomTiming />
         <div className="rounded-card border border-safe bg-safe-soft p-4">
           <p className="flex items-center gap-1.5 font-display text-sm font-bold text-safe">
             <LightbulbTealIcon className="size-[18px] shrink-0" />
             <Furigana text="しってた？防災[ぼうさい]豆知識[まめちしき]" />
           </p>
-          <p className="mt-2 text-13 leading-[1.5] text-ink-muted">
-            <Furigana text={trivia} />
+          <p className="mt-3 text-lg font-bold leading-relaxed"><Furigana text={trivia.title} /></p>
+          <p className="mt-2 text-base leading-relaxed">
+            <Furigana text={trivia.body} adult={trivia.adultBody} />
           </p>
+          <p className="mt-2 text-base leading-relaxed text-ink-muted"><Furigana text={trivia.note} adult={trivia.adultNote} /></p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline">{trivia.source.title}</a>
+            <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="min-h-11 rounded-pill bg-surface px-4 text-base font-bold"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>
+          </div>
         </div>
       </div>
 
