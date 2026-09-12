@@ -13,6 +13,7 @@ import {
   HAZARD_EVENTS,
   type HazardEvent,
   type LatLng,
+  type RouteAssessment,
   type RouteOption,
   type Shelter,
 } from "./evac-content";
@@ -375,11 +376,11 @@ async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter): Promise<Ro
   }
   // 経由地点付きのルートが短くなるケースも含め、表示する候補を距離順にする。
   const candidates = alternative ? [sorted[0], alternative].sort((a, b) => a.distanceM - b.distanceM) : [sorted[0]];
-  return candidates.map((route, i): RouteOption => {
+  const options = candidates.map((route, i): RouteOption => {
     const kind = i === 0 ? "short" : "safe";
     const eventCount = i === 0 ? 3 : 2;
     return {
-      id: `${kind}-${Math.round(route.distanceM)}`,
+      id: `${kind}-${Math.round(route.distanceM)}-${i}`,
       kind,
       label: i === 0 ? "距離[きょり]が短[みじか]いルート" : "もうひとつのルート",
       notes: routeNotes(kind, route.distanceM, route.segments, eventCount),
@@ -389,6 +390,56 @@ async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter): Promise<Ro
       eventCount,
     };
   });
+  return assessRouteOptions(options);
+}
+
+type AssessmentResponse = {
+  version?: unknown;
+  assessments?: Record<string, RouteAssessment>;
+};
+
+/**
+ * Googleが返した候補座標を自前サーバーへ送り、収録済み地形と照合する。
+ * Google経路の取得自体は成功しているため、比較APIだけが失敗したときは
+ * 経路を捨てず、未評価であることをカードへ明示する。
+ */
+async function assessRouteOptions(routes: RouteOption[]): Promise<RouteOption[]> {
+  try {
+    const response = await fetch("/api/evac/assess", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(12000),
+      body: JSON.stringify({
+        routes: routes.map(({ id, path, distanceM, durationS }) => ({
+          id,
+          path,
+          distanceM,
+          durationS,
+        })),
+      }),
+    });
+    if (!response.ok) throw new Error(`route-assessment-${response.status}`);
+    const payload = (await response.json()) as AssessmentResponse;
+    if (payload.version !== "training-google-v1" || !payload.assessments)
+      throw new Error("invalid-route-assessment");
+    return routes.map((route) => {
+      const assessment = payload.assessments?.[route.id];
+      if (!assessment) throw new Error("missing-route-assessment");
+      return {
+        ...route,
+        assessment,
+        notes: [...route.notes, ...assessment.notes],
+      };
+    });
+  } catch {
+    return routes.map((route) => ({
+      ...route,
+      notes: [
+        ...route.notes,
+        "地形[ちけい]データとの比較[ひかく]は取得[しゅとく]できませんでした。距離[きょり]・時間[じかん]だけを確認[かくにん]してください",
+      ],
+    }));
+  }
 }
 
 /**
@@ -473,7 +524,7 @@ export async function fetchDetourFrom(
     const seconds = found.durationS + connectionM / WALK_SPEED;
     const turns = found.segments;
 
-    return {
+    const option: RouteOption = {
       id: `detour-${Math.round(meters)}-${Math.round(from.lat * 1e5)}`,
       kind: "safe",
       label: "迂回[うかい]した道[みち]",
@@ -483,6 +534,7 @@ export async function fetchDetourFrom(
       path: connectedPath,
       eventCount: 2,
     };
+    return (await assessRouteOptions([option]))[0] ?? option;
   } catch {
     return null;
   }

@@ -9,7 +9,7 @@ function modules(mapsEnabled = false, computeRoutes = async () => { throw new Er
   const cache = new Map();
   const load = (file) => {
     file = path.resolve(file);
-    if (file.endsWith("/gmaps.ts")) return {
+    if (/[\\/]gmaps\.ts$/.test(file)) return {
       hasMapsKey: () => mapsEnabled,
       loadMaps: async () => ({ importLibrary: async (name) => { assert.equal(name, "routes"); return { Route: { computeRoutes } }; } }),
     };
@@ -174,6 +174,39 @@ test("deduplicate SDK paths and label the shortest candidate after via lookup", 
   assert.equal(routes.length, 2);
   assert.equal(routes[0].distanceM, 800); assert.equal(routes[0].kind, "short");
   assert.equal(routes[1].distanceM, 900); assert.equal(routes[1].kind, "safe");
+});
+
+test("live Google routes are enriched by the same-origin deterministic assessment API", async () => {
+  const live = modules(true, async () => ({ routes: [sdkRoute()] })).api;
+  const original = global.fetch;
+  global.fetch = async (url, options) => {
+    assert.equal(url, "/api/evac/assess");
+    const request = JSON.parse(options.body);
+    assert.equal(request.routes.length, 1);
+    const id = request.routes[0].id;
+    return Response.json({
+      version: "training-google-v1",
+      assessments: {
+        [id]: {
+          version: "training-google-v1",
+          coverage: "full",
+          comparisonScore: 72,
+          rank: 1,
+          provisional: true,
+          terrain: { anyAttentionM: 120, slopeM: 40, liquefactionM: 0, shakingM: 120 },
+          notes: ["地形データで比較済み"],
+          source: { name: "国土地理院", url: "https://example.test" },
+        },
+      },
+    });
+  };
+  try {
+    const routes = await live.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "api");
+    assert.equal(routes[0].assessment.comparisonScore, 72);
+    assert(routes[0].notes.includes("地形データで比較済み"));
+  } finally {
+    global.fetch = original;
+  }
 });
 
 test("invalid SDK data never becomes an invented straight route", async () => {

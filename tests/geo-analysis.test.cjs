@@ -35,6 +35,8 @@ function load(file) {
 }
 const geo = load("src/lib/server/geo-analysis.ts");
 const endpoint = load("src/app/api/evac/analyze/route.ts");
+const routeAssessment = load("src/lib/server/route-assessment.ts");
+const assessmentEndpoint = load("src/app/api/evac/assess/route.ts");
 const dataset = load("src/data/evac-geo/regions.json");
 const request = geo.parseGeoRequest({
   route: {
@@ -107,6 +109,63 @@ test("real GSI dataset has bounded regions, traceable versions, closed polygons 
   assert(
     matches.every((m) => m.distanceM <= 50 && m.sample.t > 0 && m.sample.t < 1),
   );
+});
+
+test("Google route candidates receive deterministic terrain exposure and a provisional comparison rank", () => {
+  const exposure = geo.terrainExposure(region, request.route.path);
+  for (const value of Object.values(exposure)) assert(Number.isFinite(value) && value >= 0);
+  assert(exposure.anyAttentionM <= geo.meters(request.route.path[0], request.route.path[1]) + 25);
+
+  const parsed = routeAssessment.parseRouteAssessmentRequest({
+    routes: [
+      { id: "short", path: request.route.path, distanceM: 900, durationS: 480 },
+      { id: "long", path: request.route.path, distanceM: 1200, durationS: 660 },
+    ],
+  });
+  const result = routeAssessment.assessRouteCandidates(parsed);
+  assert.equal(result.version, "training-google-v1");
+  assert.equal(result.assessments.short.coverage, "full");
+  assert.equal(result.assessments.short.rank, 1);
+  assert.equal(result.assessments.long.rank, 2);
+  assert(result.assessments.short.comparisonScore > result.assessments.long.comparisonScore);
+  assert.equal(result.assessments.short.provisional, true);
+  assert(result.assessments.short.notes.some((note) => note.includes("安全性")));
+});
+
+test("route comparison keeps Google distance and time available outside local data coverage", () => {
+  const result = routeAssessment.assessRouteCandidates(
+    routeAssessment.parseRouteAssessmentRequest({
+      routes: [{
+        id: "outside",
+        path: [{ lat: 35, lng: 135 }, { lat: 35.001, lng: 135 }],
+        distanceM: 120,
+        durationS: 100,
+      }],
+    }),
+  );
+  const assessment = result.assessments.outside;
+  assert.equal(assessment.coverage, "outside");
+  assert.equal(assessment.comparisonScore, null);
+  assert.equal(assessment.terrain, null);
+  assert(assessment.notes.some((note) => note.includes("範囲外")));
+});
+
+test("route comparison endpoint validates origin, body size and returns no-store assessments", async () => {
+  const body = JSON.stringify({
+    routes: [{ id: "one", path: request.route.path, distanceM: 900, durationS: 480 }],
+  });
+  const make = (value, origin = "http://localhost") => new Request("http://localhost/api/evac/assess", {
+    method: "POST",
+    headers: { origin, host: "localhost", "Content-Type": "application/json" },
+    body: value,
+  });
+  assert.equal((await assessmentEndpoint.POST(make(body, "https://elsewhere.example"))).status, 403);
+  assert.equal((await assessmentEndpoint.POST(make("{"))).status, 400);
+  assert.equal((await assessmentEndpoint.POST(make("x".repeat(320001)))).status, 413);
+  const response = await assessmentEndpoint.POST(make(body));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal((await response.json()).assessments.one.coverage, "full");
 });
 
 test("coverage rejects routes crossing outside the ingested region and parser rejects invalid or unbounded requests", () => {

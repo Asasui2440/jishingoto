@@ -211,6 +211,8 @@ export async function generateAftermath(photo: string | null, risks: Risk[]): Pr
 
 東京・文京周辺と横浜駅周辺の国土地理院の地形分類を収録し、AIによる0〜3件の注意候補選定・出題・最後の根拠表示まで実装済み。API版の入口で「地理データ＋AI」を選び、サーバーの `OPENAI_API_KEY` を設定する。Googleキーだけなら「固定の練習問題」を選べる。
 
+Googleが返した候補経路は、AI出題とは別に自前の `/api/evac/assess` で決定論的に地形・距離・時間を比較する。比較APIや地形データが利用できない場合もGoogle経路は保持し、未評価項目を明示する。
+
 データの更新・地域追加・API契約・検証は [docs/PHASE2_AI_BACKEND.md](docs/PHASE2_AI_BACKEND.md) を参照。GoogleマップとStreet Viewは `/evac/walk` に同時表示する。画像やGoogleの経路をOpenAIへ送信する処理はない。
 
 
