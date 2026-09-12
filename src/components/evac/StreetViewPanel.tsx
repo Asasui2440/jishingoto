@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Furigana } from "@/components/ui/Furigana";
+import { GameIcon } from "./GameUI";
 import type { LatLng } from "@/lib/evac-content";
 import { hasMapsKey, loadMaps, onMapsAuthError } from "@/lib/gmaps";
 import { streetViewUrl } from "@/lib/street-view";
@@ -18,41 +18,28 @@ type Props = {
 
 type Stop = { position: LatLng; heading: number };
 
-/** 地図と同時に表示する。高速移動中のAPI連打を避け、停止地点で風景を更新する。 */
+/** 必要なときに開き、地図と見比べる。確認中は親が移動とタイマーを止める。 */
 export function StreetViewPanel({ position, heading, demo, moving, observing, disabled, onObservingChange }: Props) {
   const [stop, setStop] = useState<Stop>({ position, heading });
-  // 最後の停止地点を保持する。移動中は地図のコマだけを進める。
-  if (!moving && (stop.position.lat !== position.lat || stop.position.lng !== position.lng || stop.heading !== heading)) {
+  // 閉じている間は座標も固定する。同じ地点での開閉はパノラマを再取得しない。
+  if (observing && !moving && (stop.position.lat !== position.lat || stop.position.lng !== position.lng || stop.heading !== heading)) {
     setStop({ position, heading });
   }
   const embedded = !demo && hasMapsKey();
   const url = streetViewUrl(stop.position, stop.heading);
 
   return (
-    <section className="border-b border-border" aria-label="周囲のストリートビュー">
+    <section aria-label="周囲のストリートビュー">
       <div className="flex items-center justify-between gap-2 bg-primary-soft px-3 py-2">
         <h2 className="font-display text-13 font-bold text-primary-ink">{demo ? "風景のサンプル" : "Street View"}</h2>
-        <span className="text-11 text-ink-muted">{moving ? "直前の停止地点" : "この停止地点の周辺"}</span>
+        <span role="status" className="flex items-center gap-1 text-11 text-primary-ink"><GameIcon name="pause" className="size-3" />{observing ? "タイマー停止中" : moving ? "直前の停止地点" : "停止地点の周辺"}</span>
       </div>
-      {embedded ? <Panorama position={stop.position} heading={stop.heading} /> : demo ? <DemoStreet /> : (
-        <div className="flex min-h-[220px] items-center justify-center bg-canvas p-5 text-13 text-ink-muted">Street Viewを表示するにはGoogleマップのキーが必要です。</div>
+      {embedded ? <Panorama position={stop.position} heading={stop.heading} observing={observing} /> : demo ? <DemoStreet /> : (
+        <div className="flex h-[min(27dvh,220px)] items-center justify-center bg-canvas p-5 text-13 text-ink-muted">Street Viewを表示するにはGoogleマップのキーが必要です。</div>
       )}
-      <div className="flex flex-col gap-2 px-3 py-2.5">
-        <p className="text-11 leading-relaxed text-ink-muted"><Furigana text={moving
-          ? "移動中[いどうちゅう]は下[した]の地図[ちず]で位置[いち]を確認[かくにん]。止[と]まると風景[ふうけい]が更新[こうしん]されます。"
-          : demo ? "サンプルのイラストです。現地[げんち]の風景[ふうけい]ではありません。"
-          : "近[ちか]くで撮影[さつえい]された風景[ふうけい]です。現在[げんざい]の被害[ひがい]を示[しめ]すものではありません。"} /></p>
-        <div className="flex items-center gap-2"><button
-          type="button"
-          disabled={disabled}
-          aria-pressed={observing}
-          onClick={() => onObservingChange(!observing)}
-          className="min-h-11 flex-1 rounded-field border border-primary-mid bg-primary-soft px-3 py-2 font-display text-13 font-bold text-primary-ink disabled:opacity-50"
-        ><Furigana text={observing ? "体験[たいけん]に戻[もど]る" : "周[まわ]りを見渡[みわた]す"} /></button>
-        <a href={url} target="_blank" rel="noopener noreferrer" aria-disabled={disabled} aria-label={demo ? "サンプル地点をGoogleマップで開く（別タブ）" : "この停止地点をGoogleマップで開く（別タブ）"} onClick={(event) => { if (disabled) event.preventDefault(); else onObservingChange(true); }} className="inline-flex min-h-11 shrink-0 items-center justify-center text-11 font-bold text-primary-ink underline underline-offset-4">
-          Googleマップ ↗
-        </a></div>
-        {observing ? <p role="status" className="text-11 text-primary-ink"><Furigana text="確認中[かくにんちゅう]は、コマと問題[もんだい]のタイマーを止[と]めています。" /></p> : null}
+      <div className="flex items-center gap-2 px-3 py-1">
+        <p className="flex-1 text-[10px] leading-relaxed text-ink-muted">{demo ? "サンプルのイラストです。" : "撮影時の風景です。現在の被害情報ではありません。"}</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" aria-disabled={disabled} aria-label={demo ? "サンプル地点をGoogleマップで開く（別タブ）" : "この停止地点をGoogleマップで開く（別タブ）"} onClick={(event) => { if (disabled) event.preventDefault(); else onObservingChange(true); }} className="inline-flex min-h-11 shrink-0 items-center justify-center text-11 font-bold text-primary-ink underline underline-offset-4">Google マップ ↗</a>
       </div>
     </section>
   );
@@ -61,7 +48,7 @@ export function StreetViewPanel({ position, heading, demo, moving, observing, di
 /** モック版は外部通信をせず、自作の街路イラストを表示する。 */
 function DemoStreet() {
   return <div className="relative bg-[#fff5d5]">
-    <svg viewBox="0 0 400 220" className="h-[220px] w-full" role="img" aria-label="住宅街を描いた練習用の風景イラスト" preserveAspectRatio="xMidYMid slice">
+    <svg viewBox="0 0 400 220" className="h-[min(27dvh,220px)] w-full" role="img" aria-label="住宅街を描いた練習用の風景イラスト" preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="220" fill="#fff5d5" />
       <circle cx="316" cy="42" r="23" fill="#ffdb55" />
       <path d="M0 126H400V220H0Z" fill="#eee6cf" />
@@ -82,13 +69,22 @@ function DemoStreet() {
   </div>;
 }
 
-function Panorama({ position, heading }: { position: LatLng; heading: number }) {
+function Panorama({ position, heading, observing }: { position: LatLng; heading: number; observing: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const viewer = useRef<google.maps.StreetViewPanorama | null>(null);
   const mapsRef = useRef<typeof google.maps | null>(null);
   const authFailed = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [attempt, setAttempt] = useState(0);
+
+  // Reopening only resizes the existing viewer; its direction and zoom stay intact.
+  useEffect(() => {
+    if (!observing || status !== "ready") return;
+    const frame = requestAnimationFrame(() => {
+      if (viewer.current) mapsRef.current?.event.trigger(viewer.current, "resize");
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [observing, status]);
 
   useEffect(() => {
     const unsubscribe = onMapsAuthError(() => { authFailed.current = true; viewer.current?.setVisible(false); setStatus("unavailable"); });
@@ -153,10 +149,10 @@ function Panorama({ position, heading }: { position: LatLng; heading: number }) 
     return () => { alive = false; clearTimeout(timeout); listener?.remove(); };
   }, [position.lat, position.lng, heading, attempt]);
 
-  return <div className="relative h-[220px] bg-canvas">
+  return <div className="relative h-[min(27dvh,220px)] bg-canvas">
     {status === "loading" ? <p role="status" className="absolute inset-0 flex items-center justify-center px-5 text-13 text-ink-muted">周囲の風景を読み込んでいます…</p> : null}
     {status === "unavailable" ? <div role="status" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-canvas px-5 py-4 text-center">
-      <p className="text-13 leading-relaxed text-ink-muted">この地点のStreet Viewを表示できませんでした。下の地図を見ながら体験を続けられます。</p>
+      <p className="text-13 leading-relaxed text-ink-muted">この地点の風景は表示できませんでした。地図で体験を続けられます。</p>
       <button type="button" onClick={() => setAttempt((n) => n + 1)} className="min-h-11 text-13 font-bold text-primary-ink underline">風景をもう一度読み込む</button>
     </div> : null}
     {/* Googleの住所・撮影日・帰属表示を覆わない。画像の保存やAI送信は行わない。 */}

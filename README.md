@@ -25,7 +25,7 @@ OPENAI_IMAGE_MODEL=gpt-image-2   # 任意
 写真はブラウザで最大 1280px に縮小し、プライバシー確認画面で指定した領域を
 画像データ自体からマスクしてから OpenAI API へ送る。写真は Web Storage へ保存しない。
 
-フェーズ2は `/evac` の入口で **モック版 / API版** を選べる。
+フェーズ2は `/evac` の「遊び方・設定」で **モック版 / API版** を切り替えられる。キー設定済みの初回起動はAPI版。
 モック版はキー不要で、固定のサンプル地図・経路を使用する。
 API版はGoogle Cloudで使用APIを有効にした後、以下の1つを `.env.local`（公開版はVercelの環境変数）へ設定し、再起動・再デプロイする。
 
@@ -59,19 +59,32 @@ PC のブラウザでも中央に寄せて表示される。
 
 | ルート | 内容 |
 |---|---|
-| `/evac` | 住所・現在地・地図タップで自宅付近を指定し、近くの避難場所を確認 |
-| `/evac/routes` | 取得できた徒歩経路の比較・制限時間の設定 |
+| `/evac` | 住所・現在地・地図タップで出発地点と避難先を指定。そのまま同じ画面で徒歩経路を比較 |
+| `/evac/routes` | 以前のURL・再挑戦からの互換入口。比較画面へ合流 |
 | `/evac/walk` | 2D地図でコマを進め、途中で判断（2〜3件） |
 | `/evac/report` | 結果レポート |
 
 入口はトップの「ひなん経路をためす（フェーズ2）」。
+通常の流れは **準備 → 体験 → ふりかえり** の3画面。説明・設定・判断の根拠はボトムシートで必要なときだけ開く。
+**→ [コンパクトUIの設計・検証](docs/MOBILE_GAME.md)**
 **→ 詳しくは [docs/PHASE2.md](docs/PHASE2.md)**（API・安全表現・保存方針）
+
+### 検証
+
+```bash
+npm test
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+E2Eはサンプルモードの実画面を操作し、320×568・360×640・390×844で確認する。Windowsはインストール済みEdge、それ以外はPlaywright Chromiumを使用（必要なら `npx playwright install chromium`）。`PLAYWRIGHT_CHANNEL`・`PLAYWRIGHT_BASE_URL`で変更可能。既定では3010番の開発サーバーを起動・再利用する。
 
 ## 構成
 
 ```
 src/
-  app/            各画面（すべてクライアントコンポーネント）
+  app/            各画面とサーバー側のAPI Route Handler
     evac/         フェーズ2（ひなん経路シミュレーション）
   components/
     icons.tsx     Figma から書き出した SVG（自動生成・直接編集しない）
