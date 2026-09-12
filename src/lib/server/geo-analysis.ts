@@ -20,7 +20,7 @@ type Feature = {
   bbox: number[];
   geometry: Geometry;
 };
-type Region = {
+export type Region = {
   id: string;
   name: string;
   center: LatLng;
@@ -232,6 +232,48 @@ export function sampleRoute(path: LatLng[]): Sample[] {
     heading: samples.at(-1)?.heading ?? 0,
   });
   return samples;
+}
+
+export type TerrainExposure = {
+  anyAttentionM: number;
+  slopeM: number;
+  liquefactionM: number;
+  shakingM: number;
+};
+
+/**
+ * 経路を約20mずつに区切り、地形分類から注意を考える区間長を集計する。
+ * 50m以内を対象にする点はAI出題候補の抽出と共通。同一の区間が複数の
+ * 観点に入ることがあるため、カテゴリ別の値は合計しない。
+ */
+export function terrainExposure(region: Region, path: LatLng[]): TerrainExposure {
+  const samples = sampleRoute(path);
+  const totals: TerrainExposure = {
+    anyAttentionM: 0,
+    slopeM: 0,
+    liquefactionM: 0,
+    shakingM: 0,
+  };
+  for (let i = 0; i < samples.length - 1; i++) {
+    const sample = samples[i];
+    const length = meters(sample.position, samples[i + 1].position);
+    if (length <= 0) continue;
+    const categories = new Set<GeoCategory>();
+    for (const feature of region.features) {
+      if (!feature.categories.length || !inBounds(sample.position, feature.bbox, 0.0007))
+        continue;
+      if (geometryDistance(sample.position, feature.geometry) > 50) continue;
+      for (const category of feature.categories) {
+        if (category === "slope" || category === "liquefaction" || category === "shaking")
+          categories.add(category);
+      }
+    }
+    if (categories.size) totals.anyAttentionM += length;
+    if (categories.has("slope")) totals.slopeM += length;
+    if (categories.has("liquefaction")) totals.liquefactionM += length;
+    if (categories.has("shaking")) totals.shakingM += length;
+  }
+  return totals;
 }
 export type MatchedFeature = {
   feature: Feature;

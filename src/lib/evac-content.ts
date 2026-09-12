@@ -56,6 +56,28 @@ export type Shelter = {
 
 export type RouteKind = "short" | "safe";
 
+/**
+ * Google が作った経路を、収録済みの国土地理院データと照合した結果。
+ * training-v1 の考え方を使うが、実際の安全性・被害確率を表す点数ではない。
+ */
+export type RouteAssessment = {
+  version: "training-google-v1";
+  coverage: "full" | "outside";
+  /** 候補内の比較にだけ使う教育用の指数。画面に安全度として表示しない。 */
+  comparisonScore: number | null;
+  rank: number | null;
+  provisional: boolean;
+  terrain: {
+    /** 各値は独立集計。同じ区間が複数項目へ入ることがある。 */
+    anyAttentionM: number;
+    slopeM: number;
+    liquefactionM: number;
+    shakingM: number;
+  } | null;
+  notes: string[];
+  source: { name: string; url: string } | null;
+};
+
 export type RouteOption = {
   id: string;
   kind: RouteKind;
@@ -70,6 +92,8 @@ export type RouteOption = {
   eventCount: number;
   /** デモ用に合成した経路か（実 API から取れなかったとき true） */
   demo?: boolean;
+  /** API版だけ。Google由来の経路を自前データで比較した結果。 */
+  assessment?: RouteAssessment;
 };
 
 /** 判断イベントの種類 */
