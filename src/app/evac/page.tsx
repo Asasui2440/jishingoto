@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { EvacApiGate, EvacModeSelector } from "@/components/evac/EvacMode";
+import { parseEvacMode, type EvacMode } from "@/lib/evac-mode";
 import { EvacMap } from "@/components/evac/EvacMap";
+import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
+import { getSession } from "@/lib/session";
+import { GeoAnalysisSettings } from "@/components/evac/GeoAnalysisSettings";
 import { Tag } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -28,11 +33,47 @@ import { formatDistance, getEvac, useEvac } from "@/lib/evac";
  * ここは地図と一覧の2通りで選べるようにしている。
  */
 export default function EvacStartPage() {
+  const { mode, setMode, linkRoom } = useEvac();
+  const [initialized, setInitialized] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = parseEvacMode(params.get("mode"));
+    if (requested) setMode(requested);
+    if (params.get("from") === "room") linkRoom(getSession().finishedAt);
+    else if (params.get("from") === "standalone") linkRoom(null);
+    // URLと保存済みモードの確定前は、外部通信を行う子画面をマウントしない。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInitialized(true);
+  }, [setMode, linkRoom]);
+  const selectMode = (next: EvacMode) => {
+    setMode(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", next);
+    window.history.replaceState(null, "", url);
+  };
+  return <Screen><main className="flex flex-1 flex-col gap-4 px-6 pt-3 pb-6">
+    <header>
+      <p className="mb-2 text-11 font-bold text-primary-ink">フェーズ2</p>
+      <h1 className="font-display text-xl font-bold text-ink"><Furigana text="ひなん経路[けいろ]シミュレーション" /></h1>
+      <p className="mt-1 text-13 text-ink-muted"><Furigana text="地図[ちず]で道[みち]を選[えら]び、途中[とちゅう]の「もしも」を考[かんが]えよう。" /></p>
+    </header>
+    {initialized ? <>
+      <RoomConnectionSummary />
+      <EvacModeSelector mode={mode} onChange={selectMode} />
+      <EvacApiGate key={mode} mode={mode}><EvacLocationForm key={mode} mode={mode} /></EvacApiGate>
+    </> : <p role="status" className="text-13 text-ink-muted">体験を準備しています…</p>}
+  </main></Screen>;
+}
+
+function EvacLocationForm({ mode }: { mode: EvacMode }) {
   const router = useRouter();
   const { home, homeLabel, shelter, update, reset } = useEvac();
 
   /** 取得できた一覧と、それがどの地点のものか。 */
-  const [found, setFound] = useState<{ key: string; list: Shelter[] } | null>(null);
+  const [found, setFound] = useState<{ key: string; list: Shelter[]; error?: string } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const alive = useRef(false);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [geoState, setGeoState] = useState<"idle" | "loading" | "denied">("idle");
   const [address, setAddress] = useState("");
   const [addressState, setAddressState] = useState<
@@ -47,12 +88,12 @@ export default function EvacStartPage() {
   // 指定済みの現在地をデモ地点で上書きしてしまう。
   useEffect(() => {
     if (!getEvac().home) {
-      update({ home: DEMO_HOME, homeLabel: DEMO_AREA_LABEL, startedAt: Date.now() });
+      update({ home: DEMO_HOME, homeLabel: mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺（開始地点）", startedAt: Date.now() });
     }
-  }, [update]);
+  }, [update, mode]);
 
   const spot = home ?? DEMO_HOME;
-  const spotKey = `${spot.lat},${spot.lng}`;
+  const spotKey = `${mode}:${spot.lat},${spot.lng}:${attempt}`;
 
   /**
    * いま指定している地点の避難場所。まだ取れていなければ null（＝探している最中）。
@@ -66,8 +107,10 @@ export default function EvacStartPage() {
   // 指定した地点が変わるたびに、その地点の近くを探し直す。
   useEffect(() => {
     let alive = true;
-    void fetchShelters(spot).then((list) => {
+    void fetchShelters(spot, mode).then((list) => {
       if (alive) setFound({ key: spotKey, list });
+    }).catch((error: unknown) => {
+      if (alive) setFound({ key: spotKey, list: [], error: error instanceof Error ? error.message : "避難場所を取得できませんでした。" });
     });
     return () => {
       alive = false;
@@ -88,10 +131,11 @@ export default function EvacStartPage() {
     setGeoState("loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        if (!alive.current) return;
         setGeoState("idle");
         pickHome({ lat: pos.coords.latitude, lng: pos.coords.longitude }, "いまいる場所");
       },
-      () => setGeoState("denied"),
+      () => { if (alive.current) setGeoState("denied"); },
       { enableHighAccuracy: true, timeout: 8000 },
     );
   };
@@ -102,6 +146,7 @@ export default function EvacStartPage() {
     setAddressState("loading");
     try {
       const hit = await geocodeAddress(q);
+      if (!alive.current) return;
       if (hit.ok) {
         pickHome(hit.position, hit.label);
         setAddressState("idle");
@@ -109,26 +154,21 @@ export default function EvacStartPage() {
         setAddressState(hit.reason);
       }
     } catch {
+      if (!alive.current) return;
       setAddressState("notfound");
     }
   };
 
   return (
-    <Screen>
-      <main className="flex flex-1 flex-col gap-4 px-6 pt-3 pb-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <span className="rounded-field bg-primary-soft px-2 py-0.5 font-display text-11 font-black text-primary-ink">
-              フェーズ2
-            </span>
-            <h1 className="font-display text-xl font-bold text-ink">
-              <Furigana text="ひなん経路[けいろ]シミュレーション" />
-            </h1>
-          </div>
-          <p className="mt-1 text-13 text-ink-muted">
-            <Furigana text="家[いえ]の近[ちか]くから避難場所[ひなんばしょ]まで、歩[ある]いて向[む]かう想定[そうてい]でためします。" />
-          </p>
-        </header>
+    <>
+        {mode === "api" ? <GeoAnalysisSettings onPickRegion={(center, name) => pickHome(center, name)} /> : null}
+        <div className="rounded-panel border border-primary/40 bg-primary-soft p-4">
+          <p className="font-display text-15 font-bold text-ink"><Furigana text="道[みち]を選[えら]ぶ。その先[さき]を想像[そうぞう]する。" /></p>
+          <ol className="mt-3 grid grid-cols-3 gap-2 text-center text-11 text-primary-ink">
+            {["地図[ちず]を見[み]る", "途中[とちゅう]で判断[はんだん]", "経路[けいろ]をふりかえる"].map((text, i) => <li key={text}><span className="mx-auto mb-1 grid size-7 place-items-center rounded-full bg-primary font-display font-bold text-ink">{i + 1}</span><Furigana text={text} /></li>)}
+          </ol>
+          <p className="mt-3 text-11 text-ink-muted"><Furigana text="その場[ば]にいながら、地図[ちず]のコマを進[すす]める練習[れんしゅう]です。" /></p>
+        </div>
 
         <Card className="p-[18px]">
           <p className="font-display text-sm font-bold text-ink">
@@ -153,7 +193,7 @@ export default function EvacStartPage() {
             </span>
           </div>
 
-          <div className="flex gap-2">
+          {mode === "api" ? <div className="flex gap-2">
             <input
               type="text"
               value={address}
@@ -172,7 +212,7 @@ export default function EvacStartPage() {
             >
               <Furigana text={addressState === "loading" ? "検索中" : "さがす"} />
             </button>
-          </div>
+          </div> : <p className="text-11 text-ink-muted">モック版ではサンプル地点を使います。住所検索・現在地はAPI版で利用できます。</p>}
           {addressState === "notfound" ? (
             <p className="text-11 text-danger">
               <Furigana text="その住所[じゅうしょ]は見[み]つかりませんでした。地図[ちず]をタップしても指定[してい]できます。" />
@@ -184,6 +224,7 @@ export default function EvacStartPage() {
           ) : null}
 
           <EvacMap
+            mode={mode}
             center={spot}
             home={home}
             shelters={shelters ?? []}
@@ -195,22 +236,22 @@ export default function EvacStartPage() {
             height={230}
           />
 
-          <div className="flex gap-2">
+          {mode === "api" ? <div className="flex gap-2">
             <Button size="md" variant="outline" onClick={useMyLocation}>
               {geoState === "loading" ? (
                 "現在地をさがしています..."
               ) : (
-                <Furigana text="いまいる場所[ばしょ]を使[つか]う" />
+                <Furigana text="現在地[げんざいち]を使[つか]う" />
               )}
             </Button>
             <Button
               size="md"
               variant="quiet"
-              onClick={() => pickHome(DEMO_HOME, DEMO_AREA_LABEL)}
+              onClick={() => pickHome(DEMO_HOME, "文京区の周辺（開始地点）")}
             >
-              <Furigana text="デモ地点[ちてん]" />
+              <Furigana text="開始地点[かいしちてん]" />
             </Button>
-          </div>
+          </div> : null}
           {geoState === "denied" ? (
             <p className="text-11 text-ink-soft">
               <Furigana text="現在地[げんざいち]を取得[しゅとく]できませんでした。地図[ちず]をタップして指定[してい]してください。" />
@@ -229,22 +270,24 @@ export default function EvacStartPage() {
             <Furigana text="2. 近[ちか]くの避難場所[ひなんばしょ]をひとつ選[えら]ぶ" />
           </p>
           <p className="text-11 text-ink-soft">
-            <Furigana text={SHELTER_CAUTION} />
+            <Furigana text={mode === "mock" ? "サンプルの避難場所[ひなんばしょ]から選[えら]んでください。" : SHELTER_CAUTION} />
           </p>
           {shelters === null ? (
             <p className="text-13 text-ink-muted"><Furigana text="近くの避難場所をさがしています..." /></p>
+          ) : found?.key === spotKey && found.error ? (
+            <Card className="p-4"><p role="alert" className="text-13 text-ink-muted">{found.error}</p><button type="button" onClick={() => setAttempt((n) => n + 1)} className="mt-2 min-h-11 text-13 font-bold text-primary-ink underline">もう一度さがす</button></Card>
           ) : shelters.length === 0 ? (
             <Card className="bg-canvas p-[18px] shadow-none">
               <p className="text-13 leading-[1.6] text-ink-muted">
-                <Furigana text="この地点[ちてん]の近[ちか]くでは、公的[こうてき]データから避難場所[ひなんばしょ]を見[み]つけられませんでした。住[す]んでいる自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。" />
+                <Furigana text={mode === "mock" ? "サンプル地点[ちてん]の近[ちか]くで試[ため]してください。" : "この地点[ちてん]の近[ちか]くでは避難場所[ひなんばしょ]の候補[こうほ]が見[み]つかりませんでした。別[べつ]の地点[ちてん]や自治体[じちたい]の一覧[いちらん]でも確認[かくにん]してください。"} />
               </p>
               <div className="mt-3">
                 <Button
                   size="md"
                   variant="outline"
-                  onClick={() => pickHome(DEMO_HOME, DEMO_AREA_LABEL)}
+                  onClick={() => pickHome(DEMO_HOME, mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺（開始地点）")}
                 >
-                  <Furigana text="デモ地点[ちてん]でためす" />
+                  <Furigana text="開始地点[かいしちてん]に戻[もど]る" />
                 </Button>
               </div>
             </Card>
@@ -313,7 +356,7 @@ export default function EvacStartPage() {
         </Card>
 
         <Button
-          disabled={!shelter}
+          disabled={!shelter || !shelters?.some((s) => s.id === shelter.id)}
           onClick={() => {
             // 経路の選び直しに備えて、判断の記録だけ空にする
             const h = home ?? DEMO_HOME;
@@ -326,7 +369,6 @@ export default function EvacStartPage() {
         >
           <Furigana text="候補[こうほ]ルートを見[み]る" />
         </Button>
-      </main>
-    </Screen>
+    </>
   );
 }

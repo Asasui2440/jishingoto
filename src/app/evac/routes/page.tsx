@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { EvacModeBadge } from "@/components/evac/EvacMode";
 import { EvacMap } from "@/components/evac/EvacMap";
 import { Tag } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
@@ -22,9 +23,11 @@ import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
  */
 export default function EvacRoutesPage() {
   const router = useRouter();
-  const { home, shelter, routes, startRouteId, timerSeconds, update } = useEvac();
+  const { mode, analysisMode, home, shelter, routes, startRouteId, timerSeconds, update } = useEvac();
   const [loading, setLoading] = useState(true);
   const [openedIds, setOpenedIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   // 自宅と避難場所が決まっていなければ最初へ戻す
   useEffect(() => {
@@ -35,10 +38,15 @@ export default function EvacRoutesPage() {
   useEffect(() => {
     if (!home || !shelter) return;
     let alive = true;
-    void fetchRoutes(home, shelter).then((list) => {
+    void fetchRoutes(home, shelter, mode).then((list) => {
       if (!alive) return;
-      update({ routes: list, startRouteId: list[0]?.id ?? null });
+      update({ routes: list, startRouteId: list[0]?.id ?? null, walk: null, decisions: [], takenRouteIds: [], followUp: null, finishedAt: null });
       setOpenedIds(list[0] ? [list[0].id] : []);
+      setLoading(false);
+    }).catch((err: unknown) => {
+      if (!alive) return;
+      update({ routes: [], startRouteId: null, walk: null, decisions: [], takenRouteIds: [] });
+      setError(err instanceof Error ? err.message : "徒歩ルートを取得できませんでした。");
       setLoading(false);
     });
     return () => {
@@ -46,7 +54,7 @@ export default function EvacRoutesPage() {
     };
     // 家と避難場所が決まったときに1回取る
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home?.lat, home?.lng, shelter?.id]);
+  }, [home?.lat, home?.lng, shelter?.id, mode, attempt]);
 
   const active = useMemo(
     () => routes.find((r) => r.id === startRouteId) ?? null,
@@ -58,25 +66,35 @@ export default function EvacRoutesPage() {
     setOpenedIds((prev) => (prev.includes(r.id) ? prev : [...prev, r.id]));
   };
 
-  const comparedEnough = openedIds.length >= 2;
+  const comparedEnough = openedIds.length >= Math.min(2, routes.length);
 
   return (
     <Screen>
       <main className="flex flex-1 flex-col gap-4 px-6 pt-3 pb-6">
         <header>
+          <EvacModeBadge mode={mode} />
           <h1 className="font-display text-xl font-bold text-ink">
-            <Furigana text="どちらの道[みち]で行[い]く？" />
+            <Furigana text={routes.length === 1 && !loading ? "この道[みち]を確[たし]かめよう" : "どちらの道[みち]で行[い]く？"} />
           </h1>
           <p className="mt-1 text-13 text-ink-muted">
-            <Furigana text="2本[ほん]とも開[ひら]いて、距離[きょり]・時間[じかん]・注意点[ちゅういてん]をくらべてみてね。" />
+            <Furigana text={routes.length === 1 && !loading ? "取得[しゅとく]できた徒歩[とほ]ルートは1本[ぽん]です。距離[きょり]や時間[じかん]を確認[かくにん]して進[すす]めます。" : "2本[ほん]とも開[ひら]いて、距離[きょり]・時間[じかん]・注意点[ちゅういてん]をくらべてみてね。"} />
           </p>
         </header>
 
         {loading ? (
           <p className="text-13 text-ink-muted"><Furigana text="経路をさがしています..." /></p>
+        ) : error ? (
+          <Card className="p-5">
+            <p role="alert" className="text-13 text-ink-muted">{error}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Button onClick={() => { setError(null); setLoading(true); setAttempt((n) => n + 1); }}>もう一度取得する</Button>
+              <Button variant="outline" onClick={() => router.push("/evac")}>場所・バージョンを選び直す</Button>
+            </div>
+          </Card>
         ) : (
           <>
             <EvacMap
+              mode={mode}
               center={home ?? { lat: 35.7186, lng: 139.7237 }}
               home={home}
               shelters={shelter ? [shelter] : []}
@@ -86,6 +104,10 @@ export default function EvacRoutesPage() {
               onSelectRoute={(id) => select(routes.find((r) => r.id === id)!)}
               height={220}
             />
+
+            {mode === "api" ? <p className="rounded-field bg-primary-soft p-3 text-11 text-primary-ink">{analysisMode === "sample" ? "実際の地図と経路で、固定の練習問題を体験します。" : "開始後、収録済みの地形データをAIが読み、注意を考える地点を選びます。データ範囲外では解析を開始しません。"}</p> : null}
+
+            {active?.demo ? <p className="rounded-field bg-primary-soft p-3 text-11 text-primary-ink">練習用の経路です。実際の道路や通行状況とは異なります。</p> : null}
 
             <ul className="flex flex-col gap-3">
               {routes.map((r) => {
@@ -128,13 +150,12 @@ export default function EvacRoutesPage() {
                         </span>
                         <span className="text-13 text-ink-muted">
                           <Furigana text="判断[はんだん]" />
-                          {r.eventCount}
-                          <Furigana text="件[けん]" />
+                          {mode === "api" && analysisMode !== "sample" ? "：AI解析後に表示" : `${r.eventCount}件`}
                         </span>
                       </span>
 
                       <span className="mt-2 block border-t border-border pt-2">
-                        {r.notes.map((n) => (
+                        {r.notes.filter((n) => !(mode === "api" && analysisMode !== "sample" && n.includes("練習用"))).map((n) => (
                           <span key={n} className="block text-11 text-ink-muted">
                             ・<Furigana text={n} />
                           </span>
@@ -202,11 +223,11 @@ export default function EvacRoutesPage() {
                 disabled={!active}
                 onClick={() => {
                   if (!active) return;
-                  update({ takenRouteIds: [active.id] });
+                  update({ takenRouteIds: [active.id], decisions: [], walk: null, followUp: null, startedAt: Date.now(), finishedAt: null });
                   router.push("/evac/walk");
                 }}
               >
-                <Furigana text="このルートで歩[ある]く" />
+                <Furigana text="地図[ちず]で体験[たいけん]する" />
               </Button>
             </div>
           </>

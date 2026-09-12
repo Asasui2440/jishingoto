@@ -12,7 +12,7 @@ import {
 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { TitleBlock } from "@/components/ui/Bits";
 import { useHaptics, useSettings } from "@/lib/settings";
 import { useSession } from "@/lib/session";
@@ -72,7 +72,6 @@ export default function PrivacyBlurPage() {
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
-        <StatusBar />
         <TitleBlock
           title="プライバシーの確認[かくにん]"
           lead="顔[かお]や個人情報[こじんじょうほう]がうつっていないかチェックしよう！"

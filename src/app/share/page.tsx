@@ -6,7 +6,7 @@ import { ShieldCheck2Icon, XCircleDarkIcon } from "@/components/icons";
 import { Tag } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { AXIS_LABEL, safetyBand, type Axis } from "@/lib/content";
 import { axisRows, drawShareCard } from "@/lib/share-card";
 import { getSession, scoreByAxis, useSession } from "@/lib/session";
@@ -67,7 +67,6 @@ export default function SharePage() {
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
-        <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
           <h1 className="font-display text-lg font-bold text-ink">
             <Furigana text="けっかを友達[ともだち]にシェア" />
@@ -154,6 +153,11 @@ export default function SharePage() {
           <Button size="md" variant="outline" onClick={download} disabled={saving}>
             <Furigana text={saving ? "作成中[さくせいちゅう]..." : "画像[がぞう]としてスマホに保存[ほぞん]する"} />
           </Button>
+        </div>
+
+        <div className="rounded-panel border border-primary/40 bg-primary-soft p-4">
+          <p className="mb-2 text-13 font-bold text-primary-ink">部屋の次は、家の外での避難を体験</p>
+          <Button size="md" onClick={() => router.push("/evac?from=room")}><Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" /></Button>
         </div>
 
         <button

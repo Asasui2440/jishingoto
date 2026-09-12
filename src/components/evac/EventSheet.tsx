@@ -8,7 +8,7 @@ import { Furigana } from "@/components/ui/Furigana";
 import {
   SCENARIO_BADGE,
   SCENARIO_NOTE,
-  STREETVIEW_NOTE,
+  MAP_NOTE,
   type EvacChoice,
   type HazardEvent,
 } from "@/lib/evac-content";
@@ -16,23 +16,26 @@ import {
 /**
  * 判断イベントの下部シート。
  *
- * ストリートビューの上には重ねず、パノラマの下に置く。
- * Google の帰属表示を隠さないため（仕様 7・14）。
+ * 地図の外に配置する。時間切れでも本人の選択を待ち、結果は最後にまとめる。
  */
 export function EventSheet({
   event,
+  viewingStreet = false,
   index,
   total,
   seconds,
+  busy = false,
   onExtend,
   onDisableTimer,
   onChoose,
 }: {
   event: HazardEvent;
+  viewingStreet?: boolean;
   index: number;
   total: number;
   /** 制限時間（秒）。0 なら無効 */
   seconds: number;
+  busy?: boolean;
   onExtend: () => void;
   onDisableTimer: () => void;
   onChoose: (choice: EvacChoice, timedOut: boolean) => void;
@@ -42,19 +45,14 @@ export function EventSheet({
   const [showSketch, setShowSketch] = useState(false);
 
   useEffect(() => {
-    if (remaining === null) return;
-    const id = setTimeout(() => {
-      // 時間切れは「迷っているうちに、そのまま進んでしまった」として扱う。
-      // 安全な選択を自動で選ばない（それでは判断を体験したことにならない）。
-      if (remaining <= 1) onChoose(event.choices[0], true);
-      else setRemaining(remaining - 1);
-    }, 1000);
+    if (remaining === null || remaining <= 0 || busy || viewingStreet) return;
+    const id = setTimeout(() => setRemaining(remaining - 1), 1000);
     return () => clearTimeout(id);
-  }, [remaining, event, onChoose]);
+  }, [remaining, busy, viewingStreet]);
 
   return (
-    <div className="flex flex-col gap-3 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 rounded-panel mx-4 border border-border bg-surface px-5 pt-4 pb-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2">
           <span className="rounded-chip bg-warn-soft px-2 py-0.5 font-display text-11 font-black text-warn">
             <Furigana text={SCENARIO_BADGE} />
@@ -71,10 +69,11 @@ export function EventSheet({
                 remaining <= 3 ? "text-danger" : "text-ink-muted",
               ].join(" ")}
             >
-              残り{remaining}秒
+              {viewingStreet ? `停止中・残り${remaining}秒` : `残り${remaining}秒`}
             </span>
             <button
               type="button"
+              disabled={busy || viewingStreet}
               onClick={onExtend}
               className="rounded-chip bg-canvas px-2 py-1 font-display text-11 font-bold text-primary-ink"
             >
@@ -82,6 +81,7 @@ export function EventSheet({
             </button>
             <button
               type="button"
+              disabled={busy || viewingStreet}
               onClick={onDisableTimer}
               className="rounded-chip bg-canvas px-2 py-1 font-display text-11 font-bold text-primary-ink"
             ><Furigana text="なくす" /></button>
@@ -111,6 +111,8 @@ export function EventSheet({
         </p>
       </div>
 
+      {viewingStreet ? <p role="status" className="text-11 text-primary-ink"><Furigana text="風景[ふうけい]を確認中[かくにんちゅう]です。タイマーは止[と]まっています。" /></p> : null}
+
       <button
         type="button"
         onClick={() => setShowSketch((v) => !v)}
@@ -127,13 +129,17 @@ export function EventSheet({
         </div>
       ) : null}
 
+      {remaining === 0 ? <p role="status" className="rounded-field bg-primary-soft p-3 text-13 text-ink"><Furigana text="時間[じかん]になりました。あわてず、行動[こうどう]を選[えら]んでみましょう。" /></p> : null}
+      {busy ? <p role="status" className="text-13 text-primary-ink"><Furigana text="ここからの迂回路[うかいろ]を確認中[かくにんちゅう]…" /></p> : null}
+
       <ul className="flex flex-col gap-2">
         {event.choices.map((c, i) => (
           <li key={c.id}>
             <button
               type="button"
-              onClick={() => onChoose(c, false)}
-              className="flex w-full items-center gap-3 rounded-tile border border-border bg-surface p-3 text-left transition-colors active:border-primary-mid active:bg-primary-soft"
+              disabled={busy || viewingStreet}
+              onClick={() => onChoose(c, remaining === 0)}
+              className="flex w-full items-center gap-3 rounded-tile border border-border bg-surface p-3 text-left transition-colors active:border-primary-mid active:bg-primary-soft disabled:opacity-50"
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft font-display text-sm font-bold text-primary-ink">
                 {i + 1}
@@ -155,7 +161,7 @@ export function EventSheet({
       <p className="text-11 leading-[1.5] text-ink-soft">
         <Furigana text={SCENARIO_NOTE} />
         <br />
-        <Furigana text={STREETVIEW_NOTE} />
+        <Furigana text={MAP_NOTE} />
       </p>
     </div>
   );

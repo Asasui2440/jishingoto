@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import roomRisk from "@/../public/figma/img/room-risk.jpg";
 import { Button } from "@/components/ui/Button";
 import { Furigana, plain } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { type RiskKind, type RoomObjectType } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { prepareAftermath } from "@/lib/room-preparation";
@@ -71,7 +71,6 @@ export default function RoomRecognitionPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <StatusBar />
       <main className="flex flex-1 flex-col gap-4 px-5 py-4">
         <div>
           <p className="text-11 font-bold text-primary-ink">体験の準備</p>

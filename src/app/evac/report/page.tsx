@@ -1,7 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
+import { RouteLegend } from "@/components/evac/RouteLegend";
+import { walkedPath, walkDistance } from "@/lib/evac-walk";
+import { EvacModeBadge } from "@/components/evac/EvacMode";
 import { EvacMap } from "@/components/evac/EvacMap";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -9,7 +13,6 @@ import { Furigana } from "@/components/ui/Furigana";
 import { Screen } from "@/components/ui/Screen";
 import { findChoice, findEvent } from "@/lib/evac-content";
 import {
-  avoidanceCount,
   formatDistance,
   formatDuration,
   getEvac,
@@ -21,13 +24,14 @@ import {
  * フェーズ2 ④：結果レポート。
  *
  * 点数を主役にしない（仕様 8）。
- * 「避けられた危険」と「次回の判断基準」、そして
+ * 通った道と選んだ行動を並べ、
  * 平常時にひとつ確認することを持ち帰ってもらうのが目的。
  */
 export default function EvacReportPage() {
   const router = useRouter();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const evac = useEvac();
-  const { home, shelter, routes, startRouteId, takenRouteIds, decisions, followUp, update, reset } =
+  const { mode, home, shelter, routes, startRouteId, takenRouteIds, decisions, walk, followUp, update, reset } =
     evac;
 
   useEffect(() => {
@@ -40,20 +44,21 @@ export default function EvacReportPage() {
   const rows = useMemo(
     () =>
       decisions.flatMap((d) => {
-        const event = findEvent(d.eventId);
-        const choice = findChoice(d.eventId, d.choiceId);
+        const event = walk?.steps.find((s) => s.pointId === d.pointId)?.event ?? findEvent(d.eventId);
+        const choice = event?.choices.find((c) => c.id === d.choiceId) ?? findChoice(d.eventId, d.choiceId);
         return event && choice ? [{ d, event, choice }] : [];
       }),
-    [decisions],
+    [decisions, walk],
   );
 
-  // 「良かった判断」＝安全上の優先順位が高かったもの。
-  // 低かったものは名指しせず、「次に試したいこと」として言い換える（仕様 8）。
-  const good = rows.filter((r) => r.choice.priority === 3);
-  const improve = rows.filter((r) => r.choice.priority === 1);
+  const trail = walkedPath(walk);
+  const selectDecision = (id: string) => {
+    setSelectedId(id);
+    requestAnimationFrame(() => document.getElementById(`decision-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  };
 
   const followUps = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.event.followUp))),
+    () => rows.length ? Array.from(new Set(rows.map((r) => r.event.followUp))) : ["自治体の防災マップで、この経路と避難先の指定を平常時に確認する"],
     [rows],
   );
 
@@ -63,6 +68,7 @@ export default function EvacReportPage() {
     <Screen>
       <main className="animate-rise flex flex-1 flex-col gap-4 px-6 pt-3 pb-6">
         <header>
+          <EvacModeBadge mode={mode} />
           <div className="flex items-center gap-2">
             <span className="rounded-field bg-primary-soft px-2 py-0.5 font-display text-11 font-black text-primary-ink">
               フェーズ2
@@ -73,21 +79,35 @@ export default function EvacReportPage() {
           </div>
         </header>
 
+        <RoomConnectionSummary complete />
+
+        <div className="grid grid-cols-2 gap-3 rounded-panel bg-primary-soft p-4">
+          <div><p className="text-11 text-primary-ink"><Furigana text="考[かんが]えた場面[ばめん]" /></p><p className="mt-1 font-display text-28 font-bold text-ink">{rows.length}<span className="ml-1 text-13">地点</span></p></div>
+          <div><p className="text-11 text-primary-ink"><Furigana text="通[とお]った道[みち]の長[なが]さ" /></p><p className="mt-2 font-display text-xl font-bold text-ink">{formatDistance(walk ? walkDistance(walk) : startRoute?.distanceM ?? 0)}</p></div>
+          <p className="col-span-2 text-11 text-ink-muted"><Furigana text="これは地図[ちず]の上[うえ]で体験[たいけん]した記録[きろく]です。" /></p>
+        </div>
+
         <Card className="p-[18px]">
           <p className="font-display text-sm font-bold text-ink">
             <Furigana text="通[とお]った経路[けいろ]" />
           </p>
           <div className="mt-2 overflow-hidden rounded-tile">
             <EvacMap
+              mode={mode}
               center={home ?? { lat: 35.7186, lng: 139.7237 }}
               home={home}
               shelters={shelter ? [shelter] : []}
               selectedShelterId={shelter?.id ?? null}
-              routes={routes}
-              activeRouteId={takenRouteIds[takenRouteIds.length - 1] ?? startRouteId}
-              height={190}
+              routes={startRoute ? [startRoute] : []}
+              activeRouteId={startRouteId}
+              traveledPath={walk ? trail : undefined}
+              markers={rows.flatMap(({ d }, i) => d.position ? [{ id: d.pointId, position: d.position, label: String(i + 1), color: selectedId === d.pointId ? "#ffcc00" : "#fff6d6", title: `判断${i + 1}の記録を見る`, onClick: () => selectDecision(d.pointId) }] : [])}
+              height={250}
             />
           </div>
+          <div className="mt-3"><RouteLegend /></div>
+          <p className="mt-2 text-11 text-ink-soft"><Furigana text="番号[ばんごう]をタップすると、その場所[ばしょ]での選択[せんたく]を読[よ]めます。" /></p>
+          {startRoute?.demo ? <p className="mt-2 text-11 text-primary-ink">練習用の経路です。実際の道路とは異なります。</p> : null}
           <div className="mt-2.5 flex flex-col gap-1 text-13 text-ink-muted">
             <p>
               <Furigana text="選[えら]んだ避難場所[ひなんばしょ]" />：
@@ -101,9 +121,9 @@ export default function EvacReportPage() {
               {startRoute ? formatDistance(startRoute.distanceM) : "—"}）
             </p>
             <p>
-              <Furigana text="実際[じっさい]に通[とお]った経路[けいろ]" />：
+              <Furigana text="体験中[たいけんちゅう]に通[とお]った経路[けいろ]" />：
               {changed ? (
-                <span className="font-display font-bold text-safe">
+                <span className="font-display font-bold text-primary-ink">
                   <Furigana text="途中[とちゅう]で別[べつ]ルートに変更[へんこう]" />
                 </span>
               ) : (
@@ -120,51 +140,30 @@ export default function EvacReportPage() {
           </div>
         </Card>
 
-        <div className="rounded-tile bg-safe-soft p-4">
-          <p className="font-display text-sm font-bold text-safe">
-            ◎ <Furigana text="避[さ]けられた危険[きけん]" />
-          </p>
-          <p className="mt-1 text-13 text-ink-muted">
-            <Furigana text="危険[きけん]に近[ちか]づかない判断[はんだん]（距離[きょり]を取[と]る・待[ま]つ・迂回[うかい]する）は" />{" "}
-            <span className="font-display font-bold text-ink">
-              {avoidanceCount(evac)} / {rows.length}
-            </span>{" "}
-            <Furigana text="回[かい]でした。" />
-          </p>
-          {good.length > 0 ? (
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {good.map(({ d, event, choice }) => (
-                <li key={d.pointId} className="text-13 text-ink-muted">
-                  ・<Furigana text={event.title} />
-                  では「<Furigana text={choice.label} />」
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        {walk?.source === "geo-ai" && rows.length === 0 ? <p className="rounded-field bg-primary-soft p-3 text-13 leading-relaxed text-ink-muted">今回の地形データから出題できる候補は見つかりませんでした。危険がないことや、この経路の安全を確認した意味ではありません。</p> : null}
 
         <Card className="p-[18px]">
           <p className="font-display text-15 font-bold text-ink">
             <Furigana text="それぞれの判断[はんだん]" />
           </p>
           <p className="mt-1 text-11 text-ink-soft">
-            <Furigana text="「正解[せいかい]」ではなく、その場[ば]での優先順位[ゆうせんじゅんい]の話[はなし]です。どの選択[せんたく]にも利点[りてん]と注意点[ちゅういてん]があります。" />
+            <Furigana text="道[みち]を選[えら]ぶときに、何[なに]を考[かんが]えましたか？それぞれの場面[ばめん]で確[たし]かめたいことを見[み]てみましょう。" />
           </p>
           <div className="mt-3 flex flex-col gap-2">
             {rows.map(({ d, event, choice }, i) => (
-              <details key={d.pointId} className="rounded-field bg-canvas p-3">
-                <summary className="cursor-pointer list-none">
+              <details id={`decision-${d.pointId}`} key={d.pointId} open={selectedId === d.pointId} className="scroll-mt-4 rounded-field bg-canvas p-3">
+                <summary onClick={(e) => { e.preventDefault(); setSelectedId(selectedId === d.pointId ? null : d.pointId); }} className="cursor-pointer list-none">
                   <span className="font-display text-11 font-bold text-primary-ink">
                     <Furigana text="判断[はんだん]" />
                     {i + 1}
                   </span>
                   <span className="mt-0.5 flex items-center gap-1.5">
                     <span className="flex-1 font-display text-13 font-bold text-ink">
-                      {d.timedOut ? "時間切れ：" : ""}
+                      {d.timedOut ? "時間をかけて選択：" : ""}
                       <Furigana text={choice.label} />
                     </span>
                     <span aria-hidden className="text-ink-soft">
-                      ＋
+                      {selectedId === d.pointId ? "−" : "＋"}
                     </span>
                   </span>
                 </summary>
@@ -195,6 +194,13 @@ export default function EvacReportPage() {
                   <p className="text-11 text-ink-soft">
                     <Furigana text={event.hint} />
                   </p>
+                  {event.evidence ? <div className="rounded-field border border-border bg-surface p-3 text-11 leading-relaxed text-ink-muted">
+                    <p className="font-bold text-primary-ink">この地点を選んだ根拠</p>
+                    <p>地理データの分類：{event.evidence.classification}</p>
+                    <p className="mt-1">AIの補足：{event.evidence.aiReason}</p>
+                    {event.evidence.uncertainties.map((text, i) => <p key={i}>未確認：{text}</p>)}
+                    <p className="mt-1">データ取得日：{event.evidence.downloadedAt}（現地調査日とは異なります）</p>
+                  </div> : null}
                   <a
                     href={event.reference.url}
                     target="_blank"
@@ -208,25 +214,6 @@ export default function EvacReportPage() {
             ))}
           </div>
         </Card>
-
-        {improve.length > 0 ? (
-          <div className="rounded-tile bg-warn-soft p-4">
-            <p className="font-display text-sm font-bold text-warn">
-              <Furigana text="次[つぎ]に試[ため]したい判断[はんだん]" />
-            </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {improve.map(({ d, event }) => {
-                const better = event.choices.find((c) => c.priority === 3);
-                return (
-                  <li key={d.pointId} className="text-13 text-ink-muted">
-                    ・<Furigana text={event.title} />
-                    では「<Furigana text={better?.label ?? ""} />」も選[えら]べました
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
 
         <Card className="p-[18px]">
           <p className="font-display text-15 font-bold text-ink">

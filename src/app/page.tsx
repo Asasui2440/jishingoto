@@ -83,13 +83,18 @@ export default function OnboardingPage() {
           {adult ? "室内の地震リスクを確認しましょう" : <Furigana text="自分[じぶん]の部屋[へや]の安全[あんぜん]、確[たし]かめよう" />}
         </h1>
 
+        <ol aria-label="体験の流れ" className="grid grid-cols-2 gap-2 text-center text-13 font-bold text-primary-ink">
+          <li className="rounded-field bg-primary-soft p-3"><span className="block text-11">フェーズ1</span><Furigana text="部屋[へや]での行動[こうどう]" /></li>
+          <li className="rounded-field bg-primary-soft p-3"><span className="block text-11">フェーズ2</span><Furigana text="家[いえ]の外[そと]の避難[ひなん]" /></li>
+        </ol>
+
         <Button onClick={start}>
           <ArrowRightIcon className="size-5 text-ink" />
           {adult ? "安全診断を始める" : <Furigana text="体験[たいけん]を始[はじ]める" />}
         </Button>
 
-        <Button variant="outline" size="md" onClick={() => router.push("/evac")}>
-          {adult ? "避難経路をシミュレーション（フェーズ2）" : <Furigana text="ひなん経路[けいろ]をためす（フェーズ2）" />}
+        <Button variant="outline" size="md" onClick={() => router.push("/evac?from=standalone")}>
+          {adult ? "避難ルートから体験する（フェーズ2）" : <Furigana text="避難[ひなん]ルートから体験[たいけん]する（フェーズ2）" />}
         </Button>
 
         <Card className="flex flex-col gap-3 p-[18px]">

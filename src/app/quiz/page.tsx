@@ -8,7 +8,7 @@ import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
 import { Meter, Tag } from "@/components/ui/Bits";
 import { Card } from "@/components/ui/Card";
 import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { fetchQuestions } from "@/lib/api";
 import { RISK_KINDS, type Choice, type Question } from "@/lib/content";
 import { useHaptics, useSettings } from "@/lib/settings";
@@ -74,7 +74,6 @@ function QuestionView({
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
-        <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-black text-primary-ink">Q{index + 1}</span>
@@ -261,7 +260,6 @@ export default function QuizPage() {
   if (!questions) {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
-        <StatusBar />
         <p className="px-6 text-center text-13 text-ink-muted">問題を用意しています...</p>
         <DisclaimerFooter />
       </div>

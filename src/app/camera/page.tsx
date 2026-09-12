@@ -12,7 +12,7 @@ import {
 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { preparePhoto, useCamera } from "@/lib/camera";
 import { detectBlurRegions } from "@/lib/api";
 import { useHaptics } from "@/lib/settings";
@@ -61,7 +61,6 @@ export default function CameraGuidePage() {
   return (
     <div className="flex min-h-dvh flex-col justify-between bg-ink">
       <div>
-        <StatusBar tone="light" />
         <div className="flex items-center gap-2 bg-danger-soft px-4 py-3">
           <AlertOctagonIcon className="size-[18px] shrink-0" />
           <p className="font-display text-13 font-bold text-danger">

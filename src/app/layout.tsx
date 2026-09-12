@@ -54,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SettingsProvider>
           <SessionProvider>
             {/* スマホ幅が基準。PC で開いたときは中央に寄せる */}
-            <div className="mx-auto w-full max-w-[402px] bg-canvas shadow-[0_0_60px_rgba(26,32,44,0.08)]">
+            <div className="mx-auto w-full max-w-[402px] bg-canvas pt-[env(safe-area-inset-top)] shadow-[0_0_60px_rgba(26,32,44,0.08)]">
               {children}
             </div>
           </SessionProvider>

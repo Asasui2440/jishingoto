@@ -4,8 +4,7 @@ import type { EventKind } from "@/lib/evac-content";
  * 想定シナリオのイラスト（アニメ風の想定図）。
  *
  * 実在の建物を加工した画像ではなく、完全な作図。
- *   - ストリートビューが使えないときの背景（デモ表示）
- *   - ストリートビューとは別枠で「どういう状況か」を示す想定図（仕様 7）
+ *   - 2D地図の下で「どういう状況か」を示す想定図
  * の2か所で使う。
  */
 export function HazardSketch({
@@ -66,6 +65,7 @@ export function HazardSketch({
       <path d="M64 180 L96 152 L96 180 Z" fill="#cbd5e0" />
       <path d="M246 180 L214 152 L214 180 Z" fill="#cbd5e0" />
 
+      {kind === "terrain" ? <g><path d="M0 142L50 94L112 149" fill="#aac68a" /><path d="M176 169l16-8 18 12" fill="none" stroke="#b87d00" strokeWidth="3" strokeDasharray="4 3" /><circle cx="147" cy="143" r="14" fill="#ffcc00" /><text x="147" y="149" textAnchor="middle" fill="#5b420b" fontSize="20" fontWeight="bold">?</text></g> : null}
       {kind === "wall" ? <WallScene /> : null}
       {kind === "fall" ? <FallScene /> : null}
       {kind === "closed" ? <ClosedScene /> : null}

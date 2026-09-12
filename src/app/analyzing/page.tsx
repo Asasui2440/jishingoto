@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { Meter, TitleBlock } from "@/components/ui/Bits";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
@@ -61,7 +61,6 @@ export default function AnalysisLoadingPage() {
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
-        <StatusBar />
         <TitleBlock
           title="AIが部屋[へや]をチェック中[ちゅう]..."
           lead="危[あぶ]ない場所[ばしょ]がないかしらべています。"

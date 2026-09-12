@@ -8,7 +8,7 @@ import { Meter } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { DisclaimerFooter } from "@/components/ui/Screen";
 import { RiskActions } from "@/components/RiskActions";
 import { withAdultSituation } from "@/lib/api";
 import { AXIS_LABEL, CHECKLIST, safetyBand, type Axis } from "@/lib/content";
@@ -82,10 +82,9 @@ export default function ResultPage() {
   return (
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
-        <StatusBar />
         <div className="flex items-center gap-2 px-6 pt-3">
           <span className="shrink-0 rounded-field bg-primary-soft px-2 py-0.5 font-display text-xs font-black whitespace-nowrap text-primary-ink">
-            ジシンゴト
+            フェーズ1
           </span>
           <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold text-ink">
             <Furigana text="防災[ぼうさい]シミュレーション結果[けっか]" />
@@ -235,7 +234,13 @@ export default function ResultPage() {
           </div>
         </Card>
 
-
+          <div className="rounded-panel border border-primary/40 bg-primary-soft p-4" aria-label="次はフェーズ2">
+            <p className="text-11 font-bold text-primary-ink">部屋の中から、家の外へ</p>
+            <h2 className="mt-1 font-display text-lg font-bold text-ink"><Furigana text="次[つぎ]は、避難[ひなん]する道[みち]を考[かんが]えよう" /></h2>
+            <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text="部屋[へや]での行動[こうどう]をふりかえったら、フェーズ2へ。地図[ちず]で避難先[ひなんさき]を選[えら]び、途中[とちゅう]の場面[ばめん]を体験[たいけん]します。" /></p>
+            <p className="mt-2 text-11 text-ink-muted">部屋の回答とチェックリストは、このタブで見返せます。</p>
+          </div>
+          <Button variant="outline" size="md" onClick={() => router.push("/share")}><Furigana text="部屋[へや]の結果[けっか]をシェア" /></Button>
           <button
             type="button"
             className="min-h-11 self-center px-4 py-2 text-13 font-bold text-primary-ink underline underline-offset-4"
@@ -247,9 +252,9 @@ export default function ResultPage() {
             <Furigana text="もういちど挑戦[ちょうせん]" />
           </button>
         </>}
-        <nav aria-label="結果のページ切り替え" className="sticky bottom-0 flex gap-3 border-t border-border bg-canvas py-3">
+        <nav aria-label="結果のページ切り替え" className={`sticky bottom-0 flex gap-3 border-t border-border bg-canvas py-3 ${step === lastStep ? "flex-col-reverse" : ""}`}>
           <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}>戻る</Button>
-          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果[けっか]をシェア" />}</Button>
+          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/evac?from=room")}>{step < lastStep ? "次へ" : <Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" />}</Button>
         </nav>
       </div>
 

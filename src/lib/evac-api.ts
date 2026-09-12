@@ -1,16 +1,10 @@
 "use client";
 
 /**
- * フェーズ2のバックエンド境界。
- *
- * フェーズ1の `api.ts` と同じで、シグネチャを変えずに中身だけ差し替えられるようにしてある。
- *   - `fetchShelters()`   … 自治体オープンデータ（指定緊急避難場所・指定避難所）
- *   - `fetchRoutes()`     … 徒歩の候補経路。いまは Maps JS の DirectionsService。
- *                            サーバー側で Routes API を叩く形にも差し替えられる。
- *   - `fetchDecisionPoints()` … 経路上の判断地点。ルールエンジンが決める。
- *
- * Maps が読み込めないとき（キーなし・オフライン）は、
- * 同じ形のデモデータを返して UI をそのまま動かす（仕様 13）。
+ * フェーズ2の取得境界。フェーズ1のfixture/liveと同様、モードを明示する。
+ * mock: サンプル避難場所・合成ルート。外部サービスを呼ばない。
+ * api: GSI/Placesの候補と、Maps JS Routes Libraryの徒歩ルート。
+ * API失敗時はエラーを返し、モックへ自動で置き換えない。
  */
 
 import {
@@ -22,7 +16,9 @@ import {
   type RouteOption,
   type Shelter,
 } from "./evac-content";
-import { MAPS_API_KEY, hasMapsKey, loadMaps } from "./gmaps";
+import { hasMapsKey, loadMaps } from "./gmaps";
+import { requestWalkingRoutes, type WalkingRoute } from "./google-routes";
+import type { EvacMode } from "./evac-mode";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -79,33 +75,21 @@ export function headingAt(path: LatLng[], t: number) {
 
 /**
  * 「近く」とみなす上限（m）。
- * 地理院タイル（z14 の 3×3 枚）が覆う範囲とだいたい合わせてある。
+ * 地理院タイルの検索範囲にもこの上限を使う。
  * これより遠い候補は、指定した地点の「近く」ではないので出さない。
  */
 const NEARBY_RADIUS_M = 3000;
 
-/**
- * 指定した地点の近くの避難場所を返す。
- *
- * 探しにいく順番:
- *   1. 国土地理院「指定緊急避難場所」データ（公的データ。地震に対応する skhb01）
- *   2. Google Places（公園・学校・公民館など、避難場所になりやすい施設の候補）
- *   3. デモデータ（どちらも使えないとき）
- *
- * 2 は「自治体が指定した避難場所」ではないので、画面では候補として出し、
- * 自治体の一覧で確認するよう促す（`Shelter.source` をそのまま表示している）。
- *
- * どの手段でも、指定した地点から `NEARBY_RADIUS_M` より遠いものは落とす。
- * 遠くの避難場所を「近く」として並べると、その地点に避難場所があるかのように
- * 誤って伝わるため（仕様 11）。近くに1件も無ければ空配列を返し、
- * 画面側が「見つからなかった」と出す。
- */
-export async function fetchShelters(near: LatLng): Promise<Shelter[]> {
+/** API版は公的データ→Places候補の順に取得し、固定データには置き換えない。 */
+export async function fetchShelters(near: LatLng, mode: EvacMode): Promise<Shelter[]> {
   const nearby = (list: Shelter[]) =>
     [...list]
       .filter((s) => distanceM(near, s.position) <= NEARBY_RADIUS_M)
       .sort((a, b) => distanceM(near, a.position) - distanceM(near, b.position))
       .slice(0, 5);
+
+  if (mode === "mock") return nearby(DEMO_SHELTERS).map((s) => ({ ...s, source: "練習用サンプル（現在の指定状況は未確認）" }));
+  if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
 
   try {
     const official = nearby(await fetchGsiShelters(near));
@@ -114,18 +98,11 @@ export async function fetchShelters(near: LatLng): Promise<Shelter[]> {
     // 公的データを取れなければ次の手段へ
   }
 
-  if (hasMapsKey()) {
-    try {
-      const places = nearby(await fetchPlaceShelters(near));
-      if (places.length > 0) return places;
-    } catch {
-      // Places も使えなければデモデータへ
-    }
+  try {
+    return nearby(await fetchPlaceShelters(near));
+  } catch {
+    throw new Error("避難場所を取得できませんでした。接続とGoogle APIの設定を確認して再試行してください。");
   }
-
-  await wait(200);
-  // デモデータはデモ地点の周りにしか無い。離れた地点では 0 件になる。
-  return nearby(DEMO_SHELTERS);
 }
 
 /* --- 1. 国土地理院の指定緊急避難場所データ --------------------------- */
@@ -194,6 +171,7 @@ async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
     tiles.map(async (t) => {
       const res = await fetch(
         `https://maps.gsi.go.jp/xyz/${GSI_EARTHQUAKE_LAYER}/${GSI_ZOOM}/${t.x}/${t.y}.geojson`,
+        { signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) return [] as GsiFeature[];
       const json = (await res.json()) as { features?: GsiFeature[] };
@@ -343,115 +321,18 @@ export async function geocodeAddress(query: string): Promise<GeocodeResult> {
 const WALK_SPEED = 1.2;
 
 /**
- * 候補経路を2本返す。
+ * 候補経路を返す。実APIから1本だけ取得できた場合もそのまま採用する。
  *
  * 1本目 = 距離と時間を優先した経路、2本目 = 迂回しやすさを優先した経路。
  * **どちらが安全かは断定しない**。画面には距離・時間・イベント数と、
  * 経路データから言える事実（曲がる回数など）だけを出す。
  */
-export async function fetchRoutes(home: LatLng, shelter: Shelter): Promise<RouteOption[]> {
-  if (hasMapsKey()) {
-    // 1. Routes API（新）。2025 年以降に作った Google Cloud プロジェクトは
-    //    旧 Directions API を有効にできないので、まずこちらを試す。
-    try {
-      const routes = await fetchRoutesFromRoutesApi(home, shelter);
-      if (routes.length >= 2) return routes;
-    } catch {
-      // 次の手段へ
-    }
-
-    // 2. 旧 Directions API。以前から有効にしているプロジェクト向け。
-    try {
-      const routes = await fetchRoutesFromDirections(home, shelter);
-      if (routes.length >= 2) return routes;
-    } catch {
-      // どちらも使えなければデモ経路に落ちる
-    }
-  }
-  await wait(300);
-  return demoRoutes(home, shelter);
-}
-
-/* --- Routes API（新） ------------------------------------------------ */
-
-type RoutesApiRoute = {
-  distanceMeters?: number;
-  /** "423s" の形 */
-  duration?: string;
-  polyline?: { encodedPolyline?: string };
-  legs?: { steps?: unknown[] }[];
-};
-
-/**
- * 経路を1回取る。経由点を渡すと、そこを通る別ルートになる。
- *
- * Routes API は REST なので、ブラウザから直接叩くと `X-Goog-Api-Key` に
- * キーが載り、DevTools からそのまま読めてしまう。
- * `GOOGLE_MAPS_SERVER_KEY` が設定してあれば `/api/routes` を通して、
- * 経路用のキーをブラウザに出さないようにする。
- *
- * 設定が無い環境（キーを1本しか用意していないとき）は、
- * これまでどおりブラウザから直接叩く。動くことを優先する。
- */
-async function callRoutesApi(
-  origin: LatLng,
-  destination: LatLng,
-  via?: LatLng,
-): Promise<RoutesApiRoute[]> {
-  const res = await fetch("/api/routes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ origin, destination, ...(via ? { via } : {}) }),
-  });
-
-  if (res.ok) {
-    const json = (await res.json()) as { routes?: RoutesApiRoute[] };
-    return json.routes ?? [];
-  }
-  // 503 = サーバー用のキーが未設定。それ以外は本当に失敗している。
-  if (res.status !== 503) throw new Error(`routes-proxy-${res.status}`);
-
-  return callRoutesApiDirect(origin, destination, via);
-}
-
-const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-
-/** ブラウザから直接叩く版。キーはリファラー制限で守る前提。 */
-async function callRoutesApiDirect(
-  origin: LatLng,
-  destination: LatLng,
-  via?: LatLng,
-): Promise<RoutesApiRoute[]> {
-  const point = (p: LatLng) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
-
-  const res = await fetch(ROUTES_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": MAPS_API_KEY,
-      // 必要な項目だけを取る（課金は FieldMask の範囲で決まる）
-      "X-Goog-FieldMask": [
-        "routes.distanceMeters",
-        "routes.duration",
-        "routes.polyline.encodedPolyline",
-        "routes.legs.steps.navigationInstruction",
-      ].join(","),
-    },
-    body: JSON.stringify({
-      origin: point(origin),
-      destination: point(destination),
-      ...(via ? { intermediates: [point(via)] } : {}),
-      travelMode: "WALK",
-      computeAlternativeRoutes: !via,
-      languageCode: "ja",
-      regionCode: "JP",
-      units: "METRIC",
-    }),
-  });
-
-  if (!res.ok) throw new Error(`routes-api-${res.status}`);
-  const json = (await res.json()) as { routes?: RoutesApiRoute[] };
-  return json.routes ?? [];
+export async function fetchRoutes(home: LatLng, shelter: Shelter, mode: EvacMode): Promise<RouteOption[]> {
+  if (mode === "mock") return demoRoutes(home, shelter);
+  if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
+  const routes = await fetchRoutesFromGoogle(home, shelter);
+  if (!routes.length) throw new Error("この場所への徒歩ルートが見つかりませんでした。場所を選び直してください。");
+  return routes;
 }
 
 /**
@@ -477,119 +358,37 @@ function detourVia(home: LatLng, to: LatLng): LatLng {
   };
 }
 
-async function fetchRoutesFromRoutesApi(
-  home: LatLng,
-  shelter: Shelter,
-): Promise<RouteOption[]> {
-  // polyline の復号に geometry ライブラリを使う
-  const maps = await loadMaps();
-  const decode = (encoded: string): LatLng[] =>
-    maps.geometry.encoding.decodePath(encoded).map((p) => ({ lat: p.lat(), lng: p.lng() }));
-
-  const toOption = (
-    r: RoutesApiRoute,
-    kind: RouteOption["kind"],
-    eventCount: number,
-  ): RouteOption => {
-    const meters = r.distanceMeters ?? 0;
-    const seconds = Number.parseInt(r.duration ?? "", 10) || Math.round(meters / WALK_SPEED);
-    const turns = r.legs?.reduce((s, l) => s + (l.steps?.length ?? 0), 0) ?? 0;
-    const path = r.polyline?.encodedPolyline ? decode(r.polyline.encodedPolyline) : [];
-    return {
-      id: `${kind}-${Math.round(meters)}`,
-      kind,
-      label: kind === "short" ? "最短[さいたん]ルート" : "迂回[うかい]しやすいルート",
-      notes: routeNotes(kind, meters, turns, eventCount),
-      distanceM: meters,
-      durationS: seconds,
-      path: path.length > 1 ? path : [home, shelter.position],
-      eventCount,
-    };
-  };
-
-  const found = await callRoutesApi(home, shelter.position);
-  if (found.length === 0) return [];
-
-  const sorted = [...found].sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
-  const shortest = sorted[0];
-
-  // 代替が返っていればいちばん違うものを使う。
-  // 徒歩の短い距離では1本しか返らないので、そのときは経由点でもう1本引く。
-  let alternative = sorted.length > 1 ? sorted[sorted.length - 1] : null;
+async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter): Promise<RouteOption[]> {
+  const found = await requestWalkingRoutes(home, shelter.position);
+  const sorted = [...found].sort((a, b) => a.distanceM - b.distanceM);
+  if (!sorted.length) return [];
+  const fingerprint = (route: WalkingRoute) => JSON.stringify(route.path);
+  const primaryPath = fingerprint(sorted[0]);
+  let alternative = sorted.findLast((route) => fingerprint(route) !== primaryPath);
   if (!alternative) {
     try {
-      const [detour] = await callRoutesApi(
-        home,
-        shelter.position,
-        detourVia(home, shelter.position),
-      );
-      if (detour && (detour.distanceMeters ?? 0) > (shortest.distanceMeters ?? 0)) {
-        alternative = detour;
-      }
+      const extra = await requestWalkingRoutes(home, shelter.position, detourVia(home, shelter.position));
+      alternative = extra.find((route) => fingerprint(route) !== primaryPath);
     } catch {
-      // 迂回が引けなければ最短だけ返す（呼び出し側が次の手段に移る）
+      // 代替ルートがなくても、取得できた実経路1本で進める。
     }
   }
-
-  const options = [toOption(shortest, "short", 3)];
-  if (alternative) options.push(toOption(alternative, "safe", 2));
-  return options;
-}
-
-/** Maps JS の DirectionsService（徒歩・代替経路あり）から取る */
-async function fetchRoutesFromDirections(
-  home: LatLng,
-  shelter: Shelter,
-): Promise<RouteOption[]> {
-  const maps = await loadMaps();
-  const service = new maps.DirectionsService();
-
-  const result = await service.route({
-    origin: home,
-    destination: shelter.position,
-    travelMode: maps.TravelMode.WALKING,
-    provideRouteAlternatives: true,
-    language: "ja",
-    region: "JP",
-  });
-
-  const sorted = [...result.routes].sort(
-    (a, b) => legMeters(a) - legMeters(b),
-  );
-  if (sorted.length === 0) return [];
-
-  // 最短と、いちばん違う経路（＝迂回しやすい別ルート）を選ぶ
-  const shortest = sorted[0];
-  const alternative = sorted.length > 1 ? sorted[sorted.length - 1] : null;
-
-  const options: RouteOption[] = [toRouteOption(shortest, "short", 3)];
-  if (alternative) options.push(toRouteOption(alternative, "safe", 2));
-  return options;
-
-  function legMeters(r: google.maps.DirectionsRoute) {
-    return r.legs.reduce((s, l) => s + (l.distance?.value ?? 0), 0);
-  }
-
-  function toRouteOption(
-    r: google.maps.DirectionsRoute,
-    kind: RouteOption["kind"],
-    eventCount: number,
-  ): RouteOption {
-    const meters = legMeters(r);
-    const seconds = r.legs.reduce((s, l) => s + (l.duration?.value ?? 0), 0);
-    const steps = r.legs.flatMap((l) => l.steps);
-    const path = (r.overview_path ?? []).map((p) => ({ lat: p.lat(), lng: p.lng() }));
+  // 経由地点付きのルートが短くなるケースも含め、表示する候補を距離順にする。
+  const candidates = alternative ? [sorted[0], alternative].sort((a, b) => a.distanceM - b.distanceM) : [sorted[0]];
+  return candidates.map((route, i): RouteOption => {
+    const kind = i === 0 ? "short" : "safe";
+    const eventCount = i === 0 ? 3 : 2;
     return {
-      id: `${kind}-${Math.round(meters)}`,
+      id: `${kind}-${Math.round(route.distanceM)}`,
       kind,
-      label: kind === "short" ? "最短[さいたん]ルート" : "迂回[うかい]しやすいルート",
-      notes: routeNotes(kind, meters, steps.length, eventCount),
-      distanceM: meters,
-      durationS: seconds || Math.round(meters / WALK_SPEED),
-      path: path.length > 1 ? path : [home, shelter.position],
+      label: i === 0 ? "距離[きょり]が短[みじか]いルート" : "もうひとつのルート",
+      notes: routeNotes(kind, route.distanceM, route.segments, eventCount),
+      distanceM: route.distanceM,
+      durationS: route.durationS,
+      path: route.path,
       eventCount,
     };
-  }
+  });
 }
 
 /**
@@ -602,21 +401,15 @@ function routeNotes(
   turns: number,
   eventCount: number,
 ): string[] {
-  const notes: string[] = [];
-  if (kind === "short") {
-    notes.push("距離[きょり]と時間[じかん]がいちばん短[みじか]い");
-    notes.push(`曲[ま]がる回数[かいすう]は ${turns} 回[かい]`);
-    notes.push("細[ほそ]い道[みち]を含[ふく]むことがある");
-  } else {
-    notes.push("大[おお]きい道[みち]を通[とお]るぶん、距離[きょり]は長[なが]い");
-    notes.push(`曲[ま]がる回数[かいすう]は ${turns} 回[かい]`);
-    notes.push("途中[とちゅう]で別[べつ]の道[みち]に切[き]り替[か]えやすい");
-  }
-  notes.push(`このルートで起[お]きる判断[はんだん]イベントは ${eventCount} 件[けん]`);
+  const notes = [
+    kind === "short" ? "候補[こうほ]の中[なか]で距離[きょり]が短[みじか]い" : "別[べつ]の道順[みちじゅん]を比較[ひかく]できる",
+    `経路[けいろ]の区間[くかん]は ${turns} 区間[くかん]`,
+    `練習用[れんしゅうよう]の判断[はんだん]ポイントは ${eventCount} 件[けん]`,
+  ];
   return notes;
 }
 
-/** Maps を使えないときのデモ経路。碁盤の目に沿った2本を作る。 */
+/** モック版専用。碁盤の目に沿った2本を作る。 */
 function demoRoutes(home: LatLng, shelter: Shelter): RouteOption[] {
   const to = shelter.position;
   const mid1 = { lat: home.lat, lng: home.lng + (to.lng - home.lng) * 0.62 };
@@ -639,7 +432,7 @@ function demoRoutes(home: LatLng, shelter: Shelter): RouteOption[] {
     return {
       id: `demo-${kind}`,
       kind,
-      label: kind === "short" ? "最短[さいたん]ルート" : "迂回[うかい]しやすいルート",
+      label: kind === "short" ? "距離[きょり]が短[みじか]いルート" : "もうひとつのルート",
       notes: routeNotes(kind, meters, path.length - 1, eventCount),
       distanceM: meters,
       durationS: Math.round(meters / WALK_SPEED),
@@ -652,48 +445,43 @@ function demoRoutes(home: LatLng, shelter: Shelter): RouteOption[] {
   return [build(shortPath, "short", 3), build(safePath, "safe", 2)];
 }
 
-/**
- * いまいる地点から避難場所まで、別の道を引き直す（迂回）。
- *
- * 迂回を選んだときに、もう1本の候補ルートへ飛び移ると、
- * 別ルートの「同じ進捗の地点」は数百m先にあるためワープしてしまう。
- * 実際に起きるのは「いまいる場所から、別の道で避難場所へ向かう」なので、
- * 現在地を起点に引き直す。こうすると次の一歩が数十m先になり、
- * ストリートビューも隣のパノラマを辿って歩ける。
- */
+/** 現在地から引き直す。模式図の経路では、同じ地点から練習用の迂回路を作る。 */
 export async function fetchDetourFrom(
   from: LatLng,
   shelter: Shelter,
+  mode: EvacMode,
 ): Promise<RouteOption | null> {
+  if (mode === "mock") {
+    const route = demoRoutes(from, shelter)[1];
+    return { ...route, id: `demo-detour-${from.lat}-${from.lng}`, label: "迂回[うかい]した道[みち]" };
+  }
   if (!hasMapsKey()) return null;
   try {
-    const [found] = await callRoutesApi(
+    const [found] = await requestWalkingRoutes(
       from,
       shelter.position,
       detourVia(from, shelter.position),
     );
-    if (!found?.polyline?.encodedPolyline) return null;
+    if (!found) return null;
+    const path = found.path;
 
-    const maps = await loadMaps();
-    const path = maps.geometry.encoding
-      .decodePath(found.polyline.encodedPolyline)
-      .map((p) => ({ lat: p.lat(), lng: p.lng() }));
-    if (path.length < 2) return null;
-
-    const meters = found.distanceMeters ?? pathLengthM(path);
-    const seconds =
-      Number.parseInt(found.duration ?? "", 10) || Math.round(meters / WALK_SPEED);
-    const turns = found.legs?.reduce((s, l) => s + (l.steps?.length ?? 0), 0) ?? 0;
+    const connectionM = distanceM(from, path[0]);
+    // 大きく離れた道路へ補正された場合は、移動を捏造せず再選択を案内する。
+    if (connectionM > 50) return null;
+    const connectedPath = connectionM < 0.01 ? path : [from, ...path];
+    const meters = found.distanceM + connectionM;
+    const seconds = found.durationS + connectionM / WALK_SPEED;
+    const turns = found.segments;
 
     return {
       id: `detour-${Math.round(meters)}-${Math.round(from.lat * 1e5)}`,
       kind: "safe",
       label: "迂回[うかい]した道[みち]",
-      notes: routeNotes("safe", meters, turns, 1),
+      notes: routeNotes("safe", meters, turns, 2),
       distanceM: meters,
       durationS: seconds,
-      path,
-      eventCount: 1,
+      path: connectedPath,
+      eventCount: 2,
     };
   } catch {
     return null;
@@ -709,7 +497,7 @@ export type DecisionPoint = {
   /** 経路上の位置（0–1） */
   t: number;
   position: LatLng;
-  /** そこで進んでいる向き（ストリートビューの初期 POV に使う） */
+  /** そこで進んでいる向き（地図上のコマに使う） */
   heading: number;
   event: HazardEvent;
   /** 残り距離・残り時間（この地点に着いた時点） */
@@ -720,10 +508,20 @@ export type DecisionPoint = {
 /**
  * 経路上の判断地点を返す。
  *
- * どの地点でどのイベントを出すかは **ルールエンジン側の担当**（仕様 10）。
- * ストリートビューの画像を見て決めているわけではない。
+ * geo-aiは別途取り込んだ地形データをAIで分析する。sampleは固定の練習用配置。
+ * Googleの地図画像やStreet ViewはAIへ送らない。
  */
-export async function fetchDecisionPoints(route: RouteOption): Promise<DecisionPoint[]> {
+export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+  if (options?.source === "geo-ai") {
+    const response = await fetch("/api/evac/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(45000)]) : AbortSignal.timeout(45000),
+      body: JSON.stringify({ route: { id: route.id, path: route.path, durationS: route.durationS }, excludedEventIds: options.excludedEventIds ?? [] }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message ?? "地理データのAI解析に接続できませんでした。");
+    if (result.source !== "geo-ai" || !Array.isArray(result.points)) throw new Error("地理データの解析結果を読み取れませんでした。");
+    return result.points.slice(0, options.maxPoints ?? 3) as DecisionPoint[];
+  }
   await wait(200);
   // 最短ルートは3件、もう一方は2件（仕様 4：1体験につき2〜3件）
   const plan =
@@ -776,49 +574,46 @@ export type WalkStep = {
   /** 経路上の位置（0–1） */
   t: number;
   position: LatLng;
-  /** 進行方向（度）。ストリートビューの向きに使う */
+  /** 進行方向（度）。北が0 */
   heading: number;
   remainingM: number;
   remainingS: number;
+  /** ひとつ前の地点からの想定移動時間。迂回後の集計にも使う。 */
+  travelSeconds: number;
   /** この地点で起きる判断イベント（無ければ、ただ進むだけの地点） */
   event?: HazardEvent;
   pointId?: string;
 };
 
-/**
- * 1歩ぶんの距離（m）。
- *
- * ストリートビューのパノラマは道沿いに 10m 前後の間隔で並んでいる。
- * StreetStage はこの1歩を、隣のパノラマへ数回辿って進むので、
- * 短くするほど連続した歩きに見える（そのぶん1歩の所要時間は縮む）。
- */
+/** 地図上で進む1区間の目安（m）。 */
 const STEP_M = 45;
 
-/**
- * 自宅から避難場所までを、ストリートビューで歩ける粒度に区切る。
- * 判断地点はその途中に混ぜ込む。
- */
+/** 曲がり角も必ず含める。通った道が建物を横切る直線にならないようにする。 */
 export function buildWalkSteps(route: RouteOption, points: DecisionPoint[]): WalkStep[] {
   const total = pathLengthM(route.path);
   const count = Math.min(24, Math.max(5, Math.round(total / STEP_M)));
-
-  const ts = new Set<number>();
-  for (let i = 0; i <= count; i++) ts.add(Number((i / count).toFixed(4)));
-  for (const p of points) ts.add(Number(p.t.toFixed(4)));
-
-  return [...ts]
-    .sort((a, b) => a - b)
-    .map((t): WalkStep => {
-      const point = points.find((p) => Number(p.t.toFixed(4)) === t);
-      return {
-        id: `${route.id}:${t}`,
-        t,
-        position: point?.position ?? pointAt(route.path, t),
-        heading: point?.heading ?? headingAt(route.path, t),
-        remainingM: Math.round(total * (1 - t)),
-        remainingS: Math.round((total * (1 - t)) / WALK_SPEED),
-        event: point?.event,
-        pointId: point?.id,
-      };
-    });
+  const positions = new Map<number, LatLng>();
+  let traversed = 0;
+  route.path.forEach((position, i) => {
+    if (i > 0) traversed += distanceM(route.path[i - 1], position);
+    positions.set(total > 0 ? traversed / total : 0, position);
+  });
+  const ts = new Set<number>(positions.keys());
+  for (let i = 0; i <= count; i++) ts.add(i / count);
+  for (const p of points) ts.add(p.t);
+  const sorted = [...ts].sort((a, b) => a - b);
+  return sorted.map((t, i): WalkStep => {
+    const point = points.find((p) => p.t === t);
+    return {
+      id: `${route.id}:${t}`,
+      t,
+      position: point?.position ?? positions.get(t) ?? pointAt(route.path, t),
+      heading: point?.heading ?? headingAt(route.path, t),
+      remainingM: Math.round(total * (1 - t)),
+      remainingS: Math.round(route.durationS * (1 - t)),
+      travelSeconds: (t - (sorted[i - 1] ?? 0)) * route.durationS,
+      event: point?.event,
+      pointId: point?.id,
+    };
+  });
 }
