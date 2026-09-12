@@ -1,0 +1,16 @@
+# Keep credentials and local-only tooling out of deployment source uploads.
+.env*
+.git
+.next
+.vercel
+node_modules
+artifacts
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+*.log
+.claude
+.codex
+.agents
+next-env.d.ts
