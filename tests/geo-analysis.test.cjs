@@ -419,9 +419,15 @@ test("HTTP endpoint rejects cross-origin, malformed, oversized and out-of-covera
       ],
     },
   };
-  const rejected = await endpoint.POST(make(JSON.stringify(outside)));
-  assert.equal(rejected.status, 422);
-  assert.equal((await rejected.json()).code, "outside_coverage");
+  const before = global.fetch;
+  global.fetch = async () => new Response(null, { status: 404 });
+  try {
+    await withKey(async () => {
+      const rejected = await endpoint.POST(make(JSON.stringify(outside)));
+      assert.equal(rejected.status, 422);
+      assert.equal((await rejected.json()).code, "outside_coverage");
+    });
+  } finally { global.fetch = before; }
 });
 
 test("HTTP origin check accepts the actual Host behind a normalized Next.js URL", async () => {
@@ -443,7 +449,10 @@ test("HTTP origin check accepts the actual Host behind a normalized Next.js URL"
       },
     }),
   });
-  assert.equal((await endpoint.POST(req)).status, 422);
+  const previousFetch = global.fetch;
+  global.fetch = async () => new Response(null, {status:404});
+  try { await withKey(async () => { assert.equal((await endpoint.POST(req)).status, 422); }); }
+  finally { global.fetch = previousFetch; }
 });
 
 test("OpenAI mock mode serves fixture data through existing endpoints without provider calls", async () => {
@@ -480,4 +489,77 @@ test("OpenAI mock mode serves fixture data through existing endpoints without pr
     if (beforeKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = beforeKey;
     global.fetch = beforeFetch;
   }
+});
+
+const dynamicGeo = load("src/lib/server/route-geodata.ts");
+const osakaPath = [{ lat: 34.702, lng: 135.495 }, { lat: 34.703, lng: 135.495 }];
+const terrainTile = (code = "10701", east = 135.6) => ({
+  type: "FeatureCollection", features: [{ type: "Feature", properties: { code }, geometry: {
+    type: "Polygon", coordinates: [[[135.4,34.6],[east,34.6],[east,34.8],[135.4,34.8],[135.4,34.6]]],
+  } }],
+});
+
+test("route tiles include intervening segments and both sides of tile boundaries", () => {
+  const tiles = dynamicGeo.routeTiles([{ lat: 34.7, lng: 135.4 }, { lat: 34.7, lng: 135.5 }]);
+  assert(tiles.length >= 5);
+  const xs = [...new Set(tiles.map(t => t.x))].sort((a,b) => a-b);
+  assert.equal(xs.at(-1) - xs[0] + 1, xs.length);
+  const boundary = 14359 / 16384 * 360 - 180;
+  const edge = dynamicGeo.routeTiles([{lat:34.7,lng:boundary},{lat:34.701,lng:boundary}]);
+  assert(edge.some(t => t.x === 14358));
+  assert(edge.some(t => t.x === 14359));
+});
+
+test("unlisted addresses load real-format tiles with traceable evidence and grounded AI candidates", async () => {
+  const urls = [];
+  const fetcher = async (url, options) => {
+    urls.push(url);
+    if (url.startsWith("https://cyberjapandata.gsi.go.jp/xyz/experimental_landformclassification1/14/")) return Response.json(terrainTile());
+    const input = JSON.parse(JSON.parse(options.body).input[0].content);
+    return response({candidates:[{ featureId:input.features[0].featureId, category:"liquefaction", reason:"地形分類に基づく練習", uncertainties:["現地未確認"] }]});
+  };
+  const r = await dynamicGeo.loadRouteRegion(osakaPath, undefined, fetcher);
+  assert(r.id.startsWith("gsi-route-"));
+  assert(r.version.length === 16);
+  assert(r.features.length > 0);
+  await withKey(async () => {
+    const result = await geo.analyzeGeoRoute({route:{id:"osaka",path:osakaPath,durationS:300},excludedEventIds:[]}, undefined, fetcher);
+    assert.equal(result.points.length, 1);
+    assert(result.regionIds[0].startsWith("gsi-route-"));
+  });
+  assert(urls.some(url => url.includes("cyberjapandata")));
+});
+
+test("dynamic comparison uses downloaded terrain outside preset areas", async () => {
+  const result = await routeAssessment.assessDynamicRouteCandidates({routes:[{id:"osaka",path:osakaPath,distanceM:120,durationS:100}]}, undefined, async () => Response.json(terrainTile()));
+  assert.equal(result.assessments.osaka.coverage, "full");
+  assert(result.assessments.osaka.terrain.liquefactionM > 0);
+});
+
+test("missing, partially covered and unknown terrain cannot become a successful empty analysis", async () => {
+  for (const fetcher of [
+    async () => new Response(null,{status:404}),
+    async () => Response.json(terrainTile("10701",135.494)),
+    async () => Response.json(terrainTile("new-unknown-code")),
+    async () => Response.json({type:"FeatureCollection",features:[]}),
+  ]) await assert.rejects(dynamicGeo.loadRouteRegion(osakaPath,undefined,fetcher), e => e.code === "outside_coverage");
+});
+
+test("transport failures and invalid polygons are retryable errors, and cancellation propagates", async () => {
+  const broken = terrainTile(); broken.features[0].geometry.coordinates[0].pop();
+  for (const fetcher of [
+    async () => new Response(null,{status:503}),
+    async () => { throw new Error("offline"); },
+    async () => new Response("not json"),
+    async () => Response.json(broken),
+  ]) await assert.rejects(dynamicGeo.loadRouteRegion(osakaPath,undefined,fetcher), e => e.code === "geodata_unavailable");
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(dynamicGeo.loadRouteRegion(osakaPath,controller.signal,async () => { throw new Error("must not fetch"); }), e => e.code === "cancelled");
+});
+
+test("preset data stays available without a tile download and weak-risk classifications stay excluded", async () => {
+  const existing = await dynamicGeo.loadRouteRegion(request.route.path,undefined,async () => { throw new Error("must not fetch"); });
+  assert.equal(existing.id, region.id);
+  const tile = dynamicGeo.parseTerrainTile(terrainTile("10305"),{x:1,y:2});
+  assert.deepEqual(tile[0].categories, []);
 });

@@ -1,7 +1,7 @@
 import { buildWalkSteps, pathLengthM, distanceM, type DecisionPoint, type WalkStep } from "./evac-api";
-import type { RouteOption } from "./evac-content";
+import type { RouteOption, LatLng } from "./evac-content";
 
-export type WalkProgress = { source?: "geo-ai" | "sample"; routeId: string; steps: WalkStep[]; index: number };
+export type WalkProgress = { source?: "geo-ai" | "sample"; routeId: string; steps: WalkStep[]; index: number; street?: StreetProgress };
 
 /** 早送りでも未回答の判断地点を越えない。 */
 export function nextWalkIndex(walk: WalkProgress, answeredIds: string[], jump = false) {
@@ -16,16 +16,18 @@ export function nextWalkIndex(walk: WalkProgress, answeredIds: string[], jump = 
 export function rerouteWalk(walk: WalkProgress, route: RouteOption, points: DecisionPoint[], answeredEvents: string[]): WalkProgress {
   const next = buildWalkSteps(route, points.filter((p) => !answeredEvents.includes(p.event.id)));
   const history = walk.steps.slice(0, walk.index + 1);
-  history[walk.index] = { ...history[walk.index], remainingM: next[0].remainingM, remainingS: next[0].remainingS, heading: next[0].heading };
+  history[walk.index] = { ...history[walk.index], ...(walk.street ? { position: walk.street.position } : {}), remainingM: next[0].remainingM, remainingS: next[0].remainingS, heading: next[0].heading };
   return {
     ...(walk.source ? { source: walk.source } : {}),
     routeId: route.id,
     steps: [...history, ...next.slice(1)],
     index: walk.index,
+    ...(walk.street ? { street: { ...walk.street, routeM: 0, remainingM: next[0].remainingM, remainingS: next[0].remainingS, arrived: false } } : {}),
   };
 }
 
 export function walkedPath(walk: WalkProgress | null) {
+  if (walk?.street) return walk.street.path;
   return walk?.steps.slice(0, walk.index + 1).map((step) => step.position) ?? [];
 }
 
@@ -53,4 +55,67 @@ export function nextStreetIndex(walk: WalkProgress, answeredIds: string[]) {
     if (distance >= 65) return i;
   }
   return walk.steps.length - 1;
+}
+
+
+/** Actual Street View positions only. Panorama IDs intentionally stay out of storage. */
+export type StreetProgress = {
+  position: LatLng;
+  heading: number;
+  path: LatLng[];
+  routeM: number;
+  elapsedS: number;
+  remainingM: number;
+  remainingS: number;
+  arrived: boolean;
+};
+const MATCH_M = 20;
+/** Project onto the selected route and look along its geometry. Guidance only. */
+export function streetRouteGuidance(path: LatLng[], position: LatLng) {
+  if (path.length < 2) return null;
+  const lengths = path.slice(1).map((point, i) => distanceM(path[i], point));
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  let best = Infinity, along = 0, segment = 0, offset = 0, traversed = 0;
+  let projection = path[0];
+  for (let i = 0; i < lengths.length; i++) {
+    const a = path[i], b = path[i + 1];
+    const scale = Math.cos(position.lat * Math.PI / 180);
+    const dx = (b.lng - a.lng) * scale, dy = b.lat - a.lat;
+    const t = Math.max(0, Math.min(1, ((position.lng - a.lng) * scale * dx + (position.lat - a.lat) * dy) / (dx * dx + dy * dy || 1)));
+    const point = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
+    const away = distanceM(position, point);
+    if (away < best) { best = away; along = traversed + lengths[i] * t; segment = i; offset = lengths[i] * t; projection = point; }
+    traversed += lengths[i];
+  }
+  let ahead = offset + 12;
+  let targetSegment = segment;
+  while (targetSegment < lengths.length - 1 && ahead >= lengths[targetSegment]) ahead -= lengths[targetSegment++];
+  const a = path[targetSegment], b = path[targetSegment + 1];
+  const t = Math.min(1, ahead / (lengths[targetSegment] || 1));
+  const target = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
+  const heading = Math.atan2((target.lng - projection.lng) * Math.cos(projection.lat * Math.PI / 180), target.lat - projection.lat) * 180 / Math.PI;
+  return { heading, distanceFromRoute: best, routeM: along, remainingM: Math.max(0, total - along), segment, total };
+}
+
+/** Actual position drives progress; missed questions cannot prevent arrival. */
+export function observeStreetPosition(walk: WalkProgress, position: LatLng, heading: number, answered: string[], arrivalConfirmed = false): WalkProgress {
+  const prior = walk.street;
+  const moved = prior ? distanceM(prior.position, position) : 0;
+  const path = prior ? (moved > 0.1 ? [...prior.path, position] : prior.path) : [position];
+  const start = walk.steps.findIndex(step => step.id.startsWith(`${walk.routeId}:`));
+  const routeStart = Math.max(0, start - (start > 0 ? 1 : 0));
+  const guide = streetRouteGuidance(walk.steps.slice(routeStart).map(step => step.position), position);
+  let matchedIndex = guide && guide.distanceFromRoute <= MATCH_M ? routeStart + guide.segment : walk.index;
+  const nearby = walk.steps.map((step, i) => ({ step, i, distance: distanceM(position, step.position) }))
+    .filter(({ step, i, distance }) => i >= routeStart && step.pointId && !answered.includes(step.pointId) && distance <= MATCH_M)
+    .sort((a, b) => a.distance - b.distance)[0];
+  if (nearby) matchedIndex = nearby.i;
+  const arrived = arrivalConfirmed;
+  if (arrived) matchedIndex = walk.steps.length - 1;
+  const end = walk.steps[walk.steps.length - 1];
+  const remainingM = arrived ? 0 : Math.max(distanceM(position, end.position), guide?.remainingM ?? 0);
+  const duration = walk.steps.slice(routeStart + 1).reduce((sum, step) => sum + step.travelSeconds, 0);
+  const total = guide?.total ?? 0;
+  return { ...walk, index: matchedIndex, street: { position, heading, path, routeM: guide?.routeM ?? prior?.routeM ?? 0,
+    remainingM, elapsedS: (prior?.elapsedS ?? 0) + (total > 0 ? moved / total * duration : 0), remainingS: total > 0 ? remainingM / total * duration : 0, arrived } };
 }
