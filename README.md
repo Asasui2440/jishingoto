@@ -37,11 +37,13 @@ PC のブラウザでも中央に寄せて表示される。
 
 ## Vercelへのデプロイ
 
-[vercel.json](vercel.json)で、Git連携による自動デプロイを `main` のみに限定しています。共同開発者のPR・作業ブランチではプレビューの自動デプロイを行いません。VercelのProduction Branchは `main` に設定してください。本番への反映は、Vercelの権限を持つ担当者がマージして確認します。この設定はVercelの権限チェック自体を解除するものではありません。
+[vercel.json](vercel.json)でGit連携による自動デプロイを有効にしています。`main` は本番、PR・作業ブランチはプレビューとしてデプロイします。VercelのProduction Branchは `main` に設定してください。
 
-設定を既存の作業ブランチにも取り込んでください。設定導入前のコミットに付いたチェックは過去の結果として残ることがあります。VercelチェックはGitHub Actionsのワークフローではなく、VercelのGitHub連携によるものです。
+サイト閲覧時の「Request Access」は、デプロイの実行権限とは別の設定です。Vercelの Settings → Deployment Protection で管理します。Standard Protectionでは本番ドメインを公開し、プレビューもログインなしで共有する場合はVercel Authenticationの「Require Log In」をOFFにして保存します。このリポジトリの設定変更では、Vercel管理画面の閲覧制限は変更しません。
 
-検証状況：設定のJSON構文とブランチ指定をローカルで確認。Vercel上でのデプロイ停止・本番更新の動作はpush後に確認が必要です。
+以前の自動デプロイ停止設定を取り込んだ作業ブランチは、最新の `main` を取り込んでください。
+
+検証状況：設定のJSON構文と全ブランチの自動デプロイ有効化をローカルで確認。Vercel上での本番・プレビューデプロイとログインなしの閲覧は別途確認が必要です。
 
 ## 画面の流れ
 
