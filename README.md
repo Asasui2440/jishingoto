@@ -62,3 +62,12 @@ npm start  # ビルド済みアプリを起動
 - [画面・API](src/app) / [ロジック・文言](src/lib) / [共通UI](src/components)
 - [実装ガイド](docs/APP_GUIDE.md)：写真処理、認識対象、クイズ、共有、表示設定
 - [作業ルール](AGENTS.md)：push前にREADMEと実装を照合し、必要な更新を含める
+
+## Vercelへのデプロイ
+
+[vercel.json](vercel.json)で、Git連携による自動デプロイを `main` のみに限定しています。共同開発者のPR・作業ブランチではプレビューの自動デプロイを行いません。VercelのProduction Branchは `main` に設定してください。本番への反映は、Vercelの権限を持つ担当者がマージして確認します。この設定はVercelの権限チェック自体を解除するものではありません。
+
+設定を既存の作業ブランチにも取り込んでください。設定導入前のコミットに付いたチェックは過去の結果として残ることがあります。VercelチェックはGitHub Actionsのワークフローではなく、VercelのGitHub連携によるものです。
+
+検証状況：設定のJSON構文とブランチ指定をローカルで確認。Vercel上でのデプロイ停止・本番更新の動作はpush後に確認が必要です。
+
