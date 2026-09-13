@@ -97,11 +97,11 @@ export default function RoomRecognitionPage() {
       <StatusBar />
       <main className="flex flex-1 flex-col gap-4 px-5 py-4">
         <div>
-          <p className="text-11 font-bold text-primary-ink">体験の準備</p>
+          <p className="text-11 font-bold text-primary-ink"><Furigana text={"体験の準備"} /></p>
           <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1>
-          <p className="mt-2 text-13 text-ink-muted"><Furigana text="番号や名前を押すと、危険[きけん]の理由を確認[かくにん]できます。認識[にんしき]が違[ちが]うものは修正[しゅうせい]しよう。" adult="番号や名前を選ぶと、危険の理由と対策を確認できます。認識が違うものは修正してください。" /></p>
+          <p className="mt-2 text-13 text-ink-muted"><Furigana text="番号や矢印で、家具ごとの説明を切り替えられます。認識[にんしき]が違[ちが]うものは修正[しゅうせい]しよう。" adult="番号や矢印で、家具ごとの説明を切り替えられます。認識が違うものは修正してください。" /></p>
         </div>
-        {analysisSource === "demo" && <p role="status" className="rounded-field bg-warn-soft p-3 text-11 text-warn">{analysisWarning ?? "サンプルの部屋で体験できます。"}</p>}
+        {analysisSource === "demo" && <p role="status" className="rounded-field bg-warn-soft p-3 text-11 text-warn"><Furigana text={analysisWarning ?? "サンプルの部屋で体験できます。"} /></p>}
         <div id="selected-room-photo" tabIndex={-1} className="scroll-mt-4 overflow-hidden rounded-panel bg-ink">
         <div className="relative">
           {photoUrl ? (
@@ -114,18 +114,42 @@ export default function RoomRecognitionPage() {
             const nearby = risks.slice(0, index).filter((other) => Math.hypot(other.x - risk.x, other.y - risk.y) < 12).length;
             const offsets = [[0, 0], [24, -24], [-24, 24], [24, 24], [-24, -24]];
             const [dx, dy] = offsets[nearby % offsets.length];
-            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${index + 1}番・${plain(risk.name)}の説明を表示`} onClick={() => setSelectedId(risk.id)} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{index + 1}</button>;
+            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${index + 1}番・${plain(risk.name)}の説明を表示`} onClick={() => { setEditing(null); setSelectedId(risk.id); }} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{index + 1}</button>;
           })}
         </div>
         {selected && <div className="relative flex items-center gap-2 bg-ink p-3 text-white">
-          <button type="button" aria-label="前の物体を表示" disabled={selectedIndex === 0} onClick={() => setSelectedId(risks[selectedIndex - 1].id)} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">←</button>
+          <button type="button" aria-label="前の物体を表示" disabled={selectedIndex === 0} onClick={() => { setEditing(null); setSelectedId(risks[selectedIndex - 1].id); }} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">←</button>
           <p aria-live="polite" className="min-w-0 flex-1 text-center text-sm font-bold">{selectedIndex + 1} / {risks.length} · <Furigana text={selected.name} adult={selected.adultName} /></p>
-          <button type="button" aria-label="次の物体を表示" disabled={selectedIndex === risks.length - 1} onClick={() => setSelectedId(risks[selectedIndex + 1].id)} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">→</button>
+          <button type="button" aria-label="次の物体を表示" disabled={selectedIndex === risks.length - 1} onClick={() => { setEditing(null); setSelectedId(risks[selectedIndex + 1].id); }} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">→</button>
         </div>}
         </div>
         {selected && selectedAdvice && <article className="rounded-panel bg-surface p-4" aria-live="polite">
           <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h2>
+            <button type="button" className="min-h-11 px-3 text-base text-primary-ink underline" aria-label={`${plain(selected.name)}の認識を修正`} onClick={() => {
+              setEditing(selected.id);
+              setDraft({ name: plain(selected.name), objectType: selected.objectType ?? "other" });
+            }}><Furigana text="修正" /></button>
+          </div>
+          {editing === selected.id && <div className="my-3 rounded-field border border-border p-3">
+                  <form onSubmit={save} className="flex flex-col gap-2">
+                    <label htmlFor="object-name" className="text-13"><Furigana text={"名前"} /></label>
+                    <input id="object-name" autoFocus maxLength={40} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="min-h-11 rounded-field border border-border bg-surface px-3" />
+                    <label htmlFor="object-type" className="text-13"><Furigana text={"何が写っていますか？"} /></label>
+                    <select id="object-type" value={draft.objectType} onChange={(event) => setDraft({ ...draft, objectType: event.target.value as RoomObjectType })} className="min-h-11 rounded-field border border-border bg-surface px-3">
+                      {OBJECTS.map((object) => <option key={object.value} value={object.value}>{object.label}</option>)}
+                    </select>
+                    <div className="flex gap-2">
+                      <Button size="md" type="button" variant="outline" onClick={() => setEditing(null)}>キャンセル</Button>
+                      <Button size="md" type="submit" disabled={!draft.name.trim()}><Furigana text={"保存"} /></Button>
+                    </div>
+                    <button type="button" className="min-h-11 text-13 text-ink-muted underline" onClick={() => {
+                      update((prev) => ({ ...prev, risks: prev.risks.filter((item) => item.id !== selected.id) }));
+                      setEditing(null);
+                    }}><Furigana text={"これは写っていない（一覧から外す）"} /></button>
+                  </form>
+          </div>}
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
           <AdviceIllustration key={selected.id} risk={selected} />
           <div className="mt-3 rounded-field bg-primary-soft p-3">
@@ -145,46 +169,9 @@ export default function RoomRecognitionPage() {
           </label>
           <div className="mt-3"><SafetyProducts risks={[{ ...selected, confirmed: true }]} /></div>
         </article>}
-        <section className="rounded-panel bg-surface p-4">
-          <h2 className="font-display text-sm font-bold"><Furigana text="見[み]つけた家具[かぐ]や場所[ばしょ]" /></h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {risks.map((risk, index) => (
-              <li key={risk.id} id={`room-object-${index}`} tabIndex={-1} className="scroll-mt-6 rounded-field bg-canvas p-3 focus:bg-primary-soft focus:outline-2 focus:outline-primary-mid">
-                {editing === risk.id ? (
-                  <form onSubmit={save} className="flex flex-col gap-2">
-                    <label htmlFor="object-name" className="text-13">名前</label>
-                    <input id="object-name" autoFocus maxLength={40} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="min-h-11 rounded-field border border-border bg-surface px-3" />
-                    <label htmlFor="object-type" className="text-13">何が写っていますか？</label>
-                    <select id="object-type" value={draft.objectType} onChange={(event) => setDraft({ ...draft, objectType: event.target.value as RoomObjectType })} className="min-h-11 rounded-field border border-border bg-surface px-3">
-                      {OBJECTS.map((object) => <option key={object.value} value={object.value}>{object.label}</option>)}
-                    </select>
-                    <div className="flex gap-2">
-                      <Button size="md" type="button" variant="outline" onClick={() => setEditing(null)}>キャンセル</Button>
-                      <Button size="md" type="submit" disabled={!draft.name.trim()}>保存</Button>
-                    </div>
-                    <button type="button" className="min-h-11 text-13 text-ink-muted underline" onClick={() => {
-                      update((prev) => ({ ...prev, risks: prev.risks.filter((item) => item.id !== risk.id) }));
-                      setEditing(null);
-                    }}>これは写っていない（一覧から外す）</button>
-                  </form>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button type="button" aria-pressed={selected?.id === risk.id} aria-controls="selected-room-photo" className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-field px-2 text-left text-13 font-bold ${selected?.id === risk.id ? "bg-primary-soft text-primary-ink" : "text-ink"}`} onClick={() => { setSelectedId(risk.id); focusDescription("selected-room-photo"); }}>
-                      <span>{index + 1}</span><Furigana text={risk.name} adult={risk.adultName} />
-                    </button>
-                    <button type="button" aria-label={`${plain(risk.name)}の認識を修正`} className="min-h-11 px-3 text-13 text-primary-ink underline" onClick={() => {
-                      setEditing(risk.id);
-                      setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other" });
-                    }}>修正</button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          {risks.length === 0 && <p className="mt-3 text-13 text-ink-muted">家具や場所を読み取れませんでした。共通の問題で体験するか、写真を撮り直せます。</p>}
-        </section>
+        {risks.length === 0 && <p className="text-base text-ink-muted"><Furigana text="家具や場所を読み取れませんでした。共通の問題で体験するか、写真を撮り直せます。" /></p>}
         <section className="rounded-panel bg-primary-soft p-5">
-          <p className="text-sm font-bold text-primary-ink">備えを確認したら、次は行動の体験へ</p>
+          <p className="text-sm font-bold text-primary-ink"><Furigana text={"備えを確認したら、次は行動の体験へ"} /></p>
           <h2 className="mt-2 text-xl font-bold"><Furigana text="この部屋で、地震が起きたら？" /></h2>
           <p className="mt-2 text-base leading-relaxed"><Furigana text="今見た家具や場所のそばで揺れが始まったとき、どう動くかを選んでみよう。" adult="確認した家具や場所をもとに、揺れている間と収まった後の行動をシミュレーションします。" /></p>
         </section>
@@ -193,7 +180,7 @@ export default function RoomRecognitionPage() {
             <Button variant="outline" size="md" disabled={editing !== null || risks.length < 2} onClick={() => { setSelectedId(risks[(selectedIndex + 1) % risks.length].id); focusDescription("selected-room-photo"); }}><Furigana text={selectedIndex === risks.length - 1 ? "最初の家具へ" : "次の家具へ"} /></Button>
             <Button size="md" onClick={start} disabled={editing !== null}><Furigana text="行動クイズへ" /></Button>
           </div>
-          <button type="button" onClick={() => router.push("/camera")} className="min-h-11 text-13 text-ink-muted underline">写真を撮り直す</button>
+          <button type="button" onClick={() => router.push("/camera")} className="min-h-11 text-13 text-ink-muted underline"><Furigana text={"写真を撮り直す"} /></button>
         </div>
       </main>
       <DisclaimerFooter />

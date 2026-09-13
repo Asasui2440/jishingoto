@@ -83,7 +83,7 @@ function QuestionView({
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
-      {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold">この部屋で地震が発生</p><p className="mt-3 text-3xl font-black">揺れが始まりました！</p></div></div>}
+      {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold"><Furigana text={"この部屋で地震が発生"} /></p><p className="mt-3 text-3xl font-black"><Furigana text={"揺れが始まりました！"} /></p></div></div>}
       <div>
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
@@ -95,10 +95,10 @@ function QuestionView({
           </div>
           <span className="flex items-center gap-1 text-xs text-ink-muted">
             <Volume2Icon className="size-4" />
-            音・振動: {sound ? "ON" : "OFF"}
+            <Furigana text={"音・振動:"} /><Furigana text={sound ? "ON" : "OFF"} />
           </span>
         </div>
-        {index === 0 && <p className="mx-6 mt-3 rounded-field bg-warn-soft p-3 text-lg font-bold">揺れが始まりました！ あなたならどうする？</p>}
+        {index === 0 && <p className="mx-6 mt-3 rounded-field bg-warn-soft p-3 text-lg font-bold"><Furigana text={"揺れが始まりました！ あなたならどうする？"} /></p>}
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
           <p className="mb-2 text-13 font-bold text-primary-ink" aria-live="polite">
@@ -119,8 +119,8 @@ function QuestionView({
               <Furigana text={kind.label} />
             </Tag>
             <span className="font-display text-13 font-bold text-ink-muted">
-              {audience === "adult" ? "あなたの部屋で検出した「" : "あなたの部屋の「"}
-              <Furigana text={question.place} adult={question.adultPlace} />」{audience === "adult" ? "について" : "の話"}
+              <Furigana text={audience === "adult" ? "あなたの部屋で検出した「" : "あなたの部屋の「"} />
+              <Furigana text={question.place} adult={question.adultPlace} />」<Furigana text={audience === "adult" ? "について" : "の話"} />
             </span>
           </div>
         ) : null}
@@ -131,7 +131,7 @@ function QuestionView({
           </p>
         </Card>
 
-        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
+        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted"><Furigana text={"どの部屋でも役立つ共通の問題です。"} /></p>}
         {(question.sourceRiskId || question.id === "home-kitchen-after") && <div className="relative w-full overflow-hidden rounded-panel bg-ink">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -176,8 +176,7 @@ function QuestionView({
                 ].join(" ")}
               />
               <span className="font-display text-13 font-bold tabular-nums text-white">
-                {remaining}秒
-              </span>
+                {remaining}<Furigana text={"秒"} /></span>
             </div>
           ) : null}
         </div>}
@@ -276,7 +275,7 @@ export default function QuizPage() {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
         <StatusBar />
-        <p className="px-6 text-center text-13 text-ink-muted">問題を用意しています...</p>
+        <p className="px-6 text-center text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p>
         <DisclaimerFooter />
       </div>
     );

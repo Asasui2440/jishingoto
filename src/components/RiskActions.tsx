@@ -67,7 +67,7 @@ export function RiskActions({ photoUrl, risks }: { photoUrl: string | null; risk
       <div className="p-4">
         <h2 className="font-display text-lg font-bold"><Furigana text="部屋[へや]で見[み]つかった危険[きけん]" adult="室内で見つかった危険候補" /></h2>
         <p className="mt-2 text-13 text-ink-muted"><Furigana text="番号[ばんごう]か名前[なまえ]を押[お]すと、その場所[ばしょ]の説明[せつめい]が下[した]に出[で]るよ。" adult="番号または名前を選ぶと、その場所の説明が下に表示されます。" /></p>
-        <p className="mt-1 text-11 text-ink-soft">{photoUrl ? "地震前の写真（プライバシー処理後）" : "サンプル写真・サンプルの危険候補（実際の室内の診断ではありません）"}</p>
+        <p className="mt-1 text-11 text-ink-soft"><Furigana text={photoUrl ? "地震前の写真（プライバシー処理後）" : "サンプル写真・サンプルの危険候補（実際の室内の診断ではありません）"} /></p>
       </div>
       <div className="relative">
         {photoUrl ? (
@@ -80,17 +80,17 @@ export function RiskActions({ photoUrl, risks }: { photoUrl: string | null; risk
           return <button key={risk.id} type="button" aria-pressed={active} aria-controls="selected-risk-explanation" onClick={() => setSelectedId(risk.id)} aria-label={`${index + 1}番・${risk.adultName ?? risk.name}の説明を表示`} className={`absolute grid size-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white font-bold text-ink shadow-lg focus-visible:outline-4 focus-visible:outline-white ${active ? "z-20 scale-110 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(22px, calc(${risk.x}% + ${offsetX}px), calc(100% - 22px))`, top: `clamp(22px, calc(${risk.y}% + ${offsetY}px), calc(100% - 22px))`, boxShadow: active ? `0 0 0 4px ${RISK_KINDS[risk.kind].accent}` : undefined }}>{index + 1}</button>;
         })}
       </div>
-      <p className="px-4 pt-3 text-11 text-ink-soft">番号の位置は目安です。近い番号は押せるように少しずらして表示します。</p>
-      {!confirmed.length && <p className="p-4 text-13">確認済みの危険候補はありません。室内の安全を保証するものではありません。通路や家具の固定状態を実際に確認してください。</p>}
+      <p className="px-4 pt-3 text-11 text-ink-soft"><Furigana text={"番号の位置は目安です。近い番号は押せるように少しずらして表示します。"} /></p>
+      {!confirmed.length && <p className="p-4 text-13"><Furigana text={"確認済みの危険候補はありません。室内の安全を保証するものではありません。通路や家具の固定状態を実際に確認してください。"} /></p>}
       {confirmed.length > 0 && <div className="flex gap-2 overflow-x-auto px-4 py-3" aria-label="危険箇所の一覧">
         {confirmed.map((risk, index) => <button key={risk.id} type="button" aria-pressed={selected?.id === risk.id} aria-controls="selected-risk-explanation" onClick={() => setSelectedId(risk.id)} className={`min-h-11 shrink-0 rounded-pill border px-3 text-13 font-bold ${selected?.id === risk.id ? "border-primary-mid bg-primary-soft text-primary-ink" : "border-border bg-surface text-ink"}`}>{index + 1}. <Furigana text={risk.name} adult={risk.adultName} /></button>)}
       </div>}
       {selected && selectedAdvice && specific && <article id="selected-risk-explanation" className="border-t border-border p-4" aria-live="polite">
-            <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}>{RISK_KINDS[selected.kind].label}</p>
+            <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
             <h3 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h3>
             <p className="mt-2 text-13 text-ink-muted"><Furigana text={selectedAdvice.childDanger} adult={selectedAdvice.danger} /></p>
             <div className="mt-3 rounded-field bg-primary-soft p-3">
-              <p className="text-11 text-primary-ink">地震前に・大人と一緒に</p>
+              <p className="text-11 text-primary-ink"><Furigana text={"地震前に・大人と一緒に"} /></p>
               <p className="mt-1 font-bold"><Furigana text={specific.headline} /></p>
               <ol className="mt-2 space-y-2">
                 {specific.steps.map((text, i) => <li key={text} className="flex gap-2 text-13"><span className="font-bold text-primary-ink">{i + 1}</span><Furigana text={text} /></li>)}
@@ -103,7 +103,7 @@ export function RiskActions({ photoUrl, risks }: { photoUrl: string | null; risk
             <div className="mt-3"><SafetyProducts risks={[selected]} /></div>
       </article>}
       <div className="border-t border-border p-4">
-        <a href="https://www.tfd.metro.tokyo.lg.jp/learning/elib/kagutenhandbook.html" target="_blank" rel="noopener noreferrer" className="text-11 underline">対策の参考：東京消防庁 家具類の転倒・落下・移動防止対策 ↗</a>
+        <a href="https://www.tfd.metro.tokyo.lg.jp/learning/elib/kagutenhandbook.html" target="_blank" rel="noopener noreferrer" className="text-11 underline"><Furigana text={"対策の参考：東京消防庁 家具類の転倒・落下・移動防止対策 ↗"} /></a>
         <button type="button" aria-expanded={showAftermath} aria-controls="aftermath-preview" onClick={() => { setOpenedOnce(true); setShowAftermath(!showAftermath); }} className="mt-4 min-h-11 w-full rounded-pill border border-border px-3 text-13 font-bold">
           <Furigana text={showAftermath ? "予想図[よそうず]を閉[と]じる" : "地震[じしん]のあとの様子[ようす]を見[み]る"} adult={showAftermath ? "予測画像を閉じる" : "地震後の様子を見る（予測画像）"} />
         </button>

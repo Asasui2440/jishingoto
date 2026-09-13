@@ -347,13 +347,10 @@ test("quiz highlights follow the selected object's bounds, including near image 
 });
 
 test("upper elementary reading and adult guidance remain distinct", async () => {
-  const { needsReading, upperElementaryText } = load("src/lib/reading-level.ts");
+  const { upperElementaryText } = load("src/lib/reading-level.ts");
   const { reviewNotes } = load("src/lib/review-copy.ts");
   const { roomAdvice } = load("src/lib/room-guidance.ts");
   const { TRIVIA } = load("src/lib/trivia.ts");
-  assert.equal(needsReading("家族"), false);
-  assert.equal(needsReading("安全"), false);
-  assert.equal(needsReading("地震"), true);
   assert.equal(upperElementaryText("まどガラス"), "窓[まど]ガラス");
   assert(TRIVIA.length >= 7);
   assert(TRIVIA.every(t => t.adultBody && typeof t.adultNote === "string" && t.source.url.startsWith("https://")));

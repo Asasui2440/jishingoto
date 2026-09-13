@@ -75,7 +75,7 @@ function questionForRisk(risk: Risk, index: number): Question {
   const region = risk.bounds ?? { x, y, w: Math.min(26, 100 - x), h: Math.min(36, 100 - y) };
   const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { ...region, label: risk.name }, seconds: 10 };
   if (isCooktop(risk)) return { ...HOME_KITCHEN_AFTER, ...common, id: HOME_KITCHEN_AFTER.id, seconds: 12 };
-  if (type === "desk") return { ...common, axis: "initial", category: "瞬間判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
+  if (type === "desk") return { ...common, axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
   if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が棚から落ちそうです。`, choices: SIMPLE_CHOICES.move };
   if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
   if (type === "window") {
@@ -117,7 +117,7 @@ export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "hom
   const desk = roomQuestions.find((q) => q.choices.some((choice) => choice.id === "under-desk"));
   const duringPool = roomQuestions.filter((q) => q.axis === "initial" && q.id !== desk?.id);
   const during: Question[] = [...(desk ? [desk] : []), ...pickMany(duringPool, desk ? 1 : 2, random)];
-  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "瞬間判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
+  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
   const kitchen = roomQuestions.find(q => q.id === HOME_KITCHEN_AFTER.id);
   const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial" && q.id !== HOME_KITCHEN_AFTER.id), 1, random);
   const information = QUESTIONS.find((q) => q.id === "q5")!;

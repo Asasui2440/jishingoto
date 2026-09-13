@@ -11,7 +11,8 @@
   "dependencies": {
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "kuromoji": "^0.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -22,6 +23,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@types/kuromoji": "^0.1.3"
   }
 }

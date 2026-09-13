@@ -15,17 +15,16 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { Meter, TitleBlock } from "@/components/ui/Bits";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
+import { roomTimings } from "@/lib/room-test";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
 
-/** 1ステップあたりの見せかけの所要時間 */
-const STEP_MS = 1400;
-
 export default function AnalysisLoadingPage() {
   const router = useRouter();
   const { photoUrl, startedAt, update } = useSession();
-  const [step, setStep] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [failed, setFailed] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [triviaOffset, setTriviaOffset] = useState(0);
 
@@ -35,29 +34,26 @@ export default function AnalysisLoadingPage() {
 
   useEffect(() => {
     if (cancelled) return;
-    if (step >= ANALYSIS_STEPS.length) {
-      let alive = true;
-      void prepareRoom(photoUrl).then((analysis) => {
-        if (!alive) return;
-        update({
-          ...(analysis.source === "demo" && !photoUrl ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
-          risks: analysis.risks,
-          analysisSource: analysis.source,
-          analysisWarning: analysis.warning ?? null,
-        });
-        router.replace("/risks");
+    let alive = true;
+    const job = prepareRoom(photoUrl);
+    const started = roomTimings().analysis?.start ?? performance.now();
+    const timer = setInterval(() => setElapsed((performance.now() - started) / 1000), 250);
+    void job.then((analysis) => {
+      if (!alive) return;
+      update({
+        ...(analysis.source === "demo" && !photoUrl ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
+        risks: analysis.risks,
+        analysisSource: analysis.source,
+        analysisWarning: analysis.warning ?? null,
       });
-      return () => {
-        alive = false;
-      };
-    }
-    const id = setTimeout(() => setStep((s) => s + 1), STEP_MS);
-    return () => clearTimeout(id);
-    // update / router は安定なので、進行に必要な値だけを見る
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, cancelled, photoUrl]);
+      router.replace("/risks");
+    }).catch(() => { if (alive) { clearInterval(timer); setFailed(true); } });
+    return () => { alive = false; clearInterval(timer); };
+  }, [cancelled, photoUrl, update, router]);
 
-  const progress = Math.min(1, (step + 0.35) / ANALYSIS_STEPS.length);
+  // 待機中の3段階の演出。以前と同じ1.4秒間隔で進み、最後の段階で解析完了を待つ。
+  const step = Math.min(ANALYSIS_STEPS.length - 1, Math.floor(elapsed / 1.4));
+  const progress = (step + 0.35) / ANALYSIS_STEPS.length;
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
@@ -90,8 +86,8 @@ export default function AnalysisLoadingPage() {
           role="status"
           aria-live="polite"
         >
-          <Meter value={progress} height={10} track="var(--color-canvas)" />
-
+          {!failed && <div aria-hidden="true"><Meter value={progress} height={10} track="var(--color-canvas)" /></div>}
+          {failed ? <p className="mt-3 text-base font-bold"><Furigana text="読み込みに失敗しました。写真を選び直してください。" /></p> : (
           <ol className="mt-3 flex flex-col gap-2">
             {ANALYSIS_STEPS.map((label, i) => {
               const done = i < step;
@@ -127,6 +123,8 @@ export default function AnalysisLoadingPage() {
               );
             })}
           </ol>
+          )}
+
         </div>
       </div>
 
@@ -142,7 +140,7 @@ export default function AnalysisLoadingPage() {
           </p>
           {(trivia.note || trivia.adultNote) && <p className="mt-2 text-base leading-relaxed text-ink-muted"><Furigana text={trivia.note} adult={trivia.adultNote} /></p>}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline">{trivia.source.title}</a>
+            <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline"><Furigana text={trivia.source.title} /></a>
             <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="min-h-11 rounded-pill bg-surface px-4 text-base font-bold"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>
           </div>
         </div>
