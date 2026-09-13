@@ -87,3 +87,20 @@ test('result remount restores the saved final step after visiting share', () => 
   assert.doesNotMatch(html, /行動の振り返り 1/);
   savedStep = 0;
 });
+
+
+test('情報の問題は拡散・確認・飛び出しに応じて振り返り、けがの共通文を使わない', () => {
+  const question = QUESTIONS.find(q => q.id === 'q5');
+  const expected = { share: '不安や混乱を広げるおそれ', verify: '情報の発信元を確かめる行動を選べました', panic: '投稿だけで判断せず' };
+  for (const mode of ['child', 'adult']) {
+    audience = mode;
+    for (const choice of question.choices) {
+      const html = renderToStaticMarkup(React.createElement(ActionReview, { question, choice, timedOut: false, number: 4 }));
+      assert.ok(html.includes(expected[choice.id]));
+      assert.doesNotMatch(html, /けがにつながるおそれがある行動|正解|不正解/);
+      const timeout = renderToStaticMarkup(React.createElement(ActionReview, { question, choice, timedOut: true, number: 4 }));
+      assert.match(timeout, /時間内に選べませんでした。情報の確かめ方を確認しましょう/);
+      assert.doesNotMatch(timeout, /情報の発信元を確かめる行動を選べました|あなたが選んだ行動/);
+    }
+  }
+});

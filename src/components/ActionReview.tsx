@@ -15,13 +15,22 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
   const scene = reviewIllustration(question);
   const best = question.choices.reduce((best, next) => next.safety > best.safety ? next : best, choice);
   const safe = !timedOut && choice.safety >= 0.7;
+  const informationFeedback: Record<string, string> = {
+    share: "確かめずに広めると、不安や混乱を広げるおそれがあります",
+    verify: "情報の発信元を確かめる行動を選べました",
+    panic: "投稿だけで判断せず、情報の発信元を確かめましょう",
+  };
   const feedback = timedOut
-    ? "時間内に選べませんでした。次に備えて、行動を確認しましょう。"
-    : safe
-      ? "安全につながる行動を選べました"
-      : choice.safety >= 0.4
-        ? "気をつけたい点がある行動です"
-        : "この場面では、けがにつながるおそれがある行動です";
+    ? question.id === "q5"
+      ? "時間内に選べませんでした。情報の確かめ方を確認しましょう。"
+      : "時間内に選べませんでした。次に備えて、行動を確認しましょう。"
+    : (question.id === "q5" ? informationFeedback[choice.id] : undefined) ?? (
+      safe
+        ? "安全につながる行動を選べました"
+        : choice.safety >= 0.4
+          ? "気をつけたい点がある行動です"
+          : "この場面では、けがにつながるおそれがある行動です"
+    );
   return <article className="overflow-hidden rounded-panel bg-surface">
     <div className="flex items-center justify-between gap-2 px-4 py-3 text-13 font-bold text-primary-ink">
       <p>Q{number} · <Furigana text={question.category} /></p>
