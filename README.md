@@ -57,6 +57,12 @@ npm run build
 npm start  # ビルド済みアプリを起動
 ```
 
+## デプロイ
+
+[vercel.json](vercel.json)で自動デプロイを有効にしています。VercelのProduction Branchを `main` に設定し、mainは本番、PR・作業ブランチはプレビューとして公開します。以前の自動デプロイ停止設定が残るブランチは、最新mainを取り込んでください。
+
+閲覧時の「Request Access」は、Vercelの **Settings → Deployment Protection** で管理する別設定です。Standard Protectionでは本番ドメインを公開し、プレビューもログインなしで共有する場合はVercel Authenticationの「Require Log In」をOFFにします。このリポジトリから閲覧制限は変更しません。実際のデプロイと閲覧可否はVercel上で確認してください。
+
 ## コード・詳細
 
 - [画面・API](src/app) / [ロジック・文言](src/lib) / [共通UI](src/components)
