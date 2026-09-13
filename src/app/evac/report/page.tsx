@@ -98,7 +98,7 @@ export default function EvacReportPage() {
         </dl>
 
         <div ref={mapBox} className="relative min-h-[110px] flex-1 overflow-hidden rounded-panel border border-border">
-          <EvacMap
+          <EvacMap floodHazard={evac.scenario === "flood"}
             mode={mode}
             center={home ?? { lat: 35.7186, lng: 139.7237 }}
             home={home}

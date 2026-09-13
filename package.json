@@ -13,9 +13,11 @@
   "dependencies": {
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/google.maps": "^3.66.2",
     "@types/node": "^20",
@@ -24,7 +26,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@playwright/test": "^1.63.0"
+    "typescript": "^5"
   }
 }

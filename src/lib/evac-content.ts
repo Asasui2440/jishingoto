@@ -42,6 +42,8 @@ export type LatLng = { lat: number; lng: number };
 
 /** 自治体オープンデータ由来の避難場所 */
 export type Shelter = {
+  /** 学校内の指定地点。対応災害・名称・座標は地点ごとに保持する。 */
+  facilities?: Shelter[];
   supportedDisasters?: string[];
   id: string;
   name: string;
@@ -62,6 +64,7 @@ export type RouteKind = "short" | "safe";
  * training-v1 の考え方を使うが、実際の安全性・被害確率を表す点数ではない。
  */
 export type RouteAssessment = {
+  flood?: import("./flood-hazard").FloodAssessment;
   version: "training-google-v1";
   coverage: "full" | "outside";
   /** 候補内の比較にだけ使う教育用の指数。画面に安全度として表示しない。 */

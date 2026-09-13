@@ -5,13 +5,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const ts = require("typescript");
 
-function modules(mapsEnabled = false, computeRoutes = async () => { throw new Error("API not configured in test"); }) {
+function modules(mapsEnabled = false, computeRoutes = async () => { throw new Error("API not configured in test"); }, streetMaps = {}) {
   const cache = new Map();
   const load = (file) => {
     file = path.resolve(file);
     if (/[\\/]gmaps\.ts$/.test(file)) return {
       hasMapsKey: () => mapsEnabled,
-      loadMaps: async () => ({ importLibrary: async (name) => { assert.equal(name, "routes"); return { Route: { computeRoutes } }; } }),
+      loadMaps: async () => ({ ...streetMaps, importLibrary: async (name) => { assert.equal(name, "routes"); return { Route: { computeRoutes } }; } }),
     };
     if (cache.has(file)) return cache.get(file).exports;
     const mod = { exports: {} };
@@ -20,7 +20,7 @@ function modules(mapsEnabled = false, computeRoutes = async () => { throw new Er
     new Function("require", "module", "exports", code)((p) => p.startsWith(".") ? load(path.resolve(path.dirname(file), `${p}.ts`)) : require(p), mod, mod.exports);
     return mod.exports;
   };
-  return { plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
+  return { shelterGroups: load("src/lib/shelter-groups.ts"), branches: load("src/lib/route-branches.ts"), plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
 }
 
 const { api, walk, content, state } = modules();
@@ -171,12 +171,12 @@ test("keep the one real route if finding an alternative fails", async () => {
   const live = modules(true, async () => { if (++calls > 1) throw new Error("no alternative"); return { routes: [sdkRoute()] }; }).api;
   const routes = await live.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "api");
   assert.equal(routes.length, 1); assert.equal(routes[0].demo, undefined);
-  assert.equal(routes[0].durationS, 750); assert.equal(calls, 2);
+  assert.equal(routes[0].durationS, 750); assert.equal(calls, 1);
 });
 
-test("deduplicate SDK paths and label the shortest candidate after via lookup", async () => {
+test("deduplicate SDK paths and label the shortest real candidate", async () => {
   const path = [content.DEMO_HOME, { lat: 35.72, lng: 139.73 }, content.DEMO_SHELTERS[0].position];
-  const live = modules(true, async request => ({ routes: request.intermediates ? [sdkRoute(path, 800, 700000)] : [sdkRoute(), sdkRoute()] })).api;
+  const live = modules(true, async () => ({ routes: [sdkRoute(path, 800, 700000), sdkRoute(), sdkRoute()] })).api;
   const routes = await live.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "api");
   assert.equal(routes.length, 2);
   assert.equal(routes[0].distanceM, 800); assert.equal(routes[0].kind, "short");
@@ -499,12 +499,12 @@ test("shelter lookup uses the selected disaster layer and excludes incompatible 
   global.fetch = async url => { urls.push(String(url)); return Response.json({features:[feature("洪水のみ",{disaster1:1}),feature("地震のみ",{disaster4:1}),feature("両方",{disaster1:"1",disaster4:1})]}); };
   try {
     const flood = await live.fetchShelters({lat:34.702,lng:135.495},"api","flood");
-    assert.deepEqual(flood.map(s=>s.name),["洪水のみ"]); // duplicate location is shown once
+    assert.deepEqual(flood.map(s=>s.name).sort(),["洪水のみ","両方"].sort()); // names distinguish facilities sharing coordinates
     assert(flood.every(s=>s.kind.includes("洪水") && s.supportedDisasters.includes("洪水")));
     assert(urls.every(url=>url.includes("/skhb01/")));
     urls.length=0;
     const quake = await live.fetchShelters({lat:34.702,lng:135.495},"api","earthquake");
-    assert.equal(quake[0].name,"地震のみ");
+    assert.deepEqual(quake.map(s=>s.name).sort(),["地震のみ","両方"].sort());
     assert(urls.every(url=>url.includes("/skhb04/")));
     global.fetch = async () => new Response(null,{status:503});
     await assert.rejects(live.fetchShelters({lat:34.702,lng:135.495},"api","flood"),/洪水/);
@@ -519,4 +519,161 @@ test("flood fallback questions stay explicitly synthetic and cannot become earth
   assert.equal(points[0].event.evidence,undefined);
   assert(points[0].event.situation.includes("固定の練習問題"));
   assert(points[0].event.situation.includes("浸水"));
+});
+
+test("route calculation rejects retraced spurs even when reverse geometry uses different vertices", async () => {
+  const a={lat:35,lng:139}, b={lat:35,lng:139.001}, tip={lat:35.0005,lng:139.001}, mid={lat:35.0002,lng:139.001}, end={lat:35,lng:139.002};
+  const straight=[a,b,end], spur=[a,b,tip,mid,b,end];
+  const sdk = modules(true,async ()=>({routes:[sdkRoute(spur),sdkRoute(straight)]})).googleRoutes;
+  assert.deepEqual((await sdk.requestWalkingRoutes(a,end)).map(r=>r.path),[straight]);
+  const live=modules(true,async request=>({routes:[sdkRoute(request.intermediates ? spur : straight)]})).api;
+  assert.equal((await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api")).length,1);
+  assert.equal(await live.fetchDetourFrom(a,{...content.DEMO_SHELTERS[0],position:end},"api"),null);
+  const onlySpur=modules(true,async()=>({routes:[sdkRoute(spur)]})).api;
+  await assert.rejects(onlySpur.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api"),/引き返さず/);
+});
+
+test("route filtering keeps corners, distinct parallel roads and crossings, but catches rounded reverse paths", async () => {
+  const p=(x,y)=>({lat:35+y/111132,lng:139+x/(111320*Math.cos(35*Math.PI/180))});
+  for (const path of [
+    [p(0,0),p(50,0),p(50,50)],
+    [p(0,0),p(100,0),p(100,10),p(0,10)],
+    [p(0,0),p(50,50),p(0,50),p(50,0)],
+    [p(0,0),p(0,0),p(50,0)],
+    [p(0,0),p(50,0),p(48,0),p(48,50)],
+  ]) {
+    const sdk=modules(true,async()=>({routes:[sdkRoute(path)]})).googleRoutes;
+    assert.equal((await sdk.requestWalkingRoutes(path[0],path.at(-1))).length,1);
+  }
+  const rounded=[p(0,0),p(100,0),p(99,1),p(50,1),p(50,50)];
+  const sdk=modules(true,async()=>({routes:[sdkRoute(rounded)]})).googleRoutes;
+  assert.equal((await sdk.requestWalkingRoutes(rounded[0],rounded.at(-1))).length,0);
+});
+
+const meterPoint = (x,y) => ({lat:35+y/111132,lng:139+x/(111320*Math.cos(35*Math.PI/180))});
+function branchMaps(nodes) {
+  return {
+    StreetViewPreference:{NEAREST:"NEAREST"}, StreetViewSource:{OUTDOOR:"OUTDOOR",GOOGLE:"GOOGLE"},
+    StreetViewService: class {
+      async getPanorama(request) {
+        const node = request.pano ? nodes[request.pano] : Object.values(nodes).find(n=>api.distanceM(n.position,request.location)<=35);
+        if (!node) throw new Error("no panorama");
+        return {data:{location:{pano:node.pano,latLng:{lat:()=>node.position.lat,lng:()=>node.position.lng}},links:node.links}};
+      }
+    },
+  };
+}
+
+test("at a shared fork, discover the straight road instead of an arbitrary distant waypoint", async () => {
+  const a=meterPoint(0,0), j=meterPoint(100,0), e=meterPoint(140,0), end=meterPoint(200,100);
+  const left=[a,j,meterPoint(100,100),end], right=[a,j,meterPoint(100,-100),meterPoint(250,-100),meterPoint(250,100),end];
+  const straight=[a,j,e,meterPoint(200,0),end];
+  const maps=branchMaps({
+    J:{pano:"J",position:j,links:[{pano:"unavailable",heading:45},{pano:"E",heading:90},{pano:"N",heading:0},{pano:"S",heading:180},{pano:"W",heading:270}]},
+    E:{pano:"E",position:e,links:[{pano:"J",heading:270}]},
+  });
+  const calls=[];
+  const live=modules(true,async request=>{
+    calls.push(request);
+    return {routes:request.intermediates ? [sdkRoute(straight,1500)] : [sdkRoute(left,300),sdkRoute(right,500)]};
+  },maps).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.deepEqual(routes.map(r=>r.distanceM),[300,500,1500],"longer routes remain eligible");
+  assert.deepEqual(calls[1].intermediates,[{location:j},{location:e}]);
+  assert.equal(calls.length,2);
+  assert.deepEqual(routes[2].path,straight);
+});
+
+test("via search recovers after backtracking rejection using a real connected branch", async () => {
+  const a=meterPoint(0,0), j=meterPoint(100,0), n=meterPoint(100,40), end=meterPoint(200,0);
+  const alternate=[a,j,n,meterPoint(200,40),end];
+  const maps=branchMaps({J:{pano:"J",position:j,links:[{pano:"N",heading:0}]},N:{pano:"N",position:n,links:[{pano:"J",heading:180}]}});
+  const live=modules(true,async request=>({routes:[sdkRoute(request.intermediates ? alternate : [a,j,a,end])]}),maps).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.equal(routes.length,1);
+  assert.deepEqual(routes[0].path,alternate);
+});
+
+
+test("branch validation rejects a snapped-away road or a long loop before reaching the branch", () => {
+  const {followsRouteBranch}=modules().branches;
+  const a=meterPoint(0,0), j=meterPoint(100,0), e=meterPoint(140,0), end=meterPoint(200,100);
+  const branch={via:[j,e],headingDifference:0};
+  assert(followsRouteBranch([a,j,e,meterPoint(200,0),end],branch));
+  assert.equal(followsRouteBranch([a,j,meterPoint(100,100),end],branch),false);
+  assert.equal(followsRouteBranch([a,j,meterPoint(100,-100),meterPoint(140,-100),e,end],branch),false);
+});
+
+test("school buildings form one choice while each disaster routes to an eligible building", async () => {
+  const near={lat:35,lng:139};
+  const feature=(name,offset,flags,address="東京都文京区本町1-2-3")=>({geometry:{coordinates:[139+offset,35]},properties:{name,address,remarks:"校舎は3階以上",...flags}});
+  const features=[
+    feature("さくら小学校（東校舎）",0.0001,{disaster4:1}),
+    feature("さくら小学校 西校舎",0.0005,{disaster1:1,disaster4:1}),
+    feature("さくら小学校（体育館）",0.0006,{disaster4:1}),
+    feature("さくら小学校",0.001,{disaster1:1,disaster4:1},"東京都文京区別町1-2-3"),
+    feature("さくら小学校分校",0.0007,{disaster1:1,disaster4:1}),
+  ];
+  const before=global.fetch;
+  global.fetch=async()=>Response.json({features});
+  try {
+    const live=modules(true).api;
+    const quake=await live.fetchShelters(near,"api","earthquake");
+    const flood=await live.fetchShelters(near,"api","flood");
+    assert.equal(quake.length,3);
+    assert.equal(flood.length,3);
+    assert.equal(quake[0].name,"さくら小学校");
+    assert.equal(quake[0].facilities.length,3);
+    assert.equal(flood[0].facilities.length,1);
+    assert.equal(quake[0].id,flood[0].id,"case changes retain the school selection");
+    nearly(quake[0].position.lng,139.0001,0.000001);
+    nearly(flood[0].position.lng,139.0005,0.000001);
+    assert(flood[0].facilities[0].note.includes("3階以上"));
+    const combined=modules().shelterGroups.groupSchoolShelters([...quake,...flood],near);
+    assert.equal(combined.length,3,"location screen also merges across disaster layers");
+    assert.equal(combined[0].facilities.length,3);
+    assert(combined[0].supportedDisasters.includes("洪水"));
+  } finally {global.fetch=before;}
+});
+
+test("school grouping happens before the five-choice limit and does not merge remote campuses", async () => {
+  const features=Array.from({length:6},(_,i)=>({geometry:{coordinates:[139+i*0.0001,35]},properties:{name:`第一小学校（第${i+1}校舎）`,address:"東京都文京区本町1",disaster4:1}}));
+  features.push({geometry:{coordinates:[139.002,35]},properties:{name:"第二小学校",address:"東京都文京区本町2",disaster4:1}});
+  const before=global.fetch;global.fetch=async()=>Response.json({features});
+  try {
+    const schools=await modules(true).api.fetchShelters({lat:35,lng:139},"api");
+    assert.equal(schools.length,2);
+    assert.equal(schools[0].facilities.length,6);
+    assert.equal(schools[1].name,"第二小学校");
+    const one=schools[1].facilities[0];
+    const separate=modules().shelterGroups.groupSchoolShelters([one,{...one,id:"remote",position:{lat:35.01,lng:139}}],{lat:35,lng:139});
+    assert.equal(separate.length,2);
+    assert.notEqual(separate[0].id,separate[1].id);
+  } finally {global.fetch=before;}
+});
+
+test("flood planning requests hazard-guided alternatives, reassesses them and prioritizes reduced exposure", async () => {
+  const a={lat:35,lng:139},end={lat:35,lng:139.002},via={lat:35.001,lng:139.001};
+  const direct=[a,end],detour=[a,via,end],calls=[];
+  const live=modules(true,async request=>{calls.push(request);return {routes:[sdkRoute(request.intermediates?detour:direct,request.intermediates?1000:200)]};}).api;
+  const before=global.fetch,assessed=[];
+  global.fetch=async(url,options)=>{
+    assert.equal(url,"/api/evac/assess");const body=JSON.parse(options.body);assert.equal(body.scenario,"flood");assessed.push(body);
+    return Response.json({version:"training-google-v1",assessments:Object.fromEntries(body.routes.map(route=>[route.id,{
+      notes:[],flood:{status:"available",coloredM:route.distanceM===200?200:0,weightedM:route.distanceM===200?1000:0,unknownM:0,uncoloredM:route.distanceM===200?0:1000,maxDepth:route.distanceM===200?"3〜5m":null,suggestedVias:route.distanceM===200?[via]:[]}
+    }]))});
+  };
+  try {
+    const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api","flood");
+    assert.equal(routes.length,2);assert.equal(routes[0].distanceM,1000,"prefer the longer route with reduced mapped exposure");
+    assert.deepEqual(calls[1].intermediates,[{location:via}]);assert.equal(assessed.length,2,"evaluate the entire new path again");
+    assert.equal(routes[0].assessment.flood.coloredM,0);
+  } finally {global.fetch=before;}
+});
+
+test("same road with additional rounded vertices does not fill multiple route slots", async () => {
+  const a={lat:35,lng:139},end={lat:35,lng:139.002};
+  const live=modules(true,async()=>({routes:[sdkRoute([a,end],200),sdkRoute([a,{lat:35.000001,lng:139.001},end],201)]})).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.equal(routes.length,1);assert.equal(routes[0].distanceM,200);
 });

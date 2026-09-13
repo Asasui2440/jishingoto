@@ -359,7 +359,11 @@ test("現在地で場所を選びルート比較でケースを切り替える",
   await expect(page.getByRole("button",{name:"この道でスタート"})).toBeEnabled();
   expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).scenario)).toBe("flood");
   await noPageOverflow(page,page.getByRole("button",{name:"この道でスタート"}));
+  await expect(page.locator("summary",{hasText:"洪水浸水想定（想定最大規模）"})).toBeVisible();
+  await expect(page.getByText("ハザード比較：未取得区間あり")).toBeVisible();
   await capture(page,testInfo,"scenario-routes");
+  await page.getByRole("combobox",{name:"災害ケース"}).selectOption("earthquake");
+  await expect(page.locator("summary",{hasText:"洪水浸水想定（想定最大規模）"})).toHaveCount(0);
 });
 
 test("現在地の許可がない場合も住所検索を案内する", async ({ page }) => {

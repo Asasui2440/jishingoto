@@ -1,3 +1,4 @@
+import { assessFloodRoutes } from "./flood-hazard";
 import { isEvacScenario, type EvacScenario } from "../evac-scenario";
 import type { LatLng, RouteAssessment } from "../evac-content";
 import { loadRouteRegion } from "./route-geodata";
@@ -163,11 +164,22 @@ export function assessRouteCandidates(request: RouteAssessmentRequest, resolveRe
 }
 
 export async function assessDynamicRouteCandidates(request: RouteAssessmentRequest, signal?: AbortSignal, fetcher: typeof fetch = fetch) {
-  const results = await Promise.allSettled(request.routes.map((route) => loadRouteRegion(route.path, signal, fetcher)));
-  return assessRouteCandidates(request, (path) => {
+  const [results, flood] = await Promise.all([
+    Promise.allSettled(request.routes.map((route) => loadRouteRegion(route.path, signal, fetcher))),
+    request.scenario === "flood" ? assessFloodRoutes(request.routes, signal, fetcher) : Promise.resolve(null),
+  ]);
+  const assessment = assessRouteCandidates(request, (path) => {
     const index = request.routes.findIndex((route) => route.path === path);
     const result = results[index];
     if (result.status === "rejected") throw result.reason;
     return result.value;
   });
+  if (flood) for (const [id, hazard] of Object.entries(flood)) {
+    assessment.assessments[id].flood = hazard;
+    assessment.assessments[id].notes.unshift(hazard.status === "unavailable"
+      ? "洪水ハザードデータを取得できませんでした。浸水想定を使った比較は未実施です。"
+      : `洪水浸水想定（想定最大規模）の着色区間は約${Math.round(hazard.coloredM)}m、最も深い区分は${hazard.maxDepth ?? "着色なし"}。`);
+    if (hazard.unknownM > 0) assessment.assessments[id].notes.unshift(`ハザードを判定できない区間：約${Math.round(hazard.unknownM)}m`);
+  }
+  return assessment;
 }
