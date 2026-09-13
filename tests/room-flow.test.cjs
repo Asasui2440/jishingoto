@@ -190,3 +190,35 @@ test("purchase candidates require confirmed, identifiable, matching objects", ()
   assert.equal(safetyProductsFor([risk("window", "break")])[0].id, "safety-film");
   assert.equal(safetyProductsFor([risk("tv")])[0].id, "tv-belt");
 });
+
+
+test("room API failures fall back and stalled responses are aborted", async () => {
+  const { analyzeRoom, generateAftermath, roomRequest } = load("src/lib/api.ts");
+  const originalFetch = global.fetch;
+  try {
+    for (const status of [401, 429, 502, 503]) {
+      global.fetch = async () => Response.json({ error: "unavailable" }, { status });
+      const analysis = await analyzeRoom("data:image/jpeg;base64,cGhvdG8=");
+      assert.equal(analysis.source, "demo");
+      assert(analysis.risks.length > 0);
+      assert.equal((await generateAftermath("data:image/jpeg;base64,cGhvdG8=")).source, "preview");
+    }
+    let signal;
+    global.fetch = async (_url, init) => { signal = init.signal; return { ok: true, json: () => new Promise(() => {}) }; };
+    await assert.rejects(roomRequest("/api/room/analyze", "photo", 10), /timed out/);
+    assert.equal(signal.aborted, true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("downloadable sample includes the same risks, questions and aftermath as the demo", async () => {
+  const data = JSON.parse(fs.readFileSync("public/demo/room.json", "utf8"));
+  const { DETECTED_RISKS } = load("src/lib/content.ts");
+  const { aftermathEvents } = load("src/lib/api.ts");
+  const risks = DETECTED_RISKS.map((r) => ({ ...r, confirmed: true }));
+  assert.deepEqual(data.risks, DETECTED_RISKS);
+  assert.deepEqual(data.questions, JSON.parse(JSON.stringify(await fetchQuestions(risks))));
+  assert.deepEqual(data.aftermath.events, aftermathEvents(risks));
+  assert(fs.existsSync(`public${data.photoUrl}`));
+});

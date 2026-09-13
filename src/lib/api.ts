@@ -10,6 +10,26 @@ import {
 import { adultText } from "./adult-copy";
 import { roomObjectType, EXIT_EXPLANATION } from "./room-guidance";
 
+/** Bound the entire response, including reading its body, so a stalled API cannot block the flow. */
+export async function roomRequest(path: string, photo: string, timeoutMs: number): Promise<unknown> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photo }), signal: controller.signal });
+        if (!response.ok) throw new Error("room request failed");
+        return response.json();
+      })(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => { controller.abort(); reject(new Error("room request timed out")); }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type BlurRegion = { id: string; x: number; y: number; w: number; h: number; shape: "rect" | "circle" };
@@ -27,9 +47,7 @@ export async function analyzeRoom(photoUrl: string | null): Promise<RoomAnalysis
     return { risks: DETECTED_RISKS.map((risk) => ({ ...risk })), source: "demo", warning: "写真がないため、サンプルの解析結果を表示しています。" };
   }
   try {
-    const response = await fetch("/api/room/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photoUrl }) });
-    if (!response.ok) throw new Error("analysis failed");
-    const body = (await response.json()) as { risks?: Risk[] };
+    const body = await roomRequest("/api/room/analyze", photoUrl, 12_000) as { risks?: Risk[] };
     if (!Array.isArray(body.risks)) throw new Error("invalid analysis");
     return { risks: body.risks, source: "ai" };
   } catch {
@@ -124,9 +142,7 @@ export async function generateAftermath(photo: string | null): Promise<Aftermath
   const events: Aftermath["events"] = [];
   if (!photo?.startsWith("data:image/")) return { imageUrl: null, events, source: "preview" };
   try {
-    const response = await fetch("/api/room/aftermath", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photo }) });
-    if (!response.ok) throw new Error("generation failed");
-    const body = (await response.json()) as { imageUrl?: string };
+    const body = await roomRequest("/api/room/aftermath", photo, 30_000) as { imageUrl?: string };
     return { imageUrl: body.imageUrl ?? null, events, source: body.imageUrl ? "ai" : "preview" };
   } catch {
     return { imageUrl: null, events, source: "preview" };

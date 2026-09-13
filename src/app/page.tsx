@@ -93,6 +93,8 @@ export default function OnboardingPage() {
           {adult ? "安全診断を始める" : <Furigana text="体験[たいけん]を始[はじ]める" />}
         </Button>
 
+        <Button variant="outline" size="md" onClick={() => router.push("/demo")}>サンプルで最後まで体験する（API不要）</Button>
+
         <Button variant="outline" size="md" onClick={() => router.push("/evac?from=standalone")}>
           {adult ? "避難ルートから体験する（フェーズ2）" : <Furigana text="避難[ひなん]ルートから体験[たいけん]する（フェーズ2）" />}
         </Button>

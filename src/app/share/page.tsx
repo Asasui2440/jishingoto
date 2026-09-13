@@ -28,7 +28,7 @@ export default function SharePage() {
   const router = useRouter();
   const { audience } = useSettings();
   const shareText = audience === "adult" ? adultText(SHARE_TEXT) : SHARE_TEXT;
-  const { answers, risks } = useSession();
+  const { analysisSource, answers, risks } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [saving, setSaving] = useState(false);
 
@@ -157,7 +157,7 @@ export default function SharePage() {
 
         <div className="rounded-panel border border-primary/40 bg-primary-soft p-4">
           <p className="mb-2 text-13 font-bold text-primary-ink">部屋の次は、家の外での避難を体験</p>
-          <Button size="md" onClick={() => router.push("/evac?from=room")}><Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" /></Button>
+          <Button size="md" onClick={() => router.push(analysisSource === "demo" ? "/evac?from=room&mode=mock" : "/evac?from=room")}><Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" /></Button>
         </div>
 
         <button
