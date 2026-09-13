@@ -23,13 +23,13 @@ export function reviewIllustration(question: Question): ReviewIllustration | nul
     case "verify": return SCENES.information;
     default: {
       const image = SCENARIO_IMAGES[best.id];
-      return image ? { image: image === "shelter-damaged" ? "evacuation-open-v11" : `${image}-v4`, alt: best.label.replace(/\[[^\]]*\]/g, ""), headline: best.label, timing: question.phase === "during" ? "揺れている間" : "揺れが収まったあと" } : null;
+      return image ? { image: `${image}-v4`, alt: best.label.replace(/\[[^\]]*\]/g, ""), headline: best.label, timing: question.phase === "during" ? "揺れている間" : "揺れが収まったあと" } : null;
     }
   }
 }
 
 const SCENARIO_IMAGES: Record<string, string> = Object.fromEntries([
-  "shelter-damaged", "shelter-home", "shelter-tsunami", "home-bed",
+  "shelter-home", "shelter-tsunami", "home-bed",
   "classroom-desk", "classroom-exit", "classroom-reunion",
   "office-copier", "office-elevator", "office-stay",
 ].map((id) => [`${id}-0`, id]));

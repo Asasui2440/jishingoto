@@ -75,10 +75,11 @@ test("every correct action uses its corresponding generated illustration", async
   }
   for (const q of questions) {
     const scene = reviewIllustration(q);
+    if (q.id === "shelter-damaged") { assert.equal(scene, null); continue; }
     if (q.id === "home-kitchen-after") assert.equal(scene.image, "kitchen-question-v8");
     assert(scene, `missing illustration for ${q.id}`);
     assert(fs.existsSync(`public${reviewImagePath(scene.image)}`), scene.image);
-    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, q.id === "shelter-damaged" ? "evacuation-open-v11" : `${q.id}-v4`);
+    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, `${q.id}-v4`);
     if (q.phase === "after") assert.match(scene.timing, /収ま/);
     assert.deepEqual(reviewIllustration({ ...q, choices: [...q.choices].reverse() }), scene);
   }
