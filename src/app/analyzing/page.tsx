@@ -18,6 +18,7 @@ import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { roomTimings } from "@/lib/room-test";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
+import { groupRisksByView } from "@/lib/room-views";
 import { useSession } from "@/lib/session";
 
 export default function AnalysisLoadingPage() {
@@ -40,12 +41,13 @@ export default function AnalysisLoadingPage() {
     const timer = setInterval(() => setElapsed((performance.now() - started) / 1000), 250);
     void job.then((analysis) => {
       if (!alive) return;
-      update({
+      update(prev => ({
+        ...prev,
         ...(analysis.source === "demo" && !photoUrl ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
-        risks: analysis.risks,
+        risks: groupRisksByView(analysis.risks, prev.roomViews ?? []),
         analysisSource: analysis.source,
         analysisWarning: analysis.warning ?? null,
-      });
+      }));
       router.replace("/risks");
     }).catch(() => { if (alive) { clearInterval(timer); setFailed(true); } });
     return () => { alive = false; clearInterval(timer); };
@@ -66,7 +68,7 @@ export default function AnalysisLoadingPage() {
       </div>
 
       <div className="flex flex-col items-center gap-5 px-6">
-        <div className="rounded-pill bg-primary-soft p-3">
+        <div className="rounded-pill bg-secondary-soft p-3">
           <div className="relative size-[120px] overflow-hidden rounded-tile bg-ink">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -103,7 +105,7 @@ export default function AnalysisLoadingPage() {
                   {done ? (
                     <CheckCircleTealIcon className="size-4 shrink-0 text-safe" />
                   ) : active ? (
-                    <DotBlueIcon className="size-4 shrink-0 animate-pulse text-primary-ink" />
+                    <DotBlueIcon className="size-4 shrink-0 animate-pulse text-secondary-ink" />
                   ) : (
                     <DotGrayIcon className="size-4 shrink-0 text-ink-faint" />
                   )}
@@ -111,7 +113,7 @@ export default function AnalysisLoadingPage() {
                     className={[
                       "text-13",
                       active
-                        ? "font-bold text-primary-ink"
+                        ? "font-bold text-secondary-ink"
                         : done
                           ? "font-bold text-ink"
                           : "text-ink-muted",
@@ -154,7 +156,7 @@ export default function AnalysisLoadingPage() {
             router.push("/");
           }}
         >
-          <XCircleBlueIcon className="size-5 text-primary-ink" />
+          <XCircleBlueIcon className="size-5 text-secondary-ink" />
           キャンセル
         </Button>
       </div>

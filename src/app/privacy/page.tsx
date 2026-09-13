@@ -128,16 +128,14 @@ export default function PrivacyBlurPage() {
             </button>
           ))}
 
-          <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-1.5">
-            <MousePointerIcon className="size-3.5 text-white" />
-            <span className="text-11 text-white">
-              <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
-            </span>
-          </div>
         </div>
+        <p className="mt-3 flex items-center justify-center gap-2 text-sm text-ink-muted">
+          <MousePointerIcon className="size-4 shrink-0" />
+          <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
+        </p>
       </div>
 
-      <div className="mx-5 rounded-panel bg-primary-soft p-5">
+      <div className="mx-5 rounded-panel bg-secondary-soft p-5">
         <p className="font-display text-lg font-bold text-ink">
           <Furigana text="アニメ風の地震後の予想図を生成できます" adult="アニメ風の地震後の予想図をSNSで共有できます" />
         </p>
@@ -157,7 +155,7 @@ export default function PrivacyBlurPage() {
         <Button disabled={busy} onClick={() => void continueWithMaskedPhoto()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>
-          <RefreshCwIcon className="size-5 text-primary-ink" />
+          <RefreshCwIcon className="size-5 text-secondary-ink" />
           <Furigana text="写真[しゃしん]を選[えら]び直[なお]す" />
         </Button>
       </div>

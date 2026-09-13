@@ -17,7 +17,7 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
 
   return (
     <Card className="overflow-hidden p-0">
-      <div className="border-b border-border bg-primary-soft px-[18px] py-4">
+      <div className="border-b border-border bg-canvas px-[18px] py-4">
         <p className="font-display text-15 font-bold text-ink">
           <Furigana text="見[み]つかった危険[きけん]に合[あ]う防災[ぼうさい]グッズ" adult="検出結果に合った防災用品" />
         </p>
