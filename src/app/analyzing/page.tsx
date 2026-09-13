@@ -51,8 +51,8 @@ export default function AnalysisLoadingPage() {
     return () => { alive = false; clearInterval(timer); };
   }, [cancelled, photoUrl, update, router]);
 
-  // 待機中の3段階の演出。以前の1.4秒から6秒に延ばし、最後の段階で解析完了を待つ。
-  const step = Math.min(ANALYSIS_STEPS.length - 1, Math.floor(elapsed / 6));
+  // 待機中の3段階の演出。以前と同じ1.4秒間隔で進み、最後の段階で解析完了を待つ。
+  const step = Math.min(ANALYSIS_STEPS.length - 1, Math.floor(elapsed / 1.4));
   const progress = (step + 0.35) / ANALYSIS_STEPS.length;
 
   return (
