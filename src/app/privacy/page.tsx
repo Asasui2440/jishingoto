@@ -135,7 +135,7 @@ export default function PrivacyBlurPage() {
         </p>
       </div>
 
-      <div className="mx-5 rounded-panel bg-primary-soft p-5">
+      <div className="mx-5 rounded-panel bg-secondary-soft p-5">
         <p className="font-display text-lg font-bold text-ink">
           <Furigana text="アニメ風の地震後の予想図を生成できます" adult="アニメ風の地震後の予想図をSNSで共有できます" />
         </p>
@@ -155,7 +155,7 @@ export default function PrivacyBlurPage() {
         <Button disabled={busy} onClick={() => void continueWithMaskedPhoto()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>
-          <RefreshCwIcon className="size-5 text-primary-ink" />
+          <RefreshCwIcon className="size-5 text-secondary-ink" />
           <Furigana text="写真[しゃしん]を選[えら]び直[なお]す" />
         </Button>
       </div>

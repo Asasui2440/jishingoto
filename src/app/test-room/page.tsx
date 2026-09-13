@@ -11,7 +11,7 @@ export default function TestRoomPage() {
   const [analysis, setAnalysis] = useState(2);
   const { reset, update } = useSession();
   const router = useRouter();
-  return <main className="space-y-5 p-6">
+  return <main className="space-y-5 px-6 pt-16 pb-6">
     <h1 className="text-xl font-bold">部屋のテスト（APIなし）</h1>
     <p>固定のサンプル写真と解析結果を利用し、AIへは送信しません。</p>
     <p className="text-13 text-ink-muted">解析の待ち時間を指定できます。本物のAPIの速度を測るものではありません。</p>

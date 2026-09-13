@@ -1,0 +1,57 @@
+{
+  "risks": [
+    {
+      "id": "bookshelf",
+      "name": "大きな本棚",
+      "adultName": "本棚",
+      "kind": "fall",
+      "objectType": "bookshelf",
+      "confidence": 0.9,
+      "x": 16,
+      "y": 30,
+      "bounds": {
+        "x": 1,
+        "y": 9,
+        "w": 23,
+        "h": 87
+      },
+      "confirmed": false
+    },
+    {
+      "id": "window",
+      "name": "まどガラス",
+      "adultName": "窓ガラス",
+      "kind": "break",
+      "objectType": "window",
+      "confidence": 0.7,
+      "x": 50,
+      "y": 20,
+      "bounds": {
+        "x": 32,
+        "y": 20,
+        "w": 27,
+        "h": 42
+      },
+      "confirmed": false
+    },
+    {
+      "id": "doorway",
+      "name": "ドアのまわり",
+      "adultName": "出入口",
+      "kind": "block",
+      "objectType": "doorway",
+      "confidence": 0.55,
+      "x": 80,
+      "y": 40,
+      "bounds": {
+        "x": 65,
+        "y": 2,
+        "w": 34,
+        "h": 96
+      },
+      "confirmed": false
+    }
+  ],
+  "source": "demo",
+  "warning": "モックデータを表示しています。サンプルの部屋を想定した候補で、アップロードした写真の解析結果ではありません。"
+}

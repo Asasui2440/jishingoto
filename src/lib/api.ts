@@ -30,9 +30,9 @@ export async function analyzeRoom(photoUrl: string | null): Promise<RoomAnalysis
   try {
     const response = await fetch("/api/room/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photoUrl }) });
     if (!response.ok) throw new Error("analysis failed");
-    const body = (await response.json()) as { risks?: Risk[] };
+    const body = (await response.json()) as { risks?: Risk[]; source?: RoomAnalysis["source"]; warning?: string };
     if (!Array.isArray(body.risks)) throw new Error("invalid analysis");
-    return { risks: body.risks, source: "ai" };
+    return { risks: body.risks, source: body.source === "demo" ? "demo" : "ai", warning: body.warning };
   } catch {
     return { risks: DETECTED_RISKS.map((risk) => ({ ...risk })), source: "demo", warning: "AI解析に接続できなかったため、サンプルの解析結果を表示しています。" };
   }
@@ -156,8 +156,8 @@ export async function generateAftermath(photo: string | null): Promise<Aftermath
       };
       return { imageUrl: null, events, source: "preview", error: messages[failure.error ?? ""] ?? "予想図を生成できませんでした。もう一度試してください。" };
     }
-    const body = (await response.json()) as { imageUrl?: string };
-    return { imageUrl: body.imageUrl ?? null, events, source: body.imageUrl ? "ai" : "preview" };
+    const body = (await response.json()) as { imageUrl?: string; source?: Aftermath["source"] };
+    return { imageUrl: body.imageUrl ?? null, events, source: body.source === "test" ? "test" : body.imageUrl ? "ai" : "preview" };
   } catch {
     return { imageUrl: null, events, source: "preview", error: "通信できませんでした。接続を確認して、もう一度試してください。" };
   }

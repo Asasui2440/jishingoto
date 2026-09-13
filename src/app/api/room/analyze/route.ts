@@ -1,3 +1,4 @@
+import mockResponse from "@/data/mock/room-analysis.json";
 import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 
 export const runtime = "nodejs";
@@ -37,7 +38,8 @@ function sanitize(value: unknown): Risk[] {
 
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return Response.json({ error: "openai-not-configured" }, { status: 503 });
+  const mock = process.env.OPENAI_MOCK_MODE === "true";
+  if (!apiKey && !mock) return Response.json({ error: "openai-not-configured" }, { status: 503 });
 
   let image: unknown;
   try {
@@ -48,6 +50,8 @@ export async function POST(request: Request) {
   if (typeof image !== "string" || !/^data:image\/(jpeg|png|webp);base64,/.test(image) || image.length > 8_000_000) {
     return Response.json({ error: "bad-image" }, { status: 400 });
   }
+
+  if (mock) return Response.json(mockResponse, { headers: { "Cache-Control": "no-store" } });
 
   const prompt = `この部屋の写真を地震防災の観点で観察してください。番号付きで複数の視点が並んでいる場合は、同じ部屋の別視点として全画像を確認し、同じ物体は重複させず最も見やすい視点で1件にまとめてください。囲みの座標は入力画像全体を基準にし、写真の区切りやラベルは物体として検出しないでください。実際に画像で確認できる危険候補だけを最大8件返してください。人物の特定や住所・文字の読み取りはしないでください。
 JSONのみ: {"risks":[{"name":"小学校高学年にも分かる短い名前（テレビ受像機ではなくテレビ、高層収納家具・背高収納家具ではなく背の高い収納家具など、日常の呼び方）","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|instrument|clothes_rack|pet_cage|washing_machine|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
