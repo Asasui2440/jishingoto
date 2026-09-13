@@ -591,3 +591,54 @@ test("flood analysis and comparison use flood terrain rather than earthquake cat
   assert.throws(()=>geo.parseGeoRequest({...request,scenario:"typo"}),/ケース/);
   assert.throws(()=>routeAssessment.parseRouteAssessmentRequest({scenario:"typo",routes:[{...request.route,distanceM:900}]}),/ケース/);
 });
+
+const floodHazard = load("src/lib/server/flood-hazard.ts");
+const floodConfig = load("src/lib/flood-hazard.ts");
+const sharp = require("sharp");
+async function floodPng(rgba) {
+  return sharp(Buffer.from(rgba),{raw:{width:1,height:1,channels:4}}).resize(256,256,{kernel:"nearest"}).png().toBuffer();
+}
+
+test("official flood colors preserve depth bands and separate transparent, unknown, and missing data", async () => {
+  for (let i=0;i<floodConfig.FLOOD_BANDS.length;i++) assert.equal(floodHazard.floodBand(Uint8Array.from([...floodConfig.FLOOD_BANDS[i].rgb,255])),i);
+  assert.equal(floodHazard.floodBand(Uint8Array.from([0,0,0,0])),-1);
+  assert.equal(floodHazard.floodBand(Uint8Array.from([255,255,255,255])),null);
+  assert.equal(floodHazard.floodBand(Uint8Array.from([255,216,192,100])),null);
+  const path=[{lat:35,lng:139},{lat:35.001,lng:139}];
+  const png=await floodPng([255,183,183,255]);
+  const result=await floodHazard.assessFloodRoutes([{id:"f",path}],undefined,async url=>{
+    assert(String(url).startsWith(floodConfig.FLOOD_TILE_ROOT+"/16/"));return new Response(png);
+  });
+  assert.equal(result.f.status,"available");assert.equal(result.f.maxDepth,"3〜5m");
+  assert(Math.abs(result.f.coloredM-geo.meters(...path))<0.01);
+  assert.equal(result.f.uncoloredM,0);assert.equal(result.f.unknownM,0);
+  const missing=await floodHazard.assessFloodRoutes([{id:"f",path}],undefined,async()=>new Response(null,{status:404}));
+  assert.equal(missing.f.status,"unavailable");assert(missing.f.unknownM>100);assert.equal(missing.f.suggestedVias.length,0);
+  const blank=await floodPng([0,0,0,0]);
+  const uncolored=await floodHazard.assessFloodRoutes([{id:"f",path}],undefined,async()=>new Response(blank));
+  assert.equal(uncolored.f.status,"available");assert(uncolored.f.uncoloredM>100);assert.equal(uncolored.f.coloredM,0);
+});
+
+test("flood search proposes only lower-hazard waypoints and evaluates independently of terrain availability", async () => {
+  const path=[{lat:35,lng:139},{lat:35.001,lng:139}];
+  const hazardousX=floodHazard.floodPixel(path[0]).x;
+  const red=await floodPng([255,183,183,255]), blank=await floodPng([0,0,0,0]);
+  const fetcher=async url=>{
+    if(!String(url).includes("01_flood_l2"))return new Response(null,{status:404});
+    const x=Number(String(url).split("/").at(-2));return new Response(x===hazardousX?red:blank);
+  };
+  const result=await routeAssessment.assessDynamicRouteCandidates({scenario:"flood",routes:[{id:"f",path,distanceM:111,durationS:100}]},undefined,fetcher);
+  const flood=result.assessments.f.flood;
+  assert.equal(flood.status,"available");assert(flood.suggestedVias.length>0);
+  assert(Math.abs(flood.coloredM+flood.uncoloredM+flood.unknownM-111)<0.001,"segment lengths match displayed Google distance");
+  assert(flood.suggestedVias.every(p=>floodHazard.floodPixel(p).x!==hazardousX));
+  assert(result.assessments.f.notes.some(n=>n.includes("浸水想定")));
+});
+
+test("flood comparison never treats failed lookup as zero exposure and uses depth before distance", () => {
+  const route=(distanceM,status,weightedM,coloredM)=>({distanceM,assessment:{flood:{status,weightedM,coloredM}}});
+  const missing=route(10,"unavailable",0,0), deep=route(100,"available",500,100), shallow=route(500,"available",100,100);
+  assert(floodConfig.compareFloodRoutes(shallow,deep)<0);
+  assert(floodConfig.compareFloodRoutes(deep,missing)<0);
+  assert(floodConfig.compareFloodRoutes(missing,shallow)>0);
+});

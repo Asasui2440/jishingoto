@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Furigana } from "@/components/ui/Furigana";
+import { TopPageLink } from "@/components/ui/PhaseOneNavigation";
 import styles from "./GameUI.module.css";
 
 type IconName = "map" | "pin" | "route" | "walk" | "flag" | "settings" | "info" | "close" | "back" | "check" | "locate" | "search" | "chevron" | "play" | "pause" | "eye" | "clock";
@@ -30,6 +31,7 @@ export function GameIcon({ name, className = "size-5" }: { name: IconName; class
 
 export function GameShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`${styles.shell} ${className}`}>
+    <nav aria-label="共通ナビゲーション" className="flex shrink-0 px-3 pt-1"><TopPageLink /></nav>
     {children}
     <footer className={styles.footer}>練習用の想定です。災害時は公的情報に従ってください。</footer>
   </div>;

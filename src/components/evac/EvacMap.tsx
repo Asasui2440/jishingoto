@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FLOOD_BANDS, FLOOD_SOURCE, FLOOD_TILE_ROOT } from "@/lib/flood-hazard";
 import type { LatLng, RouteOption, Shelter } from "@/lib/evac-content";
 import type { EvacMode } from "@/lib/evac-mode";
 import { hasMapsKey, loadMaps, onMapsAuthError } from "@/lib/gmaps";
@@ -16,6 +17,7 @@ export type MapMarker = {
 };
 
 type Props = {
+  floodHazard?: boolean;
   mode: EvacMode;
   center: LatLng;
   /** 自宅として指定した地点 */
@@ -69,6 +71,7 @@ function GoogleMapLoader(props: Props) {
 /* ------------------------------------------------------------------ */
 
 function GoogleMapView({
+  floodHazard = false,
   center,
   home,
   shelters = [],
@@ -106,6 +109,18 @@ function GoogleMapView({
     routeClickRef.current = onSelectRoute;
   }, [onSelectRoute]);
   const [mapReady, setMapReady] = useState(false);
+  useEffect(() => {
+    const map = mapRef.current, maps = window.google?.maps;
+    if (!mapReady || !map || !maps?.ImageMapType || !floodHazard) return;
+    const layer = new maps.ImageMapType({
+      getTileUrl: (point, zoom) => `${FLOOD_TILE_ROOT}/${zoom}/${point.x}/${point.y}.png`,
+      tileSize: new maps.Size(256, 256), minZoom: 2, maxZoom: 17, opacity: 0.5,
+      name: "洪水浸水想定（想定最大規模）",
+    });
+    map.overlayMapTypes.push(layer);
+    return () => { const index = map.overlayMapTypes.getArray().indexOf(layer); if (index >= 0) map.overlayMapTypes.removeAt(index); };
+  }, [mapReady, floodHazard]);
+
 
   useEffect(() => {
     const mapPins = pins.current;
@@ -271,6 +286,13 @@ function GoogleMapView({
   return (
     <div className={["relative overflow-hidden rounded-panel", className].join(" ")}>
       <div ref={boxRef} style={{ height }} className="w-full" />
+      {floodHazard ? <div className="absolute left-2 top-2 max-w-[75%] rounded-lg bg-white/95 p-2 text-[10px] shadow"><details>
+        <summary className="cursor-pointer font-bold">洪水浸水想定（想定最大規模）</summary>
+        <ul>{FLOOD_BANDS.map(band => <li key={band.label}><span className="mr-1 inline-block h-2 w-3" style={{backgroundColor: `rgb(${band.rgb.join(",")})`}} />{band.label}</li>)}</ul>
+        <p>無着色には未指定・未収録も含みます。</p>
+        </details>
+        <a href={FLOOD_SOURCE} target="_blank" rel="noreferrer" className="underline">出典：重ねるハザードマップ（国土交通省等）</a>
+      </div> : null}
     </div>
   );
 }

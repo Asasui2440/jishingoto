@@ -134,7 +134,7 @@ export default function EvacWalkPage() {
         </section>
     </main>
     <BottomSheet open={sheet === "map"} title="いまいる場所と通った道" onClose={() => setSheet(null)}>
-      <EvacMap mode={mode} center={currentPosition} home={home} shelters={[shelter]} selectedShelterId={shelter.id} routes={[route]} activeRouteId={route.id}
+      <EvacMap floodHazard={evac.scenario === "flood"} mode={mode} center={currentPosition} home={home} shelters={[shelter]} selectedShelterId={shelter.id} routes={[route]} activeRouteId={route.id}
         markers={arrivalNode ? [{ id: "arrival", position: arrivalNode.position, label: "着", color: "#bfdbfe", title: "体験の到着地点" }] : []}
         walker={mode === "api" ? actualPosition ?? null : step.position} walkerHeading={mode === "api" ? street?.heading ?? walk.street?.heading ?? step.heading : step.heading} traveledPath={walkedPath(walk)} height={250} />
       <p className="my-3 text-13 text-ink-muted">{remainingLabel} {timeLabel}。地図を動かしても現在地は変わりません。</p>
