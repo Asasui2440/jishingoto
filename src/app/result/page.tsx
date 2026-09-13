@@ -19,7 +19,7 @@ const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 
 export default function ResultPage() {
   const router = useRouter();
-  const { analysisSource, answers, risks, questions, checked, photoUrl, toggleChecked, reset } = useSession();
+  const { answers, risks, questions, checked, photoUrl, toggleChecked, reset } = useSession();
   const vibrate = useHaptics();
   const { audience } = useSettings();
   const adult = audience === "adult";
@@ -254,7 +254,7 @@ export default function ResultPage() {
         </>}
         <nav aria-label="結果のページ切り替え" className={`sticky bottom-0 flex gap-3 border-t border-border bg-canvas py-3 ${step === lastStep ? "flex-col-reverse" : ""}`}>
           <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}>戻る</Button>
-          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push(analysisSource === "demo" ? "/evac?from=room&mode=mock" : "/evac?from=room")}>{step < lastStep ? "次へ" : <Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" />}</Button>
+          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/evac?from=room")}>{step < lastStep ? "次へ" : <Furigana text="避難[ひなん]ルートへ進[すす]む（フェーズ2）" />}</Button>
         </nav>
       </div>
 

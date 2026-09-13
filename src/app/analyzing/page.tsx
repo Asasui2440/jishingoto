@@ -18,7 +18,6 @@ import { DisclaimerFooter } from "@/components/ui/Screen";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
-import { roomTestOptions } from "@/lib/room-test";
 import { RoomTiming } from "@/components/RoomTiming";
 
 /** 1ステップあたりの見せかけの所要時間 */
@@ -63,7 +62,7 @@ export default function AnalysisLoadingPage() {
     <div className="flex min-h-dvh flex-col justify-between">
       <div>
         <TitleBlock
-          title={roomTestOptions().mode === "fixture" ? "サンプルの部屋を準備中..." : "AIが部屋[へや]をチェック中[ちゅう]..."}
+          title="AIが部屋[へや]をチェック中[ちゅう]..."
           lead="危[あぶ]ない場所[ばしょ]がないかしらべています。"
         />
       </div>

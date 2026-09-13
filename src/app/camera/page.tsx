@@ -14,8 +14,6 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter } from "@/components/ui/Screen";
 import { preparePhoto, useCamera } from "@/lib/camera";
-import { setRoomTestOptions } from "@/lib/room-test";
-import { clearRoomPreparation } from "@/lib/room-preparation";
 import { detectBlurRegions } from "@/lib/api";
 import { useHaptics } from "@/lib/settings";
 import { useSession } from "@/lib/session";
@@ -42,12 +40,10 @@ export default function CameraGuidePage() {
   const usingFallback = state === "denied" || state === "unavailable";
 
   const proceed = async (photoUrl: string | null, photo?: Blob) => {
-    setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
-    clearRoomPreparation();
     setBusy(true);
     vibrate([10, 40, 10]);
     const blurRegions = await detectBlurRegions(photo);
-    update({ photoUrl, blurRegions, analysisSource: null, analysisWarning: null, startedAt: Date.now() });
+    update({ photoUrl, blurRegions, startedAt: Date.now() });
     router.push("/privacy");
   };
 
@@ -139,7 +135,7 @@ export default function CameraGuidePage() {
       </div>
 
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
-        <button type="button" onClick={() => router.push("/demo")} className="min-h-11 text-sm text-white underline">サンプルで最後まで体験する（API不要）</button>
+        <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline">APIを使わずテストする</button>
         {usingFallback ? (
           <>
             <Button onClick={() => fileRef.current?.click()} disabled={busy}>

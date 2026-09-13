@@ -18,7 +18,7 @@ import { useHaptics, useSettings } from "@/lib/settings";
 import { useSession } from "@/lib/session";
 import { applyPrivacyMasks } from "@/lib/camera";
 import { prepareRoom } from "@/lib/room-preparation";
-import { roomTestOptions } from "@/lib/room-test";
+import { setRoomTestOptions } from "@/lib/room-test";
 
 /** 新しく足すぼかしの大きさ（％） */
 const NEW_BLUR = { w: 22, h: 18 };
@@ -60,6 +60,7 @@ export default function PrivacyBlurPage() {
   };
 
   const continueWithMaskedPhoto = async () => {
+    setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
     if (photoUrl) {
       const masked = await applyPrivacyMasks(photoUrl, blurRegions);
       update({ photoUrl: masked });
@@ -130,7 +131,7 @@ export default function PrivacyBlurPage() {
           <Furigana text="かくしたい場所[ばしょ]をタップすると、じぶんで新[あたら]しくぼかすこともできるよ。" />
         </p>
         <p className="mt-2 text-11 text-ink-soft">
-          {roomTestOptions().mode === "fixture" ? "サンプル体験中です。写真の確認後も、用意したデータで進みます。AIへの送信はありません。" : <Furigana text="ぼかした画像[がぞう]だけを、解析[かいせき]と予想図[よそうず]の作成[さくせい]のためOpenAI APIへ送[おく]ります。端末[たんまつ]には保存[ほぞん]しません。" />}
+          <Furigana text="ぼかした画像[がぞう]だけを、解析[かいせき]と予想図[よそうず]の作成[さくせい]のためOpenAI APIへ送[おく]ります。端末[たんまつ]には保存[ほぞん]しません。" />
         </p>
       </div>
 
