@@ -98,6 +98,14 @@ body {
   outline-offset: 2px;
 }
 
+/* 入力中は茶色の外枠ではなく、控えめなグレーのフォーカス表示にする。 */
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+textarea:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: 1px solid #94a3b8;
+  outline-offset: 0;
+}
+
 /* 年齢層に応じた UI スケール（設定から data-ui-scale を切り替える） */
 :root[data-ui-scale="large"] {
   font-size: 17.5px;

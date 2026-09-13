@@ -20,7 +20,7 @@ function modules(mapsEnabled = false, computeRoutes = async () => { throw new Er
     new Function("require", "module", "exports", code)((p) => p.startsWith(".") ? load(path.resolve(path.dirname(file), `${p}.ts`)) : require(p), mod, mod.exports);
     return mod.exports;
   };
-  return { googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
+  return { plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
 }
 
 const { api, walk, content, state } = modules();
@@ -248,4 +248,275 @@ test("a stalled SDK call times out without applying late data", async (t) => {
   t.mock.timers.tick(20000);
   await checked;
   complete({ routes: [sdkRoute()] });
+});
+
+
+function fakePanorama() {
+  const nodes = {
+    A: { position: { lat: 35, lng: 139 }, links: [{ pano: "B", heading: 0 }] },
+    B: { position: { lat: 35.0001, lng: 139 }, links: [{ pano: "A", heading: 180 }, { pano: "C", heading: 90 }, { pano: "D", heading: 0 }] },
+    C: { position: { lat: 35.0001, lng: 139.0001 }, links: [{ pano: "B", heading: 270 }] },
+  };
+  const listeners = new Map();
+  let id = "A", heading = 0;
+  const calls = [];
+  return {
+    calls,
+    getPano: () => id,
+    getPosition: () => ({ lat: () => nodes[id].position.lat, lng: () => nodes[id].position.lng }),
+    getPov: () => ({ heading, pitch: 0 }),
+    getLinks: () => nodes[id].links,
+    getStatus: () => "OK",
+    addListener(name, listener) { const set = listeners.get(name) ?? new Set(); set.add(listener); listeners.set(name, set); return { remove: () => set.delete(listener) }; },
+    emit(name) { listeners.get(name)?.forEach(listener => listener()); },
+    setPano(next) { calls.push(next); },
+    setPov(pov) { heading = pov.heading; this.emit("pov_changed"); },
+    settle(next) { id = next; this.emit("position_changed"); this.emit("links_changed"); },
+    look(next) { heading = next; this.emit("pov_changed"); },
+  };
+}
+
+test("live movement accepts only a current adjacent ID, one hop at a time, with no position command", () => {
+  const pano = fakePanorama();
+  let state;
+  const control = modules().navigation.streetController(pano, value => { state = value; });
+  try {
+    control.move("C"); control.move({ lat: 35, lng: 139 });
+    assert.deepEqual(pano.calls, []);
+    control.move("B"); control.move("B"); control.move("C");
+    assert.deepEqual(pano.calls, ["B"]);
+    assert.equal(state.ready, false);
+    assert.deepEqual(state.position, { lat: 35, lng: 139 });
+    pano.settle("B");
+    assert.equal(state.ready, true);
+    assert.equal(state.previousPano, "A");
+    assert.deepEqual(state.position, { lat: 35.0001, lng: 139 });
+    pano.look(270);
+    assert.equal(state.heading, 270);
+    assert.deepEqual(pano.calls, ["B"], "looking around cannot move the panorama");
+    control.move("B"); // stale button
+    assert.deepEqual(pano.calls, ["B"]);
+    control.move("C"); pano.settle("C");
+    assert.deepEqual(pano.calls, ["B", "C"]);
+  } finally { control.dispose(); }
+  control.move("B");
+  assert.deepEqual(pano.calls, ["B", "C"], "unmounted controller cannot move");
+});
+
+test("timed out movement stops without accepting late completion or another move", t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const pano = fakePanorama();
+  let state;
+  const control = modules().navigation.streetController(pano, value => { state = value; });
+  control.move("B");
+  t.mock.timers.tick(10001);
+  assert.equal(state.ready, false);
+  assert(state.error);
+  pano.settle("B");
+  assert.equal(state.ready, false);
+  control.move("C");
+  assert.deepEqual(pano.calls, ["B"]);
+  control.dispose();
+});
+
+test("selected route controls automatic turns regardless of viewing direction", () => {
+  const { automaticStreetLink } = modules().navigation;
+  const base = { ready: true, busy: false, error: null, previousPano: "A", travelHeading: 0, heading: 270 };
+  const back = { pano: "A", heading: 180 }, straight = { pano: "D", heading: 0 }, right = { pano: "C", heading: 90 };
+  const state = { ...base, links: [back, straight, right] };
+  assert.equal(automaticStreetLink(state, 0), straight);
+  assert.equal(automaticStreetLink(state, 90), right);
+  assert.equal(automaticStreetLink({ ...state, arrivalNode: { pano: "C", position: { lat: 35, lng: 139 } } }, 0), straight, "do not shortcut the selected route merely because the goal is adjacent");
+  assert.equal(automaticStreetLink({ ...state, arrivalNode: { pano: "C", position: { lat: 35, lng: 139 } } }, 0, true), right);
+  assert.equal(automaticStreetLink({ ...state, heading: 90 }, 0), straight);
+  assert.equal(automaticStreetLink(state), null, "no route means no automatic movement");
+  assert.equal(automaticStreetLink(state, 45), null, "ambiguous links require a choice");
+  assert.equal(automaticStreetLink({ ...state, links: [straight] }, 90), null, "do not continue straight when the route turns");
+  assert.equal(automaticStreetLink({ ...state, busy: true }, 0), null);
+  assert.equal(automaticStreetLink({ ...state, previousPano: null, travelHeading: null }, 0), straight);
+});
+
+test("route geometry supplies the turn at a junction, not the destination bearing", () => {
+  const a = { lat: 35, lng: 139 }, b = { lat: 35.001, lng: 139 }, c = { lat: 35.001, lng: 139.001 };
+  nearly(walk.streetRouteGuidance([a, b, c], a).heading, 0);
+  nearly(walk.streetRouteGuidance([a, b, c], b).heading, 90);
+  nearly(walk.streetRouteGuidance([a, b, { lat: 35.002, lng: 139 }, c], b).heading, 0);
+  assert(walk.streetRouteGuidance([a, b, c], { lat: 35.0005, lng: 139.001 }).distanceFromRoute > 30);
+});
+
+test("confirmed node arrival is independent of missed questions and stale route progress", () => {
+  const positions = Array.from({ length: 9 }, (_, i) => ({ lat: 35 + i * 0.0001, lng: 139 }));
+  let progress = { routeId: "live", index: 0, steps: positions.map((position, i) => ({
+    id: `live:${i}`, position, travelSeconds: 10, ...(i === 4 ? { pointId: "event", event: { id: "wall" } } : {}),
+  })) };
+  progress = walk.observeStreetPosition(progress, positions[0], 0, []);
+  progress = walk.observeStreetPosition(progress, positions[1], 0, []);
+  assert.deepEqual(walk.walkedPath(progress), positions.slice(0, 2));
+  progress = walk.observeStreetPosition(progress, positions[4], 0, []);
+  assert.equal(progress.index, 4, "a nearby unanswered event is still presented");
+  progress.street.routeM = 0;
+  progress = walk.observeStreetPosition(progress, positions[7], 0, []);
+  assert.equal(progress.street.arrived, false, "proximity alone cannot complete the walk");
+  progress = walk.observeStreetPosition(progress, positions[7], 0, [], true);
+  assert.equal(progress.street.arrived, true);
+  assert.equal(progress.index, 8);
+  assert.equal(progress.street.remainingM, 0);
+  const offRoad = walk.observeStreetPosition(progress, { lat: 35.1, lng: 139.1 }, 0, []);
+  assert.equal(offRoad.street.arrived, false);
+  const shelter = { lat: 35.1, lng: 139.1 };
+  const nearShelter = walk.observeStreetPosition(progress, shelter, 0, [], true);
+  assert.equal(nearShelter.street.arrived, true, "confirmed arrival can differ from the planned endpoint");
+});
+
+test("recovery follows the recorded adjacent path and view faces each selected hop", () => {
+  const { streetController, returnStreetLink } = modules().navigation;
+  const pano = fakePanorama();
+  let snapshot;
+  const controller = streetController(pano, state => { snapshot = state; });
+  const onRoute = position => position.lat === 35;
+  try {
+    controller.move("B"); pano.settle("B");
+    assert.equal(returnStreetLink(snapshot, onRoute)?.pano, "A");
+    controller.move("C");
+    assert.equal(pano.getPov().heading, 90);
+    pano.settle("C");
+    assert.equal(pano.getPov().heading, 90);
+    assert.equal(returnStreetLink(snapshot, onRoute)?.pano, "B");
+    pano.look(0);
+    assert.equal(pano.getPov().heading, 0, "looking around remains free at rest");
+    controller.move("B"); pano.settle("B");
+    assert.equal(pano.getPov().heading, 270);
+    assert.deepEqual(snapshot.trail.map(node => node.pano), ["A", "B"]);
+    assert.equal(returnStreetLink(snapshot, onRoute)?.pano, "A", "continue returning, do not bounce to C");
+    controller.move("A"); pano.settle("A");
+    assert.equal(returnStreetLink(snapshot, onRoute), null);
+    assert.equal(returnStreetLink({ ...snapshot, position: { lat: 36, lng: 139 }, trail: [] }, onRoute), null, "never invent an unobserved return link");
+  } finally { controller.dispose(); }
+});
+
+test("arrival uses the resolved outdoor node, not distance to a facility center", async () => {
+  const { findStreetArrivalNode, reachedStreetArrival } = modules().navigation;
+  const endpoint = { lat: 35, lng: 139 };
+  let request;
+  const node = await findStreetArrivalNode({
+    StreetViewPreference: { NEAREST: "nearest" }, StreetViewSource: { OUTDOOR: "outdoor", GOOGLE: "google" },
+    StreetViewService: class { async getPanorama(value) { request = value; return { data: { links: [{pano:"road",heading:0}], location: {
+      pano: "outside-gate", latLng: { lat: () => 35, lng: () => 139.0006 },
+    } } }; } },
+  }, endpoint);
+  assert.deepEqual(request.location, endpoint);
+  assert.equal(request.preference, "nearest");
+  assert.deepEqual(request.sources, ["outdoor", "google"]);
+  const state = { pano: "outside-gate", position: node.position, arrivalNode: node, ready: true, busy: false, error: null };
+  assert(api.distanceM(endpoint, node.position) > 30);
+  assert.equal(reachedStreetArrival(state), true);
+  assert.equal(reachedStreetArrival({ ...state, pano: "different-node", position: endpoint }), false);
+  assert.equal(reachedStreetArrival({ ...state, arrivalNode: null }), false);
+  assert.equal(reachedStreetArrival({ ...state, busy: true }), false);
+});
+
+
+test("preflight builds a connected node chain along the selected route rather than shortcutting to the goal", async () => {
+  const { prepareStreetRoute, plannedStreetLink } = modules().plan;
+  const a = { lat: 35, lng: 139 }, b = { lat: 35.0003, lng: 139 }, d = { lat: 35.0006, lng: 139 }, c = { lat: 35.0003, lng: 139.0006 };
+  const nodes = {
+    A: { pano: "A", position: a, links: [{ pano: "B", heading: 0 }] },
+    B: { pano: "B", position: b, links: [{ pano: "A", heading: 180 }, { pano: "C", heading: 90 }, { pano: "D", heading: 0 }] },
+    C: { pano: "C", position: c, links: [] },
+    D: { pano: "D", position: d, links: [{ pano: "B", heading: 180 }, { pano: "C", heading: 120 }] },
+  };
+  let calls = 0;
+  const read = async id => { calls++; return nodes[id]; };
+  const direct = await prepareStreetRoute([a, b, c], "A", "C", read);
+  assert.deepEqual(direct.nodes.map(node => node.pano), ["A", "B", "C"]);
+  assert(calls <= 4, "each panorama is fetched once per preparation");
+  const detour = await prepareStreetRoute([a, b, d, c], "A", "C", read);
+  assert.deepEqual(detour.nodes.map(node => node.pano), ["A", "B", "D", "C"]);
+  for (let i = 0; i < detour.nodes.length - 1; i++) assert(detour.nodes[i].links.some(link => link.pano === detour.nodes[i + 1].pano));
+  const state = { ...nodes.B, ready: true, busy: false, error: null, heading: 270 };
+  assert.equal(plannedStreetLink(state, detour)?.pano, "D");
+  assert.equal(plannedStreetLink({ ...state, links: [] }, detour), null, "changed live connections cannot be fabricated");
+  nodes.B.links = [{ pano: "A", heading: 180 }];
+  await assert.rejects(prepareStreetRoute([a, b, c], "A", "C", read), /接続/);
+  const abort = new AbortController(); abort.abort();
+  await assert.rejects(prepareStreetRoute([a, b, c], "A", "C", read, { signal: abort.signal }), /cancelled/);
+});
+
+test("preflight tolerates sidewalk projection reversals and roadway offsets without coordinate jumps", async () => {
+  const { prepareStreetRoute } = modules().plan;
+  const a = {lat:35,lng:139}, b = {lat:35,lng:139.0014}, corner = {lat:35.0001,lng:139.0014}, goal = {lat:35.0001,lng:139};
+  const nodes = {
+    A: {pano:"A",position:a,links:[{pano:"B",heading:90}]},
+    B: {pano:"B",position:b,links:[{pano:"D",heading:270}]},
+    D: {pano:"D",position:{lat:35.00004,lng:139.0004},links:[{pano:"G",heading:270}]},
+    G: {pano:"G",position:goal,links:[]},
+  };
+  const plan = await prepareStreetRoute([a,b,corner,goal],"A","G",async id=>nodes[id]);
+  assert.deepEqual(plan.nodes.map(n=>n.pano),["A","B","D","G"]);
+  const road = {
+    A:{pano:"A",position:a,links:[{pano:"B",heading:90}]},
+    B:{pano:"B",position:{lat:35.00027,lng:139.0007},links:[{pano:"G",heading:90}]},
+    G:{pano:"G",position:b,links:[]},
+  };
+  assert.equal((await prepareStreetRoute([a,b],"A","G",async id=>road[id])).nodes.length,3);
+});
+
+test("isolated arrival panoramas cannot become a walking goal", async () => {
+  const {findStreetArrivalNode} = modules().navigation;
+  await assert.rejects(findStreetArrivalNode({
+    StreetViewPreference:{NEAREST:"nearest"},StreetViewSource:{OUTDOOR:"outdoor",GOOGLE:"google"},
+    StreetViewService:class {async getPanorama(){return {data:{location:{pano:"isolated",latLng:{lat:()=>35,lng:()=>139}},links:[]}};}},
+  },{lat:35,lng:139}), /no-arrival-node/);
+});
+
+test("preflight distinguishes unavailable data and exploration limits from disconnected roads", async () => {
+  const {prepareStreetRoute} = modules().plan;
+  const a={lat:35,lng:139},b={lat:35,lng:139.001};
+  const read=async id=>{if(id!=="A")throw new Error("unavailable");return {pano:"A",position:a,links:[{pano:"B",heading:90}]};};
+  await assert.rejects(prepareStreetRoute([a,b],"A","B",read),/取得できません/);
+  await assert.rejects(prepareStreetRoute([a,b],"A","B",read,{maxNodes:1}),/地点数/);
+});
+
+test("a disconnected facility tour resolves to a proven road-side node and arrival remains ID-based", async () => {
+  const {prepareStreetRoute} = modules().plan;
+  const {reachedStreetArrival} = modules().navigation;
+  const start={lat:35,lng:139}, road={lat:35.001,lng:139}, facility={lat:35.0012,lng:139};
+  const nodes={A:{pano:"A",position:start,links:[{pano:"R",heading:0}]},R:{pano:"R",position:road,links:[{pano:"A",heading:180}]}};
+  const plan=await prepareStreetRoute([start,road,facility],"A","courtyard",async id=>nodes[id],{goalPosition:facility});
+  assert.equal(plan.arrivalAdjusted,true);
+  assert.deepEqual(plan.nodes.map(n=>n.pano),["A","R"]);
+  const snapshot={pano:"R",position:road,arrivalNode:plan.nodes.at(-1),ready:true,busy:false,error:null};
+  assert.equal(reachedStreetArrival(snapshot),true);
+  assert.equal(reachedStreetArrival({...snapshot,pano:"nearby"}),false);
+  await assert.rejects(prepareStreetRoute([start,road,facility],"A","courtyard",async id=>nodes[id],{goalPosition:{lat:35.002,lng:139}}),/接続/);
+});
+
+test("shelter lookup uses the selected disaster layer and excludes incompatible facilities", async () => {
+  const live = modules(true).api;
+  const before = global.fetch;
+  const urls = [];
+  const feature = (name, flags) => ({geometry:{coordinates:[135.495,34.702]},properties:{name,address:"大阪",...flags}});
+  global.fetch = async url => { urls.push(String(url)); return Response.json({features:[feature("洪水のみ",{disaster1:1}),feature("地震のみ",{disaster4:1}),feature("両方",{disaster1:"1",disaster4:1})]}); };
+  try {
+    const flood = await live.fetchShelters({lat:34.702,lng:135.495},"api","flood");
+    assert.deepEqual(flood.map(s=>s.name),["洪水のみ"]); // duplicate location is shown once
+    assert(flood.every(s=>s.kind.includes("洪水") && s.supportedDisasters.includes("洪水")));
+    assert(urls.every(url=>url.includes("/skhb01/")));
+    urls.length=0;
+    const quake = await live.fetchShelters({lat:34.702,lng:135.495},"api","earthquake");
+    assert.equal(quake[0].name,"地震のみ");
+    assert(urls.every(url=>url.includes("/skhb04/")));
+    global.fetch = async () => new Response(null,{status:503});
+    await assert.rejects(live.fetchShelters({lat:34.702,lng:135.495},"api","flood"),/洪水/);
+  } finally { global.fetch=before; }
+});
+
+test("flood fallback questions stay explicitly synthetic and cannot become earthquake questions", async () => {
+  const route = (await api.fetchRoutes(content.DEMO_HOME,content.DEMO_SHELTERS[0],"mock"))[0];
+  const points = await api.fetchDecisionPoints(route,{source:"sample",scenario:"flood"});
+  assert.equal(points.length,1);
+  assert.equal(points[0].event.id,"practice-flood");
+  assert.equal(points[0].event.evidence,undefined);
+  assert(points[0].event.situation.includes("固定の練習問題"));
+  assert(points[0].event.situation.includes("浸水"));
 });

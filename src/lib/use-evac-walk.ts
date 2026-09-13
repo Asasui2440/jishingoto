@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildWalkSteps, fetchDecisionPoints, fetchDetourFrom } from "./evac-api";
+import { buildWalkSteps, distanceM, fetchDecisionPoints, fetchDetourFrom } from "./evac-api";
 import { getEvac, useEvac } from "./evac";
-import { nextWalkIndex, nextStreetIndex, rerouteWalk } from "./evac-walk";
+import { nextWalkIndex, nextStreetIndex, rerouteWalk, observeStreetPosition } from "./evac-walk";
+import { reachedStreetArrival, type StreetSnapshot } from "./street-navigation";
 import type { EvacChoice } from "./evac-content";
 
 export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: string | null; paused?: boolean } = {}) {
@@ -15,6 +16,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   const [notice, setNotice] = useState<string | null>(null);
   const [timerOverride, setTimerOverride] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const scenario = evac.scenario ?? "earthquake";
   const source = evac.mode === "api" ? evac.analysisMode ?? "geo-ai" : "sample";
   const choosing = useRef(false);
   const mounted = useRef(false);
@@ -27,7 +29,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
-    void fetchDecisionPoints(route, { source, signal: controller.signal }).then((points) => {
+    void fetchDecisionPoints(route, { source, scenario, signal: controller.signal }).then((points) => {
       if (alive) update((prev) => ({ ...prev,
         routes: prev.routes.map((r) => r.id === route.id ? { ...r, eventCount: points.length } : r),
         walk: { source, routeId: route.id, steps: buildWalkSteps(route, points), index: 0 },
@@ -36,18 +38,19 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
       if (alive) setError(problem instanceof Error ? problem.message : "解析できませんでした。再試行してください。");
     });
     return () => { alive = false; controller.abort(); };
-  }, [route, walk, update, source, attempt]);
+  }, [route, walk, update, source, scenario, attempt]);
 
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
-  const pending = step?.event && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
-  const arrived = !!walk && walk.index === walk.steps.length - 1 && !pending;
+  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && distanceM(walk.street.position, step.position) <= 20) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
+  const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending;
 
   const advance = useCallback((jump = false) => {
     if (choosing.current) return;
     setNotice(null);
     setError(null);
     setTimerOverride(null);
+    if (getEvac().mode === "api") return;
     update((prev) => prev.walk ? {
       ...prev,
       walk: { ...prev.walk, index: jump ? nextWalkIndex(prev.walk, prev.decisions.map((d) => d.pointId), true) : nextStreetIndex(prev.walk, prev.decisions.map((d) => d.pointId)) },
@@ -55,36 +58,62 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   }, [update]);
 
   useEffect(() => {
-    if (!walking || !walk || pending || notice || arrived || busy || !sceneReady || paused) return;
+    if (evac.mode === "api" || !walking || !walk || pending || notice || arrived || busy || !sceneReady || paused) return;
     const timer = setTimeout(() => advance(), 1600);
     return () => clearTimeout(timer);
-  }, [walking, walk, pending, notice, arrived, busy, advance, sceneReady, paused]);
+  }, [evac.mode, walking, walk, pending, notice, arrived, busy, advance, sceneReady, paused]);
+
+  // Keep auto-walk enabled while a decision is shown; resume after its notice.
+  useEffect(() => {
+    if (!walking || !notice || pending || busy || paused) return;
+    const timer = setTimeout(() => setNotice(null), 1200);
+    return () => clearTimeout(timer);
+  }, [walking, notice, pending, busy, paused]);
+
+  const observeStreet = useCallback((state: StreetSnapshot) => {
+    if (!state.ready || state.busy || !state.position) return;
+    const position = state.position;
+    const current = getEvac();
+    if (reachedStreetArrival(state)) setWalking(false);
+    const lastPosition = current.walk?.street?.position;
+    if (lastPosition && (lastPosition.lat !== position.lat || lastPosition.lng !== position.lng)) {
+      setNotice(null);
+      setTimerOverride(null);
+    }
+    update(prev => {
+      if (prev.mode !== "api" || !prev.walk) return prev;
+      const last = prev.walk.street?.position;
+      if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state)) return prev;
+      return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state)) };
+    });
+  }, [update]);
 
   const choose = async (choice: EvacChoice, timedOut: boolean) => {
     if (choosing.current || !walk || !step?.event || !step.pointId || !pending) return;
     choosing.current = true;
     setBusy(true);
     setError(null);
-    setWalking(false);
     try {
       const current = getEvac();
       const detour = choice.reroute && current.shelter
-        ? await fetchDetourFrom(step.position, current.shelter, current.mode)
+        ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode, scenario)
         : null;
       if (choice.reroute && !detour) throw new Error("迂回路を取得できませんでした。もう一度試すか、別の行動を選んでください。");
       const excluded = [...current.decisions.map((d) => d.eventId), step.event.id];
       const remaining = Math.max(0, 3 - current.decisions.length - 1);
-      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, excludedEventIds: excluded, maxPoints: remaining }) : [];
+      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded, maxPoints: remaining }) : [];
       if (!mounted.current || getEvac().walk !== walk) return;
       const nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
       // 迂回の移動時間は新しい経路に含まれる。追加時間を二重に加算しない。
-      const decision = { pointId: step.pointId, position: step.position, eventId: step.event.id, choiceId: choice.id, rerouted: !!detour, timedOut, extraSeconds: detour ? 0 : choice.extraSeconds };
+      const decision = { pointId: step.pointId, position: walk.street?.position ?? step.position, eventId: step.event.id, choiceId: choice.id, rerouted: !!detour, timedOut, extraSeconds: detour ? 0 : choice.extraSeconds };
       update((prev) => ({
         ...prev,
         decisions: [...prev.decisions, decision],
         routes: detour ? [...prev.routes, { ...detour, eventCount: points.length }] : prev.routes,
         takenRouteIds: detour ? [...prev.takenRouteIds, detour.id] : prev.takenRouteIds,
-        walk: nextWalk,
+        walk: current.mode === "api" && nextWalk.street
+          ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], false)
+          : nextWalk,
       }));
       setNotice(detour ? "ここから先の経路を更新しました。" : "選んだ行動を記録しました。");
     } catch (e) {
@@ -95,5 +124,5 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     }
   };
 
-  return { evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
+  return { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
 }

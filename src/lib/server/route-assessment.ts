@@ -1,4 +1,7 @@
+import { isEvacScenario, type EvacScenario } from "../evac-scenario";
 import type { LatLng, RouteAssessment } from "../evac-content";
+import { loadRouteRegion } from "./route-geodata";
+import type { Region } from "./geo-analysis";
 import {
   GeoError,
   meters,
@@ -13,7 +16,7 @@ type Candidate = {
   durationS: number;
 };
 
-export type RouteAssessmentRequest = { routes: Candidate[] };
+export type RouteAssessmentRequest = { scenario?: EvacScenario; routes: Candidate[] };
 export type RouteAssessmentResponse = {
   version: "training-google-v1";
   assessments: Record<string, RouteAssessment>;
@@ -26,6 +29,7 @@ export function parseRouteAssessmentRequest(value: unknown): RouteAssessmentRequ
   if (!isObject(value) || !Array.isArray(value.routes) || value.routes.length < 1 || value.routes.length > 4)
     throw new GeoError("invalid_request", "比較する経路を1〜4本指定してください。", 400);
 
+  if (value.scenario !== undefined && !isEvacScenario(value.scenario)) throw new GeoError("invalid_request", "災害ケースを選び直してください。", 400);
   const ids = new Set<string>();
   const routes = value.routes.map((raw): Candidate => {
     if (
@@ -66,7 +70,7 @@ export function parseRouteAssessmentRequest(value: unknown): RouteAssessmentRequ
       throw new GeoError("route_too_long", "解析できる経路は20km以内です。", 400);
     return { id: raw.id, path, distanceM: raw.distanceM, durationS: raw.durationS };
   });
-  return { routes };
+  return { routes, scenario: value.scenario ?? "earthquake" };
 }
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
@@ -79,7 +83,7 @@ const rounded = (value: number) => Math.round(value / 10) * 10;
  * を、Google候補経路へ適用する。道路幅・建物・現況は未収録なので15/30点を
  * 暫定付与する。指数は候補比較専用で、安全度や生存率ではない。
  */
-export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAssessmentResponse {
+export function assessRouteCandidates(request: RouteAssessmentRequest, resolveRegion: (path: LatLng[]) => Region = routeRegion): RouteAssessmentResponse {
   const baselineDistance = Math.min(...request.routes.map((route) => route.distanceM));
   const baselineDuration = Math.min(...request.routes.map((route) => route.durationS));
   const calculated: {
@@ -88,8 +92,8 @@ export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAss
     assessment: RouteAssessment;
   }[] = request.routes.map((route) => {
     try {
-      const region = routeRegion(route.path);
-      const terrain = terrainExposure(region, route.path);
+      const region = resolveRegion(route.path);
+      const terrain = terrainExposure(region, route.path, request.scenario ?? "earthquake");
       const terrainPoints = 20 * (1 - clamp(terrain.anyAttentionM / Math.max(1, route.distanceM)));
       const comparisonScore = Math.round(
         30 +
@@ -110,7 +114,7 @@ export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAss
           terrain,
           notes: [
             `収録[しゅうろく]した地形[ちけい]から注意[ちゅうい]を考[かんが]える区間[くかん]は約[やく]${rounded(terrain.anyAttentionM)}m`,
-            terrain.slopeM > 0
+            request.scenario === "flood" ? `洪水[こうずい]・浸水[しんすい]への注意[ちゅうい]を考[かんが]える地形[ちけい]の近[ちか]くは約[やく]${rounded(terrain.floodM ?? 0)}m（浸水想定区域[しんすいそうていくいき]・浸水深[しんすいしん]の評価[ひょうか]ではありません）` : terrain.slopeM > 0
               ? `斜面[しゃめん]に関係[かんけい]する地形[ちけい]の近[ちか]くは約[やく]${rounded(terrain.slopeM)}m`
               : "斜面[しゃめん]に関係[かんけい]する地形[ちけい]の近接区間[きんせつくかん]は今回[こんかい]の収録[しゅうろく]データでは0m",
             "道路幅[どうろはば]・建物[たてもの]・現在[げんざい]の通行状況[つうこうじょうきょう]は未評価[みひょうか]",
@@ -120,7 +124,7 @@ export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAss
         } satisfies RouteAssessment,
       };
     } catch (error) {
-      if (!(error instanceof GeoError) || error.code !== "outside_coverage") throw error;
+      if (!(error instanceof GeoError) || !["outside_coverage", "geodata_unavailable", "geodata_too_large"].includes(error.code)) throw error;
       return {
         route,
         comparisonScore: null,
@@ -132,7 +136,7 @@ export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAss
           provisional: true,
           terrain: null,
           notes: [
-            "この経路[けいろ]は収録済[しゅうろくず]み地形[ちけい]データの範囲外[はんいがい]です",
+            error.code === "outside_coverage" ? "この経路[けいろ]には地形[ちけい]データの範囲外[はんいがい]が含[ふく]まれます" : "この経路[けいろ]の地形[ちけい]データを取得[しゅとく]できませんでした",
             "Googleの距離[きょり]・時間[じかん]だけを比較[ひかく]できます",
           ],
           source: null,
@@ -156,4 +160,14 @@ export function assessRouteCandidates(request: RouteAssessmentRequest): RouteAss
     version: "training-google-v1",
     assessments: Object.fromEntries(calculated.map((item) => [item.route.id, item.assessment])),
   };
+}
+
+export async function assessDynamicRouteCandidates(request: RouteAssessmentRequest, signal?: AbortSignal, fetcher: typeof fetch = fetch) {
+  const results = await Promise.allSettled(request.routes.map((route) => loadRouteRegion(route.path, signal, fetcher)));
+  return assessRouteCandidates(request, (path) => {
+    const index = request.routes.findIndex((route) => route.path === path);
+    const result = results[index];
+    if (result.status === "rejected") throw result.reason;
+    return result.value;
+  });
 }

@@ -1,10 +1,11 @@
 import { GeoError } from "@/lib/server/geo-analysis";
 import {
-  assessRouteCandidates,
+  assessDynamicRouteCandidates,
   parseRouteAssessmentRequest,
 } from "@/lib/server/route-assessment";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     } catch {
       throw new GeoError("invalid_request", "経路データの形式が正しくありません。", 400);
     }
-    return Response.json(assessRouteCandidates(parseRouteAssessmentRequest(raw)), {
+    return Response.json(await assessDynamicRouteCandidates(parseRouteAssessmentRequest(raw), request.signal), {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

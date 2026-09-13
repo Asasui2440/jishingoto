@@ -1,5 +1,5 @@
 import type { HazardEvent, LatLng } from "./evac-content";
-export type GeoCategory = "slope" | "liquefaction" | "shaking";
+export type GeoCategory = "slope" | "liquefaction" | "shaking" | "flood";
 export type GeoEvidence = {
   featureId: string;
   code: string;
