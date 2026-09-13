@@ -1,0 +1,23 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "key": "cupboard-v13",
+      "ref": "public/illustrations/actions/cupboard-dishes-v11.png",
+      "prompt": "Edit this illustration maintaining the exact warm hand-drawn Japanese anime style, kitchen and cabinet, palette, framing and safe placement of dishes on LOW shelf. Replace the mother and girl with ONE adult father only, calmly kneeling and placing the stack of heavy dishes onto the low shelf with BOTH hands. No child, no other person. Father wears a softly checked casual shirt with rolled cuffs and well-fitting dark trousers. Natural anatomy, serious focused expression, no apron stereotype, no text, 1536x1024 landscape. Keep dishes not books.",
+      "output": "public/illustrations/actions/cupboard-v13.png"
+    },
+    {
+      "key": "lower-items-v13",
+      "ref": "public/illustrations/actions/lower-items-v11.png",
+      "prompt": "Edit reference, preserve warm Japanese anime drawing style, room, shelf, composition, older boy clothes and father clothes. Remove thin green book from boy's hands: boy simply watches with both empty hands resting naturally on his thighs. Father uses both hands to put a compact rectangular household storage box on the LOWEST shelf rather than books. Clearly show the box fully supported on shelf, no toys. Existing books on other shelves can remain. This illustrates moving heavy items to low storage before an earthquake. No text, no extra people or hands, natural anatomy, landscape 1536x1024.",
+      "output": "public/illustrations/actions/lower-items-v13.png"
+    },
+    {
+      "key": "foot-safety-v13",
+      "ref": "public/illustrations/review/foot-safety-v11.png",
+      "prompt": "Redraw scene to explain checking a blocked floor after an earthquake, keeping EXACT warm hand-drawn Japanese anime style of reference, muted olive striped layered clothes, realistic upper-elementary 11-year-old proportions and serious concerned expression, same cozy home. Wide landscape, elevated three-quarter view so floor is legible. Boy remains seated on sofa with BOTH feet safely drawn up on the sofa cushion, not touching floor, looking toward shards of broken glass scattered on wooden floor between sofa and doorway. One hand holds a smartphone near mouth as he CALLS for help, other hand resting on cushion. Visible modest glass debris zone from fallen picture frame, no blood, no injuries, no fire, no rubble pile. Doorway in background, some intact furniture. No flashlight cone, no inexplicable shoes beside bare feet, no floating glass, no text, no speech bubbles. Clear visual: do not step onto scattered glass; stay off floor and call someone to help clear a route. 1536x1024.",
+      "output": "public/illustrations/review/foot-safety-v13.png"
+    }
+  ]
+}

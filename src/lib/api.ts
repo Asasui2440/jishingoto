@@ -8,7 +8,7 @@ import {
   type RoomObjectType,
 } from "./content";
 import { adultText } from "./adult-copy";
-import { roomObjectType, EXIT_EXPLANATION } from "./room-guidance";
+import { roomObjectType, isCooktop, EXIT_EXPLANATION } from "./room-guidance";
 import { HOME_KITCHEN_AFTER, shuffleChoices, type RoomSetting } from "./scenarios";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,7 +74,8 @@ function questionForRisk(risk: Risk, index: number): Question {
   const y = Math.max(0, Math.min(100, risk.y - 18));
   const region = risk.bounds ?? { x, y, w: Math.min(26, 100 - x), h: Math.min(36, 100 - y) };
   const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { ...region, label: risk.name }, seconds: 10 };
-  if (type === "desk") return { ...common, axis: "initial", category: "しゅんかん判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
+  if (isCooktop(risk)) return { ...HOME_KITCHEN_AFTER, ...common, id: HOME_KITCHEN_AFTER.id, seconds: 12 };
+  if (type === "desk") return { ...common, axis: "initial", category: "瞬間判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
   if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が棚から落ちそうです。`, choices: SIMPLE_CHOICES.move };
   if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
   if (type === "window") {
@@ -87,6 +88,7 @@ function questionForRisk(risk: Risk, index: number): Question {
 }
 
 export function withAdultSituation(question: Question, risk: Risk): Question {
+  if (question.id === HOME_KITCHEN_AFTER.id) return question;
   const name = adultText(risk.adultName ?? risk.name);
   const type = roomObjectType(risk);
   let adultSituation = `${name}の近くで強い揺れが始まりました。どのように行動しますか。`;
@@ -109,21 +111,22 @@ function pickMany<T>(items: T[], count: number, random: () => number): T[] {
   return pool.slice(0, count);
 }
 
-/** 写真で見つけた物体を中心に出題。自宅では揺れの後の火の元確認も扱う。 */
-export async function fetchQuestions(risks: Risk[], setting: RoomSetting = "home", random = Math.random): Promise<Question[]> {
+/** 写真で確認したコンロだけ火の元の問題を出す。 */
+export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "home", random = Math.random): Promise<Question[]> {
   const roomQuestions = risks.filter((risk) => risk.confirmed).map((risk, index) => withAdultSituation(questionForRisk(risk, index), risk));
   const desk = roomQuestions.find((q) => q.choices.some((choice) => choice.id === "under-desk"));
   const duringPool = roomQuestions.filter((q) => q.axis === "initial" && q.id !== desk?.id);
   const during: Question[] = [...(desk ? [desk] : []), ...pickMany(duringPool, desk ? 1 : 2, random)];
-  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "しゅんかん判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
-  const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial"), 1, random);
+  if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "瞬間判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
+  const kitchen = roomQuestions.find(q => q.id === HOME_KITCHEN_AFTER.id);
+  const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial" && q.id !== HOME_KITCHEN_AFTER.id), 1, random);
   const information = QUESTIONS.find((q) => q.id === "q5")!;
   return during.map((q): Question => ({ ...q, phase: "during" }))
-    .concat([...afterRoom, ...(setting === "home" ? [HOME_KITCHEN_AFTER] : []), information].map((q): Question => ({ ...q, phase: "after" })))
+    .concat([...afterRoom, ...(kitchen ? [kitchen] : []), information].map((q): Question => ({ ...q, phase: "after" })))
     .map((q) => shuffleChoices(q, random));
 }
 
-export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test" };
+export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test"; error?: string };
 const AFTERMATH_TEXT: Record<Risk["kind"], string> = { fall: "たおれたり落[お]ちたりして、人[ひと]に当[あ]たるかもしれない", break: "われて、床[ゆか]に破片[はへん]が散[ち]らばるかもしれない", block: "動[うご]いたりくずれたりして、床[ゆか]の通[とお]り道[みち]をふさぐかもしれない" };
 
 export function aftermathEvents(risks: Risk[]): Aftermath["events"] {
@@ -141,13 +144,21 @@ export function aftermathEvents(risks: Risk[]): Aftermath["events"] {
 
 export async function generateAftermath(photo: string | null): Promise<Aftermath> {
   const events: Aftermath["events"] = [];
-  if (!photo?.startsWith("data:image/")) return { imageUrl: null, events, source: "preview" };
+  if (!photo?.startsWith("data:image/")) return { imageUrl: null, events, source: "preview", error: "写真がありません。写真を選び直してください。" };
   try {
     const response = await fetch("/api/room/aftermath", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photo }) });
-    if (!response.ok) throw new Error("generation failed");
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({})) as { error?: string };
+      const messages: Record<string, string> = {
+        "openai-not-configured": "画像生成の設定がまだ完了していません。",
+        "openai-rate-limit": "画像生成が混み合っているか、利用上限に達しています。時間をおいて試してください。",
+        "openai-timeout": "画像生成に時間がかかりすぎました。もう一度試してください。",
+      };
+      return { imageUrl: null, events, source: "preview", error: messages[failure.error ?? ""] ?? "予想図を生成できませんでした。もう一度試してください。" };
+    }
     const body = (await response.json()) as { imageUrl?: string };
     return { imageUrl: body.imageUrl ?? null, events, source: body.imageUrl ? "ai" : "preview" };
   } catch {
-    return { imageUrl: null, events, source: "preview" };
+    return { imageUrl: null, events, source: "preview", error: "通信できませんでした。接続を確認して、もう一度試してください。" };
   }
 }

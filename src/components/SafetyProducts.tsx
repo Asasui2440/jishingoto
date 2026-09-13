@@ -32,7 +32,10 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
         {products.map((product) => (
           <li key={product.id} className="px-[18px] py-4">
             <div className="flex items-start gap-3">
-              <Image src={`/illustrations/products/${product.id}.png`} alt={`${product.name}の種類を示すイラスト`} width={160} height={160} className="size-20 shrink-0 rounded-field object-contain" />
+              <figure className="w-24 shrink-0">
+                <Image src={`/illustrations/products/${product.id}.png`} alt={product.id === "furniture-anchor" ? "家具転倒防止用の突っ張り棒2本とL字金具" : `${product.name}の種類を示すイラスト`} width={160} height={160} className="size-24 rounded-field object-contain" />
+                {product.id === "furniture-anchor" && <figcaption className="mt-1 text-center text-xs leading-relaxed"><Furigana text="突[つ]っ張[ぱ]り棒[ぼう]・L字金具" /></figcaption>}
+              </figure>
               <div className="min-w-0 flex-1">
                 <p className="font-display text-sm font-bold text-ink">
                   {adult ? product.name : <Furigana text={product.easyName} />}

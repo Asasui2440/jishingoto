@@ -1,0 +1,6 @@
+{
+  "tool": "image_gen",
+  "reference": "public/illustrations/review/desk-hold-v11.png",
+  "output": "public/illustrations/review/desk-hold-v12.png",
+  "prompt": "Edit only the safety pose/table geometry of this reference, retain exact warm anime style, 11-year-old boy face, mustard overshirt and striped shirt, olive trousers, serious expression and home. He remains FULLY under sturdy rectangular FOUR-LEGGED wooden table, kneeling low with head/back under tabletop. CHANGE: EACH hand holds a DIFFERENT table leg. Left hand wraps LEFT leg, right hand wraps RIGHT leg, one arm per leg. Show him from front/three-quarter looking across the SHORT END of table (about 65cm wide) so the two short-end legs are within comfortable reach, his body BETWEEN those legs, each hand naturally wrapping its own leg about 20cm above floor. Both knees on floor, torso tilted low forward, crawl-like posture, no sitting upright. Exactly two arms two hands, hands visibly separated by his shoulder-width, NO both hands on sameleg, NO extra fifth leg. Four tablelegs must support the four corners realistically. Do not change clothes, age, expression, palette. No text or framing."
+}

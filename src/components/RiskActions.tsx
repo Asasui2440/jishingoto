@@ -96,10 +96,10 @@ export function RiskActions({ photoUrl, risks }: { photoUrl: string | null; risk
                 {specific.steps.map((text, i) => <li key={text} className="flex gap-2 text-13"><span className="font-bold text-primary-ink">{i + 1}</span><Furigana text={text} /></li>)}
               </ol>
             </div>
-            <div className="mt-3 rounded-field bg-canvas p-3">
+            {specific.detail && <div className="mt-3 rounded-field bg-canvas p-3">
               <h3 className="min-h-6 text-13 font-bold"><Furigana text="対策[たいさく]のポイント" adult="対策の詳細・注意点" /></h3>
               <p className="mt-2 text-base leading-relaxed"><Furigana text={specific.detail} /></p>
-            </div>
+            </div>}
             <div className="mt-3"><SafetyProducts risks={[selected]} /></div>
       </article>}
       <div className="border-t border-border p-4">

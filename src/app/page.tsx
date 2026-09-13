@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import heroRoom from "@/../public/figma/img/hero-room.jpg";
-import { ArrowRightIcon, CameraBlueIcon, LogoCircleXIcon, ShieldCheckIcon } from "@/components/icons";
+import { ArrowRightIcon, CameraBlueIcon, LogoCircleXIcon } from "@/components/icons";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { IconChip } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
@@ -18,12 +18,10 @@ type InfoItem = { Icon: typeof CameraBlueIcon; bg: string; fg: string; title: st
 
 const INFO = {
   child: [
-    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋の写真から、地震[じしん]への備[そな]えを考えよう", body: "AIが見つけた危険[きけん]な場所を確認[かくにん]し、行動をシミュレーション" },
-    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "送信前に、顔や住所を隠[かく]せます", body: "必要[ひつよう]のない情報[じょうほう]を隠[かく]した写真を、部屋の確認[かくにん]と予想図[よそうず]づくりに使います" },
+    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋の写真から、地震[じしん]への備[そな]えを考えよう", body: "AIが見つけた気になる場所を確認[かくにん]し、行動をシミュレーション" },
   ],
   adult: [
-    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "室内写真から地震時の危険箇所を確認", body: "AIが家具の転倒、ガラスの飛散、避難経路の閉塞などを検出します" },
-    { Icon: ShieldCheckIcon, bg: "var(--color-safe-soft)", fg: "var(--color-safe)", title: "送信前に個人情報をマスク", body: "確認後の写真をOpenAIへ送り、室内の解析と予想図の生成に使用します" },
+    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "室内写真から地震時に気になる箇所を確認", body: "AIが家具の転倒やガラスの飛散などの可能性がある箇所を候補として示します" },
   ],
 } satisfies Record<Audience, InfoItem[]>;
 
@@ -54,7 +52,7 @@ export default function OnboardingPage() {
         </header>
 
         <div role="radiogroup" aria-label="表示モード" className="grid grid-cols-2 gap-1 rounded-tile bg-border p-1">
-          {([ ["child", "小学校高学年"], ["adult", "大人向け"] ] as const).map(([value, label]) => {
+          {([ ["child", "小学生"], ["adult", "大人向け"] ] as const).map(([value, label]) => {
             const active = audience === value;
             return (
               <button
@@ -68,7 +66,7 @@ export default function OnboardingPage() {
                   active ? "bg-surface text-ink shadow-sm" : "text-ink-soft",
                 ].join(" ")}
               >
-                {label}
+                <span>{value === "child" ? `${label}向け` : label}</span>
               </button>
             );
           })}
@@ -79,8 +77,8 @@ export default function OnboardingPage() {
           <span aria-hidden className="absolute inset-0 bg-white/[0.18]" />
         </div>
 
-        <h1 className="text-center font-display text-28 leading-[1.3] font-extrabold text-ink">
-          {adult ? "室内の地震リスクを確認しましょう" : <Furigana text="自分[じぶん]の部屋[へや]の安全[あんぜん]、確[たし]かめよう" />}
+        <h1 className={`text-center font-display leading-[1.3] font-extrabold text-ink whitespace-nowrap text-[clamp(15px,4.8vw,20px)]`}>
+          {adult ? "室内の地震リスクを確認" : <Furigana text="自分[じぶん]の部屋[へや]の安全[あんぜん]、確[たし]かめよう" />}
         </h1>
 
         <Button onClick={start}>

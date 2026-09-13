@@ -7,10 +7,16 @@ const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 let audience = 'child';
+let savedStep = 0;
 function load(file) {
   const mod = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   new Function('require', 'module', 'exports', code)((p) => {
+    if (/\.(jpg|png|webp)$/.test(p)) return { default: { src: p, width: 1536, height: 1024 } };
+    if (p === 'next/navigation') return { useRouter: () => ({ push() {}, replace() {} }) };
+    if (p === '@/lib/session') return { useSession: () => ({ answers: [], risks: [], questions: [], photoUrl: null, checked: [], resultStep: savedStep }), getSession: () => ({ finishedAt: 1 }), strengths: () => [], scoreByAxis: () => ({ initial: null, judgement: null, room: null, evacuation: null }) };
+    if (p === '@/components/ui/Button') return { Button: ({ children, disabled }) => React.createElement('button', { disabled }, children) };
+    if (p === '@/components/ui/Screen') return { StatusBar: () => null, DisclaimerFooter: () => null };
     if (p === '@/lib/settings') return { useSettings: () => ({ audience }) };
     if (p === 'next/image') return { default: (props) => React.createElement('img', props) };
     if (p === '@/components/ui/Card') return { Card: ({ children }) => React.createElement('section', null, children) };
@@ -56,4 +62,28 @@ test('action review distinguishes safe, risky and timed-out answers without righ
   for (const html of [render(safe), render(risky), timed]) {
     assert.doesNotMatch(html, /正解|不正解|AI生成の説明用イラスト/);
   }
+});
+
+
+const { default: SharePage } = load('src/app/share/page.tsx');
+test('child results offer LINE and saving while adult results also offer X', () => {
+  audience = 'child';
+  const child = renderToStaticMarkup(React.createElement(SharePage));
+  assert.doesNotMatch(child, /Xで共有|X・LINE|予想図を共有|SNS/);
+  assert.match(child, /LINEで共有/);
+  assert.match(child, /結果サマリーを画像で保存/);
+  audience = 'adult';
+  const adult = renderToStaticMarkup(React.createElement(SharePage));
+  assert.match(adult, /Xで共有/);
+  assert.match(adult, /LINEで共有/);
+  assert.doesNotMatch(adult, /画像2枚を共有する|が見つからない場合|共有先でLINEを選んで/);
+});
+
+const { default: ResultPage } = load('src/app/result/page.tsx');
+test('result remount restores the saved final step after visiting share', () => {
+  savedStep = 1;
+  const html = renderToStaticMarkup(React.createElement(ResultPage));
+  assert.match(html, /今日からできること/);
+  assert.doesNotMatch(html, /行動の振り返り 1/);
+  savedStep = 0;
 });

@@ -9,8 +9,9 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 let analysisJob: { photo: string | null; promise: Promise<RoomAnalysis> } | null = null;
 let imageJob: { photo: string | null; promise: Promise<Aftermath>; result: Aftermath | null } | null = null;
 
-export function prepareAftermath(photo: string | null, risks: Risk[]): Promise<Aftermath> {
-  if (imageJob?.photo === photo) return imageJob.promise.then((result) => ({ ...result, events: aftermathEvents(risks) }));
+export function prepareAftermath(photo: string | null, risks: Risk[], retry = false): Promise<Aftermath> {
+  if (!photo && roomTestOptions().mode !== "fixture") return generateAftermath(null);
+  if (imageJob?.photo === photo && !(retry && imageJob.result?.source === "preview")) return imageJob.promise.then((result) => ({ ...result, events: aftermathEvents(risks) }));
   const options = roomTestOptions();
   const finish = startRoomTiming("image");
   const promise: Promise<Aftermath> = options.mode === "fixture"
@@ -48,4 +49,11 @@ export function clearRoomPreparation() {
   analysisJob = null;
   imageJob = null;
   resetRoomTimings();
+}
+
+/** 同意・マスク確定後の画像だけで、解析と予想図生成を並行して開始する。 */
+export function prepareMaskedRoom(photo: string): Promise<RoomAnalysis> {
+  const analysis = prepareRoom(photo);
+  void prepareAftermath(photo, []);
+  return analysis;
 }

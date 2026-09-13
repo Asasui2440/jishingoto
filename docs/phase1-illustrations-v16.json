@@ -1,0 +1,13 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "output": "public/illustrations/actions/lower-items-v16.png",
+      "prompt": "Edit this explanatory warm Japanese anime illustration. Replace the held flower vase with a compact stack of THREE thick hardcover reference books, supported securely from underneath with BOTH hands. Adult bends knees slightly and lowers the stack into the LOWEST open shelf at knee height. Cabinet TOP is now clear, with only picture frame remaining; remove the vase and plant from its top. Communicate moving small heavy objects from cabinet top down to low storage. Same adult checked shirt, natural proportions, room style. No child, no labels, no arrows, no boxes or vases. Wide landscape."
+    },
+    {
+      "output": "public/illustrations/review/check-floor-v16.png",
+      "prompt": "Edit this image, preserving boy safely kneeling on sofa with both socked feet entirely on cushion, looking toward exit, same clothes age11 warm anime style and room. Increase earthquake aftermath disorder substantially: many fallen books and household objects on floor below bookshelf and cabinet, broken glass shards and ceramic pieces spread visibly across the right and middle floor, a fallen picture frame, shifted rug and opened cupboard door. Show a clearly recognisable disrupted room after earthquake, not a mostly pristine room with tiny corner spill. Keep one narrower continuous clear route visible from sofa toward doorway along left side around debris. Do not place debris on sofa, do not change boy pose or give him shoes/phone. No injuries, no fire, no text/arrows. Preserve warm highquality drawing."
+    }
+  ]
+}

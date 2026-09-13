@@ -40,7 +40,7 @@ export default function AnalysisLoadingPage() {
       void prepareRoom(photoUrl).then((analysis) => {
         if (!alive) return;
         update({
-          ...(analysis.source === "demo" ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
+          ...(analysis.source === "demo" && !photoUrl ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
           risks: analysis.risks,
           analysisSource: analysis.source,
           analysisWarning: analysis.warning ?? null,
@@ -140,7 +140,7 @@ export default function AnalysisLoadingPage() {
           <p className="mt-2 text-base leading-relaxed">
             <Furigana text={trivia.body} adult={trivia.adultBody} />
           </p>
-          <p className="mt-2 text-base leading-relaxed text-ink-muted"><Furigana text={trivia.note} adult={trivia.adultNote} /></p>
+          {(trivia.note || trivia.adultNote) && <p className="mt-2 text-base leading-relaxed text-ink-muted"><Furigana text={trivia.note} adult={trivia.adultNote} /></p>}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline">{trivia.source.title}</a>
             <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="min-h-11 rounded-pill bg-surface px-4 text-base font-bold"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>

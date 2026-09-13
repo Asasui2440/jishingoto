@@ -32,7 +32,7 @@ const LABELS: Record<string, string> = {
   "初動たいおう": "初動対応[しょどうたいおう]",
   "ひなん安全性": "避難[ひなん]の安全性[あんぜんせい]",
   "部屋のそなえ": "部屋の備[そな]え",
-  "しゅんかん判断": "とっさの判断[はんだん]",
+  "瞬間判断": "瞬間[しゅんかん]判断[はんだん]",
   "ゆれがおさまったあと": "揺[ゆ]れが収[おさ]まった後",
   "ゆれがおさまったあと・キッチン": "揺[ゆ]れが収[おさ]まった後・キッチン",
   "ゆれのさいちゅう": "揺[ゆ]れている間",
@@ -43,5 +43,5 @@ const LABELS: Record<string, string> = {
 };
 export function upperElementaryText(text: string): string {
   const key = text.replace(/\[[^\]]*\]/g, "");
-  return LABELS[key] ?? text.replaceAll("テレビ受像機", "テレビ");
+  return LABELS[key] ?? text.replaceAll("テレビ受像機", "テレビ").replaceAll("高層収納家具", "背の高い収納家具").replaceAll("背高収納家具", "背の高い収納家具").replaceAll("しゅんかん", "瞬間").replaceAll("あつかい", "扱い").replaceAll("ばめんで", "場面で");
 }

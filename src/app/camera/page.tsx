@@ -7,8 +7,6 @@ import roomCamera from "@/../public/figma/img/room-camera.jpg";
 import {
   AlertOctagonIcon,
   CameraWhiteIcon,
-  CheckCheckIcon,
-  XCircleRedIcon,
 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
@@ -28,7 +26,7 @@ export default function CameraGuidePage() {
   const router = useRouter();
   const { update } = useSession();
   const vibrate = useHaptics();
-  const { videoRef, state, start, capture } = useCamera();
+  const { videoRef, state, start, stop, capture } = useCamera();
   const fileRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"choose" | "camera">("choose");
   const [busy, setBusy] = useState(false);
@@ -77,7 +75,8 @@ export default function CameraGuidePage() {
         <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・背の高い家具まで広く入れた部屋のイラスト" className="h-auto w-full rounded-panel" priority />
         <div className="rounded-panel bg-primary-soft p-4 text-base leading-relaxed">
           <p className="font-bold"><Furigana text="部屋全体が入るように撮[と]ろう" adult="部屋全体を撮影してください" /></p>
-          <p className="mt-2"><Furigana text="床[ゆか]・出入口・背[せ]の高い家具も入れよう。無理に下がらず、安全な場所から撮[と]ること。" adult="床・出入口・背の高い家具も含めてください。無理に後退せず、安全な位置から撮影してください。" /></p>
+          <p className="mt-2"><Furigana text="床から家具の上まで、部屋が広く写るようにしよう！" adult="床から家具の上まで、部屋を広く写しましょう。" /></p>
+          <div className="mt-3 grid grid-cols-3 gap-2">{["床", "出入口", "家具の上"].map((label, i) => <div key={label} className="flex flex-col items-center gap-1 rounded-field bg-surface px-2 py-3 font-bold"><span className="grid size-7 place-items-center rounded-full bg-primary text-sm">{i + 1}</span><span>{label}</span></div>)}</div>
         </div>
         <div className="flex flex-col items-center gap-3">
           <Button onClick={() => setMode("camera")} disabled={busy}><CameraWhiteIcon className="size-5" /><Furigana text="写真[しゃしん]を撮[と]る" /></Button>
@@ -96,10 +95,10 @@ export default function CameraGuidePage() {
     <div className="flex min-h-dvh flex-col justify-between bg-ink">
       <div>
         <StatusBar tone="light" />
-        <div className="flex items-center gap-2 bg-danger-soft px-4 py-3">
+        <div className="flex items-center gap-2 bg-primary-soft px-4 py-3">
           <AlertOctagonIcon className="size-[18px] shrink-0" />
-          <p className="font-display text-13 font-bold text-danger">
-            <Furigana text="人[ひと]やじゅうしょ（郵便物[ゆうびんぶつ]など）がうつらないようにしよう" />
+          <p className="font-display text-13 font-bold text-primary-ink">
+            <Furigana text="顔や住所が写った場合は、次の画面で隠せます" />
           </p>
         </div>
       </div>
@@ -150,31 +149,12 @@ export default function CameraGuidePage() {
         </div>
       </div>
 
-      <div className="flex justify-center gap-4 px-6">
-        <div className="flex flex-1 flex-col items-center gap-1.5">
-          <div className="grid size-[72px] place-items-center rounded-tile border-[3px] border-safe bg-white/15">
-            <CheckCheckIcon className="size-10" />
-          </div>
-          <p className="font-display text-xs font-bold text-safe">
-            <Furigana text="ひろく撮[と]る (OK)" />
-          </p>
-        </div>
-        <div className="flex flex-1 flex-col items-center gap-1.5">
-          <div className="grid size-[72px] place-items-center rounded-tile border-2 border-danger bg-white/5">
-            <XCircleRedIcon className="size-10" />
-          </div>
-          <p className="font-display text-xs font-bold text-ink-faint">
-            <Furigana text="ちかすぎる (ダメ)" />
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
         <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline">APIを使わずテストする</button>
         {!usingFallback ? (
           <Button onClick={onShoot} disabled={busy || state !== "live"}>
             <CameraWhiteIcon className="size-5 text-ink" />
-            <Furigana text="さつえいする" />
+            <Furigana text="撮影する" />
           </Button>
         ) : null}
         {busy ? <p role="status" className="text-sm text-white"><Furigana text="写真[しゃしん]を準備中[じゅんびちゅう]…" /></p> : null}
@@ -191,10 +171,10 @@ export default function CameraGuidePage() {
         ) : null}
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => { stop(); setMode("choose"); }}
               className="font-display text-sm font-bold text-white underline underline-offset-2"
             >
-              <Furigana text="ホーム画面へ" adult="ホーム画面へ" />
+              <Furigana text="戻る" adult="戻る" />
             </button>
       </div>
 

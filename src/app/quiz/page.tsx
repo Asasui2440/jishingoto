@@ -16,7 +16,8 @@ import { getSession, useSession } from "@/lib/session";
 import { playRumble, playTick } from "@/lib/audio";
 
 /** 揺れの演出を出す長さ。最初の1問だけ鳴らす */
-const SHAKE_MS = 800;
+const SHAKE_MS = 1600;
+const BEFORE_SHAKE_MS = 700;
 
 /**
  * 1問ぶんの出題。
@@ -43,16 +44,25 @@ function QuestionView({
   const { sound, audience } = useSettings();
   const vibrate = useHaptics();
   const [remaining, setRemaining] = useState(question.seconds > 0 ? question.seconds : null);
-  const [shaking, setShaking] = useState(shake);
+  const [shaking, setShaking] = useState(false);
+  const [intro, setIntro] = useState(shake);
 
   // 地震の演出は最初の1問だけ。毎問やると体験が間延びする。
   useEffect(() => {
     if (!shake) return;
-    const stopSound = sound ? playRumble(SHAKE_MS / 1000) : null;
-    vibrate(60);
-    const id = setTimeout(() => setShaking(false), SHAKE_MS);
+    let stopSound: (() => void) | null = null;
+    const startId = setTimeout(() => {
+      setShaking(true);
+      stopSound = sound ? playRumble(SHAKE_MS / 1000) : null;
+      vibrate(60);
+    }, BEFORE_SHAKE_MS);
+    const endId = setTimeout(() => {
+      setShaking(false);
+      setIntro(false);
+    }, BEFORE_SHAKE_MS + SHAKE_MS);
     return () => {
-      clearTimeout(id);
+      clearTimeout(startId);
+      clearTimeout(endId);
       stopSound?.();
     };
     // 出題ごとに1回だけ。音の設定を途中で変えても鳴らし直さない。
@@ -61,18 +71,19 @@ function QuestionView({
 
   // 制限時間。0 になったら「迷っているうちに時間切れ」として最後の選択肢で進む。
   useEffect(() => {
-    if (remaining === null) return;
+    if (remaining === null || intro) return;
     const id = setTimeout(() => {
       if (remaining <= 1) onAnswer(question.choices[question.choices.length - 1], true);
       else setRemaining(remaining - 1);
     }, 1000);
     return () => clearTimeout(id);
-  }, [remaining, question, onAnswer]);
+  }, [remaining, question, onAnswer, intro]);
 
   const kind = question.riskKind ? RISK_KINDS[question.riskKind] : null;
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
+      {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold">この部屋で地震が発生</p><p className="mt-3 text-3xl font-black">揺れが始まりました！</p></div></div>}
       <div>
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
@@ -87,6 +98,7 @@ function QuestionView({
             音・振動: {sound ? "ON" : "OFF"}
           </span>
         </div>
+        {index === 0 && <p className="mx-6 mt-3 rounded-field bg-warn-soft p-3 text-lg font-bold">揺れが始まりました！ あなたならどうする？</p>}
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
           <p className="mb-2 text-13 font-bold text-primary-ink" aria-live="polite">
@@ -119,11 +131,9 @@ function QuestionView({
           </p>
         </Card>
 
-        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted">{question.id === "home-kitchen-after" ? "自宅のキッチンを想定した共通の問題です。" : "どの部屋でも役立つ共通の問題です。"}</p>}
+        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
         {(question.sourceRiskId || question.id === "home-kitchen-after") && <div className="relative w-full overflow-hidden rounded-panel bg-ink">
-          {question.id === "home-kitchen-after" ? (
-            <Image src="/illustrations/actions/kitchen-question-v8.png" alt="調理中のコンロがあるキッチンの想定イラスト" width={1536} height={1024} className="h-auto w-full" />
-          ) : photoUrl ? (
+          {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
@@ -177,6 +187,7 @@ function QuestionView({
             <li key={c.id}>
               <button
                 type="button"
+                disabled={intro}
                 onClick={() => onAnswer(c, false)}
                 className="flex w-full items-center gap-3 rounded-tile border border-border bg-surface p-3.5 text-left transition-colors active:border-primary-mid active:bg-primary-soft"
               >
