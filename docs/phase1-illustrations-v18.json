@@ -1,0 +1,23 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "key": "lower-speaker-v18",
+      "ref": "actions/lower-items-v16.png",
+      "prompt": "Use reference for exact warm hand drawn Japanese anime room and adult clothes style. Create two side by side panels with white gutter, no text. Left: one compact heavy wood bookshelf SPEAKER 25cm tall sits on TOP of chest-high cabinet, lower shelf empty. Right same cabinet and speaker, adult in checked shirt securely crouching and placing that speaker with BOTH hands on low shelf, top now empty. Speaker has recognizable two circular dark drivers on front, unplugged no dangling cable, NOT a box or vase or books. Natural adult proportions and careful balanced posture. Clear relocation from high to low. Landscape1536x1024.",
+      "output": "public/illustrations/actions/lower-speaker-v18.png"
+    },
+    {
+      "key": "clear-floor-v18",
+      "ref": "actions/clear-path-v15.png",
+      "prompt": "Redraw in same warm Japanese anime style. Before earthquake preparedness scene in ordinary living room near interior doorway, NOT genkan. Adult in striped shirt and blue cardigan kneels on clean wood floor, gathering several magazines that had been spread on FLOOR into a low side shelf. A closed backpack and folded reusable shopping tote still on floor beside them to be cleared next. Doorway and walkway visible; clearing floor objects to make passage clear is unmistakable. No shoes/shoe cupboard, no entry front door, no toys, no debris/glass, no shelves overhead, no pointing. Show person's hand actually lifting magazine off floor, another hand supports stack. No text, landscape.",
+      "output": "public/illustrations/actions/clear-floor-v18.png"
+    },
+    {
+      "key": "check-floor-v18",
+      "ref": "review/check-floor-v16.png",
+      "prompt": "Edit this target: remove boy entirely and restore empty sofa cushions naturally. Preserve disordered room, fallen books, broken glass, objects, opened cupboard and doorway, warm Japanese anime style. Show floor and exit as focus, no people, hands, feet, arrows or text. Keep a narrow but continuous visible clear floor route bending around debris from near sofa toward doorway; relocate shards that block that particular narrow route to sides. Plenty of scattered glass and books elsewhere, no magically pristine entire room. Maintain same perspective and furniture.",
+      "output": "public/illustrations/review/check-floor-v18.png"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "key": "lower-speaker-v19",
+      "ref": "lower-speaker-v18.png",
+      "prompt": "Edit this two panel Japanese anime educational illustration. Keep left panel unchanged speaker on chest-height cabinet. In RIGHT panel replace cabinet with a LOW wide stable solid wooden speaker/TV bench, TOP surface at knee height. Adult places speaker ON TOP of this low bench, free standing, both circular drivers fully visible, nothing above speaker. Speaker not enclosed inside furniture or cubby. Keep same speaker, checked shirt adult, warm room and two panel layout. No text or arrows.",
+      "output": "public/illustrations/actions/lower-speaker-v19.png"
+    },
+    {
+      "key": "clear-floor-v19",
+      "ref": "clear-floor-v18.png",
+      "prompt": "Edit target Japanese anime illustration preserving room and woman clothes. Replace ALL magazines/books she holds and ALL on FLOOR with everyday CLOTHES: cardigan and trousers loosely lying on floor near backpack and tote. Woman gathers a soft blue cardigan FROM FLOOR with both hands to put away, clearly fabric with sleeves not papers. Backpack remains on walkway waiting to be moved; low shelf now has folded clothes and baskets. No magazines/papers held or on floor, no shoes. Keep clear view of doorway, natural anatomy, warm anime style.",
+      "output": "public/illustrations/actions/clear-floor-v19.png"
+    }
+  ]
+}

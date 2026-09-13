@@ -3,7 +3,7 @@ import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 export const runtime = "nodejs";
 export const maxDuration = 45;
 
-const OBJECT_TYPES = new Set<RoomObjectType>(["bookshelf", "cupboard", "elevated_objects", "tall_furniture", "tv", "window", "doorway", "hanging_object", "desk", "bed", "loose_objects", "other"]);
+const OBJECT_TYPES = new Set<RoomObjectType>(["bookshelf", "cupboard", "elevated_objects", "tall_furniture", "tv", "window", "doorway", "hanging_object", "desk", "bed", "loose_objects", "instrument", "clothes_rack", "pet_cage", "washing_machine", "other"]);
 const RISK_KINDS = new Set<RiskKind>(["fall", "break", "block"]);
 
 function extractJson(response: unknown): unknown {
@@ -50,14 +50,16 @@ export async function POST(request: Request) {
   }
 
   const prompt = `この部屋の写真を地震防災の観点で観察してください。実際に画像で確認できる危険候補だけを最大8件返してください。人物の特定や住所・文字の読み取りはしないでください。
-JSONのみ: {"risks":[{"name":"小学校高学年にも分かる短い名前（テレビ受像機ではなくテレビなど、日常の呼び方）","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
-食器棚はcupboard。棚の上・高い場所に置かれた物はelevated_objects（床置きのloose_objectsと区別する）。loose_objectsは床に置かれた物だけに使用する。対象が棚本体か棚上の物かを名前と枠で区別する。
+JSONのみ: {"risks":[{"name":"小学校高学年にも分かる短い名前（テレビ受像機ではなくテレビ、高層収納家具・背高収納家具ではなく背の高い収納家具など、日常の呼び方）","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|instrument|clothes_rack|pet_cage|washing_machine|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
+調理用コンロが実際に写っている場合はobjectType=other、名前に「コンロ」を含めて返す。食器棚やキッチンの雰囲気だけでコンロの存在を推測しない。
+楽器（ピアノ・ギターなど）はinstrument、衣類やバッグを掛けるハンガーラック・ポールハンガーはclothes_rack、ペットのケージはpet_cage、洗濯機はwashing_machine。壁掛け・壁内設置と画像から分かるテレビは、その設置方法を名前にも含める。判別できない設置方法は推測しない。食器棚はcupboard。棚の上・高い場所に置かれた物はelevated_objects（床置きのloose_objectsと区別する）。loose_objectsは床に置かれた物だけに使用する。対象が棚本体か棚上の物かを名前と枠で区別する。
 kind: fall=倒れる/落ちる、break=割れる、block=出口や通路をふさぐ。棚上の物は主にfall。床や通路が写っていなければ散乱や通行障害を断定しない。固定状態や危険を断定せず、根拠が弱ければconfidenceを下げる。`;
 
   let upstream: Response;
   try {
     upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(40_000)]),
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: process.env.OPENAI_VISION_MODEL ?? "gpt-5.6-luna", store: false, input: [{ role: "user", content: [{ type: "input_text", text: prompt + '\n各riskに対象物を囲むbounds:{"x":左端,"y":上端,"w":幅,"h":高さ}も含めてください。すべて元画像全体に対する0〜100の百分率。枠は画像内に収めてください。' }, { type: "input_image", image_url: image, detail: "high" }] }] }),
     });
@@ -66,7 +68,8 @@ kind: fall=倒れる/落ちる、break=割れる、block=出口や通路をふ�
   }
   if (!upstream.ok) return Response.json({ error: "openai-error" }, { status: 502 });
   try {
-    return Response.json({ risks: sanitize(extractJson(await upstream.json())), source: "ai" });
+    const result = extractJson(await upstream.json());
+    return Response.json({ risks: sanitize(result), source: "ai" });
   } catch {
     return Response.json({ error: "invalid-openai-response" }, { status: 502 });
   }

@@ -1,0 +1,24 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "key": "lower-items-v15",
+      "ref": "actions/lower-items-v13.png",
+      "prompt": "Use reference ONLY for exact warm Japanese anime illustration style, home palette and clear contours. New scene: an adult in a softly checked casual shirt and trousers STANDING on the floor beside a wood cabinet whose TOP is just below their shoulder height. Both hands securely hold one medium ceramic vase just lifted off the TOP of cabinet, beginning to lower it toward an empty LOW compartment. Show TOP surface clearly, one remaining decorative ceramic object on top, and empty lower shelf clearly. The action is removing fragile objects FROM ABOVE THE CABINET to LOW storage before an earthquake, not merely arranging a shelf. No box held, no books held, no child, no stepladder, no overreaching, no falling or floating objects. Vase securely held by both hands, person steady and focused, natural anatomy. Wide landscape 1536x1024.",
+      "output": "public/illustrations/actions/lower-items-v15.png"
+    },
+    {
+      "key": "clear-path-v15",
+      "ref": "actions/clear-path-v11.png",
+      "prompt": "Redraw entrance scene in same warm hand-drawn Japanese anime style. A realistic Japanese genkan with clearly visible CLOSED front door, lower tiled entrance floor, raised wood hallway and one low shoe cabinet. Adult in casual cardigan and striped shirt kneels securely on raised wood floor beside shoe cabinet and places a PAIR OF SHOES into its low shelf. Central walkway and front door opening area wide and CLEAR. No bags, no books, no parcels, no toys, no person blocking passage, no child needed. Action communicates keeping exit clear by putting shoes away, not normal handbag storage. Clear room geometry, warm natural colors, no text, landscape1536x1024.",
+      "output": "public/illustrations/actions/clear-path-v15.png",
+      "followUpPrompt": "Edit target only to correct genkan floor geometry. Remove the step and gray tiled strip at BOTTOM foreground. Extend existing warm wooden hallway floor seamlessly all the way to the bottom edge of image. Keep gray entrance tile ONLY in rear area immediately inside front door. One single transition between rear tiled entrance and foreground wooden hallway. Preserve woman putting shoes in shoe cabinet, all objects, anime style, colors and framing unchanged."
+    },
+    {
+      "key": "check-floor-v15",
+      "ref": "review/check-floor-v14.png",
+      "prompt": "Edit this image preserving exact warm Japanese anime style, room perspective, older elementary boy's olive hoodie and striped shirt, and sparse glass fragments near bookshelf. CHANGE action: boy remains safely on sofa, kneeling sideways with BOTH socked feet tucked on the cushion, no feet touching floor, NO shoes worn. Torso turns toward doorway, one hand supports him on sofa back, other arm naturally points along the visibly clear floor route leading AROUND the small glass-fragment zone toward doorway. Gaze follows route toward door, alert engaged expression. He is actively checking where he can go BEFORE stepping off sofa, not standing staring down, no phone, no flashlight, no shoes nearby, no text or drawn arrows. Comfortable natural anatomy, only two arms/hands, face and entire sofa feet visible. Do not imply walking barefoot on debris. Wide 1536x1024.",
+      "output": "public/illustrations/review/check-floor-v15.png"
+    }
+  ]
+}

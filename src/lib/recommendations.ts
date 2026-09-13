@@ -1,6 +1,6 @@
 import type { Risk, RoomObjectType } from "./content";
 import { adultText } from "./adult-copy";
-import { roomObjectType } from "./room-guidance";
+import { roomObjectType, isWallMountedTv } from "./room-guidance";
 
 export type SafetyProduct = {
   id: string;
@@ -106,6 +106,7 @@ export function safetyProductsFor(risks: Risk[]): SafetyProduct[] {
   return RULES.flatMap((rule) => {
     const matches = confirmed.filter((risk) => {
       const kindMatch = !rule.kind || rule.kind === risk.kind;
+      if (rule.id === "tv-belt" && isWallMountedTv(risk)) return false;
       const typeMatch = kindMatch && rule.objectTypes?.includes(roomObjectType(risk));
       const kindFallback = rule.fallbackForKind && !risk.objectType && rule.kind === risk.kind;
       return Boolean(typeMatch || kindFallback);

@@ -80,10 +80,10 @@ export const HOME_KITCHEN_AFTER: Question = {
   adultSituation: "自宅で揺れが収まりました。調理で使っていたコンロが気になります。どのように確認しますか。",
   seconds: 12,
   choices: [
-    { id: "kitchen-check", label: "足元[あしもと]と周囲[しゅうい]を確[たし]かめ、安全[あんぜん]なら火[ひ]を消[け]す", detail: "危険[きけん]なら近[ちか]づかず離[はな]れる", safety: 0.95, explanation: ["揺れが収まってから、足元の破片や落ちた物、火や煙を確認します。安全に近づける場合だけコンロの火を消します。子どもは大人に知らせ、一人で対処しません。", "ガス臭がする場合は火や電気のスイッチを使わず、安全な場所へ離れて助けを求めます。火や煙が広がっている場合も無理に近づかず、避難を優先します。"] },
+    { id: "kitchen-check", label: "足元[あしもと]と周囲[しゅうい]を確[たし]かめ、安全[あんぜん]なら火[ひ]を消[け]す", detail: "危険[きけん]なら近[ちか]づかず離[はな]れる", safety: 0.95, explanation: ["揺れが収まってから、足元の破片や落ちた物、火や煙を確認します。安全に近づける場合だけコンロの火を消します。子どもは大人に知らせ、一人で対処しません。避難前は、可能な範囲でガス栓とメーターの元栓も閉めます。", "ガス臭がする場合は火や電気のスイッチを使わず、安全な場所へ離れて助けを求めます。火や煙が広がっている場合も無理に近づかず、避難を優先します。"] },
     { id: "kitchen-rush", label: "足元[あしもと]を見[み]ず、すぐコンロへ走[はし]る", detail: "急[いそ]いで火[ひ]を消[け]しに行[い]く", safety: 0.2, explanation: ["割れた食器や転倒した物でけがをするおそれがあります。まず周囲を確認し、安全に近づけない場合は無理をしません。"] },
     { id: "kitchen-ignore", label: "ゆれが止[と]まったので、火[ひ]の元[もと]は確認[かくにん]しない", detail: "そのまま過[す]ごす", safety: 0.2, explanation: ["揺れが収まっても、使っていた火や周囲の安全確認は必要です。危険があれば近づかず、大人や周囲に知らせます。"] },
-  ], sources: [TFD],
+  ], sources: [TFD, { title: "東京ガスネットワーク 自然災害がおきたときは", url: "https://www.tokyo-gas.co.jp/network/emergencies/jishin/index.html" }],
 };
 
 export function pickScenario(setting: RoomSetting, topic: Scenario["topic"], phase: "during" | "after", random = Math.random): Question | undefined {

@@ -22,6 +22,7 @@ export type Answer = {
 
 export type Session = {
   roomSetting: RoomSetting;
+  resultStep: number;
   /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
   blurRegions: BlurRegion[];
@@ -41,6 +42,7 @@ export type Session = {
 
 const EMPTY: Session = {
   roomSetting: "home",
+  resultStep: 0,
   photoUrl: null,
   blurRegions: [],
   risks: [],
@@ -149,7 +151,7 @@ export function strengths(answers: Answer[], questions: typeof QUESTIONS = QUEST
     const c = q?.choices.find((x) => x.id === a.choiceId);
     if (q && c) out.push(audience === "adult"
       ? `${adultText(q.category)}の場面で「${adultText(c.label)}」を選択しました。`
-      : `${q.category}のばめんで「${c.label}」をえらべた`);
+      : `${q.category}の場面で「${c.label}」を選べた`);
   }
   return out;
 }

@@ -24,17 +24,18 @@ export function AftermathCard({
   risks: Risk[];
 }) {
   const { audience } = useSettings();
+  const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Aftermath | null>(() => preparedAftermath(photoUrl, risks.filter((risk) => risk.confirmed)));
 
   useEffect(() => {
     let alive = true;
-    void prepareAftermath(photoUrl, risks.filter((risk) => risk.confirmed)).then((r) => {
+    void prepareAftermath(photoUrl, risks.filter((risk) => risk.confirmed), attempt > 0).then((r) => {
       if (alive) setResult(r);
     });
     return () => {
       alive = false;
     };
-  }, [photoUrl, risks]);
+  }, [photoUrl, risks, attempt]);
 
   const confirmed = risks.filter((r) => r.confirmed);
 
@@ -102,7 +103,11 @@ export function AftermathCard({
         )}
       </div>
 
-      {result && result.events.length === 0 && !result.imageUrl ? (
+      {result?.source === "preview" && <div className="space-y-3 px-4 py-3">
+        <p role="status" className="text-sm">{result.error ?? "予想図を生成できませんでした。"}</p>
+        {photoUrl?.startsWith("data:image/") ? <button type="button" className="min-h-11 rounded-pill border border-border px-4 font-bold" onClick={() => { setResult(null); setAttempt(value => value + 1); }}>予想図をもう一度生成</button> : <a href="/camera" className="inline-block py-3 underline">写真を選び直す</a>}
+      </div>}
+      {result && result.events.length === 0 && !result.imageUrl && !result.error ? (
         <p className="px-4 py-3 text-13 text-ink-muted">
           <Furigana text="予想図[よそうず]を作成できませんでした。写真を見ながら、部屋の備[そな]えを確認[かくにん]してください。" />
         </p>

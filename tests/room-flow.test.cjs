@@ -53,17 +53,17 @@ test("glass doors and dish cupboards keep object-specific advice and illustratio
   const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
   for (const objectType of ["doorway", "window", "other"]) {
     const door = { ...risk(objectType, "block"), name: "ガラスの扉[とびら]" };
-    assert.match(roomAdviceImage(door).src, /glass-door/);
+    assert.match(roomAdviceImage(door).src, /glass-film/);
     for (const audience of ["child", "adult"]) {
       assert.match(roomAdvice(door, audience).headline, /ガラス/);
       assert.doesNotMatch(roomAdvice(door, audience).steps.join(""), /おもちゃ/);
     }
   }
   const cupboard = { ...risk("other", "break"), name: "ガラス扉の食器棚" };
-  assert.match(roomAdviceImage(cupboard).src, /cupboard-dishes/);
+  assert.match(roomAdviceImage(cupboard).src, /cupboard-v13/);
   assert.match(roomAdvice(cupboard, "child").headline, /食器/);
-  assert.match(roomAdviceImage(risk("bookshelf")).src, /lower-items/);
-  assert.match(roomAdviceImage({ ...risk("doorway", "block"), name: "木のドア" }).src, /clear-path/);
+  assert.match(roomAdviceImage(risk("bookshelf")).src, /anchor-shelf/);
+  assert.match(roomAdviceImage({ ...risk("doorway", "block"), name: "木のドア" }).src, /clear-floor/);
 });
 
 test("every correct action uses its corresponding generated illustration", async () => {
@@ -75,14 +75,14 @@ test("every correct action uses its corresponding generated illustration", async
   }
   for (const q of questions) {
     const scene = reviewIllustration(q);
-    if (q.id === "home-kitchen-after") { assert.equal(scene, null); continue; }
+    if (q.id === "home-kitchen-after") assert.equal(scene.image, "kitchen-question-v8");
     assert(scene, `missing illustration for ${q.id}`);
     assert(fs.existsSync(`public${reviewImagePath(scene.image)}`), scene.image);
-    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, `${q.id}-${q.id === "shelter-damaged" ? "v5" : "v4"}`);
+    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, q.id === "shelter-damaged" ? "evacuation-open-v11" : `${q.id}-v4`);
     if (q.phase === "after") assert.match(scene.timing, /収ま/);
     assert.deepEqual(reviewIllustration({ ...q, choices: [...q.choices].reverse() }), scene);
   }
-  assert.equal(reviewIllustration({ choices: [{ id: "wait", safety: 0.95 }] }).image, "kitchen-cover-v4");
+  assert.equal(reviewIllustration({ choices: [{ id: "wait", safety: 0.95 }] }).image, "desk-hold-v12");
   assert.equal(reviewIllustration({ choices: [] }), null);
   assert.equal(reviewIllustration({ choices: [{ id: "unknown-future-choice", safety: 1 }] }), null);
 });
@@ -215,7 +215,7 @@ test("all room combinations follow during → after, including zero confirmed ri
   fixtures.push([risk("doorway", "block"), risk("window", "break"), risk("bookshelf"), risk("bed")]);
   for (const risks of fixtures) {
     const qs = await fetchQuestions(risks);
-    assert(qs.length >= 3 && qs.length <= 5);
+    assert(qs.length >= 2 && qs.length <= 5);
     assert.equal(qs[0].phase, "during");
     assert.equal(qs.at(-1).phase, "after");
     let after = false;
@@ -237,7 +237,7 @@ test("purchase candidates require confirmed, identifiable, matching objects", ()
   assert.equal(safetyProductsFor([risk("tv")])[0].id, "tv-belt");
 });
 
-test("photo questions exclude extra scenarios; only home adds after-shaking kitchen checks", async () => {
+test("photo questions exclude kitchen checks when no cooktop is visible", async () => {
   for (const setting of ["home", "classroom", "office"]) {
     for (let seed = 1; seed <= 30; seed++) {
       let state = seed;
@@ -249,7 +249,7 @@ test("photo questions exclude extra scenarios; only home adds after-shaking kitc
       assert(qs.every((q) => !q.id.startsWith("shelter-") && !q.category.includes("別[べつ]の場面")));
       assert(qs.every((q) => q.sourceRiskId !== "tv"));
       const nonPhoto = qs.filter((q) => !q.sourceRiskId);
-      assert.deepEqual(nonPhoto.map((q) => q.id), setting === "home" ? ["home-kitchen-after", "q5"] : ["q5"]);
+      assert.deepEqual(nonPhoto.map((q) => q.id), ["q5"]);
       for (const q of nonPhoto) assert.equal(q.phase, "after");
     }
   }
@@ -302,13 +302,13 @@ test("every active question has one actionable recommended answer with condition
   assert.match(desk.choices.find((choice) => choice.id === "under-desk").explanation.join(""), /ガラスの机.*無理/);
 });
 
-test("child advice is short, specific, and keeps adult-help and shaking conditions", () => {
+test("child preparation advice is specific and keeps adult help separate from earthquake actions", () => {
   const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
   const plain = text => text.replace(/\[[^\]]*\]/g, "");
   const shelf = roomAdvice(risk("elevated_objects"), "child");
   assert.match(plain(shelf.headline), /低い所/);
   assert.match(plain(shelf.detail), /家族/);
-  assert.match(plain(shelf.detail), /揺れている間/);
+  assert.doesNotMatch(plain(shelf.detail), /揺れている間/);
   for (const type of ["bookshelf", "cupboard", "tv", "elevated_objects", "doorway", "window", "bed"]) {
     assert(plain(roomAdvice(risk(type), "child").detail).length < 90);
     assert(fs.existsSync(`public${roomAdviceImage(risk(type)).src}`));
@@ -341,9 +341,7 @@ test("quiz highlights follow the selected object's bounds, including near image 
     if (item.bounds) assert.deepEqual({ x, y, w, h }, item.bounds);
     assert.doesNotMatch(question.adultSituation, /テレビ受像機/);
     const kitchen = questions.find(q => q.id === "home-kitchen-after");
-    assert.equal(kitchen.seconds, 12);
-    assert.equal(kitchen.sourceRiskId, undefined);
-    assert.equal(kitchen.highlight, undefined);
+    assert.equal(kitchen, undefined);
   }
 });
 
@@ -357,10 +355,141 @@ test("upper elementary reading and adult guidance remain distinct", async () => 
   assert.equal(needsReading("地震"), true);
   assert.equal(upperElementaryText("まどガラス"), "窓[まど]ガラス");
   assert(TRIVIA.length >= 7);
-  assert(TRIVIA.every(t => t.adultBody && t.adultNote && t.source.url.startsWith("https://")));
+  assert(TRIVIA.every(t => t.adultBody && typeof t.adultNote === "string" && t.source.url.startsWith("https://")));
   const questions = await fetchQuestions([risk("desk"), risk("doorway", "block")]);
   for (const question of questions) assert.doesNotMatch(reviewNotes(question, "adult").join(""), /おとな|だよ|してね|しよう|家族に知らせ/);
   for (const type of ["bookshelf", "tv", "elevated_objects", "doorway"]) {
     assert.doesNotMatch(JSON.stringify(roomAdvice(risk(type), "adult")), /大人と|大人が|おとな|だよ|してね/);
   }
+});
+
+
+test("new household objects have dedicated preparation and wall TVs do not get table belts", () => {
+  const { roomAdvice, roomObjectType, roomAdviceImage } = load("src/lib/room-guidance.ts");
+  for (const [name, type] of [["ピアノ", "instrument"], ["ハンガーラック", "clothes_rack"], ["ペットのケージ", "pet_cage"], ["ドラム式洗濯機", "washing_machine"]]) {
+    const object = { ...risk("other"), name };
+    assert.equal(roomObjectType(object), type);
+    assert.notEqual(roomAdvice(object).headline, "落下・転倒する先を確かめる");
+    assert.ok(roomAdvice(object, "child").steps.length >= 2);
+  }
+  const wall = { ...risk("tv"), name: "壁掛けテレビ" };
+  assert.match(roomAdvice(wall).headline, /取付状態/);
+  assert.equal(roomAdviceImage(wall), null);
+  assert.equal(safetyProductsFor([wall]).some(p => p.id === "tv-belt"), false);
+  assert.equal(safetyProductsFor([risk("tv")]).some(p => p.id === "tv-belt"), true);
+});
+
+test("missing hydration photo cannot evict an image job, and failed generation can be retried once", async () => {
+  const { prepareAftermath, preparedAftermath, clearRoomPreparation } = load("src/lib/room-preparation.ts");
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = (_url, options) => new Promise(resolve => calls.push({ body: JSON.parse(options.body), resolve }));
+  clearRoomPreparation();
+  const photo = "data:image/png;base64,bWFza2Vk";
+  try {
+    const first = prepareAftermath(photo, []);
+    await prepareAftermath(null, []);
+    const duplicate = prepareAftermath(photo, []);
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].body, { image: photo });
+    calls[0].resolve(Response.json({ error: "openai-timeout" }, { status: 502 }));
+    assert.match((await first).error, /時間/);
+    await duplicate;
+    await prepareAftermath(photo, []);
+    assert.equal(calls.length, 1);
+    const retry = prepareAftermath(photo, [], true);
+    const sameRetry = prepareAftermath(photo, [], true);
+    assert.equal(calls.length, 2);
+    calls[1].resolve(Response.json({ imageUrl: "data:image/png;base64,b2s=" }));
+    await retry;
+    await sameRetry;
+    assert.equal(preparedAftermath(photo, []).source, "ai");
+    await prepareAftermath(photo, [], true);
+    assert.equal(calls.length, 2);
+  } finally { global.fetch = originalFetch; clearRoomPreparation(); }
+});
+
+
+test("masked submission starts analysis and prediction together with identical image bytes", async () => {
+  const { prepareMaskedRoom, prepareAftermath, clearRoomPreparation } = load("src/lib/room-preparation.ts");
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = (url, options) => new Promise(resolve => calls.push({ url, body: JSON.parse(options.body), resolve }));
+  const masked = "data:image/png;base64,bWFza2VkLW9ubHk=";
+  clearRoomPreparation();
+  try {
+    const analysis = prepareMaskedRoom(masked);
+    assert.deepEqual(calls.map(c => c.url), ["/api/room/analyze", "/api/room/aftermath"]);
+    assert.ok(calls.every(c => c.body.image === masked));
+    calls[0].resolve(Response.json({ risks: [] }));
+    calls[1].resolve(Response.json({ imageUrl: "generated" }));
+    await analysis;
+    assert.equal((await prepareAftermath(masked, [])).imageUrl, "generated");
+    assert.equal(calls.length, 2);
+  } finally { global.fetch = originalFetch; clearRoomPreparation(); }
+});
+
+
+test("tall shelves distinguish cabinet anchoring from falling contents and elevated objects", () => {
+  const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
+  const shelf = { ...risk("tall_furniture"), name: "背の高い棚" };
+  for (const mode of ["adult", "child"]) {
+    const advice = roomAdvice(shelf, mode);
+    assert.match(advice.steps.join(""), /固定/);
+    assert.match(advice.steps.join(""), /バー|落下防止/);
+  }
+  assert.match(roomAdviceImage(shelf).src, /anchor-shelf/);
+  assert.match(roomAdviceImage(risk("elevated_objects")).src, /lower-items/);
+});
+
+test("ordinary floor checks and rescue conditions are distinct", () => {
+  const { reviewNotes } = load("src/lib/review-copy.ts");
+  const { reviewIllustration } = load("src/lib/review-illustrations.ts");
+  const question = { choices: [{ id: "shoes", safety: 1 }] };
+  for (const mode of ["adult", "child"]) {
+    const notes = reviewNotes(question, mode);
+    assert.match(notes[0], /経路|道|出口/);
+    assert.doesNotMatch(notes[0], /電話|119|届け/);
+    assert.match(notes[1], /閉じ込め|移動すると危険|動くと危ない/);
+    assert.match(notes[1], /119/);
+  }
+  assert.equal(reviewIllustration(question).image, "check-floor-v18");
+});
+
+
+test("only confirmed cooktops generate a photo-linked kitchen question", async () => {
+  const stove = { ...risk("other"), id: "cooktop", name: "ガスコンロ", bounds: { x: 10, y: 20, w: 30, h: 25 } };
+  const qs = await fetchQuestions([stove], "home", () => 0);
+  const kitchen = qs.find(q => q.id === "home-kitchen-after");
+  assert.equal(kitchen.sourceRiskId, stove.id);
+  assert.equal(kitchen.seconds, 12);
+  assert.deepEqual(kitchen.highlight, { ...stove.bounds, label: stove.name });
+  for (const item of [{ ...stove, confirmed: false }, { ...stove, name: "食器棚", objectType: "cupboard" }]) {
+    assert.equal((await fetchQuestions([item])).some(q => q.id === "home-kitchen-after"), false);
+  }
+});
+
+test("cooktop preparation has fire precautions instead of furniture-moving advice", () => {
+  const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
+  const stove = { ...risk("other"), name: "ガスコンロ" };
+  for (const audience of ["child", "adult"]) {
+    const advice = JSON.stringify(roomAdvice(stove, audience));
+    assert.match(advice, /コンロ/);
+    assert.match(advice, /ふきん/);
+    assert.match(advice, /消火器/);
+    assert.doesNotMatch(advice, /重.*低|寝る場所|転倒/);
+  }
+  assert.match(roomAdviceImage(stove).src, /kitchen/);
+});
+
+test("elevated object illustration selects exactly one of books or box", () => {
+  const { roomAdviceImages } = load("src/lib/room-guidance.ts");
+  const item = risk("elevated_objects");
+  const books = roomAdviceImages(item, 0.2);
+  const box = roomAdviceImages(item, 0.8);
+  assert.equal(books.length, 1);
+  assert.equal(box.length, 1);
+  assert.match(books[0].src, /lower-items/);
+  assert.match(box[0].src, /lower-box/);
+  assert.deepEqual(roomAdviceImages(risk("tv"), 0.2), roomAdviceImages(risk("tv"), 0.8));
 });

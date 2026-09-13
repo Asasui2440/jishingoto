@@ -1,0 +1,44 @@
+[
+  {
+    "name": "desk-shelter-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. Adult fully crouched UNDER a sturdy wooden four-legged dining table with ample space beneath, entire head and torso visibly protected under tabletop, one hand holding table leg, other protecting head. Side view clear leg and body anatomy. Ordinary living room sofa and distant bookshelf, table foreground dominant, no person outside table. Earthquake protective action.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-fc9ba1e4-7396-4407-932f-a09470b844e9.png",
+    "path": "public/illustrations/review/desk-shelter-v9.png"
+  },
+  {
+    "name": "information-tv-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. Adult sitting in safe tidy living room looking at a TELEVISION with abstract news broadcast studio and simplified map, NO readable text or logos. Smartphone face down on side table, no kids. Calm checking news after earthquake, ordinary furniture and window, TV prominent. No damage.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-ec254dce-8ebe-48db-9f21-9c8b3a2b9a13.png",
+    "path": "public/illustrations/review/information-tv-v9.png"
+  },
+  {
+    "name": "lower-items-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. An adult kneeling, placing heavy books onto lowest shelf of a full ordinary bookshelf, adult alone. Whole shelf visible, low shelf action focal, tidy realistic living room. Preparation before earthquake.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-aa7347f2-81cd-4c79-a28e-0ad73c99b167.png",
+    "path": "public/illustrations/actions/lower-items-v9.png"
+  },
+  {
+    "name": "cupboard-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. Adult carefully putting a stack of dinner plates on a LOW shelf of a kitchen cupboard containing only dishes cups bowls, no books. Whole adult and cabinet visible, calm preparation before earthquake, natural anatomy.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-3cf458a0-e7a2-4852-879f-3cccace0e20f.png",
+    "path": "public/illustrations/actions/cupboard-v9.png"
+  },
+  {
+    "name": "glass-door-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. An adult standing a safe distance away examining a large GLASS INTERIOR DOOR with visible handle and reflective glass pane. Full door visible and clear walkway. No other person. Calm household safety inspection, no broken glass or tidying toys.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-ab90ad29-ea04-48b1-b8fd-c47192e9020f.png",
+    "path": "public/illustrations/actions/glass-door-v9.png"
+  },
+  {
+    "name": "window-bed-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. Adult inspecting bedroom layout: a bed placed well away from a large window, uncluttered gap between bed and glass. Adult looking at window and bed, no contact with glass, realistic small Japanese bedroom, no children. Entire window and bed in frame.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-d3295834-7eb6-4a32-b3bd-b2737547367f.png",
+    "path": "public/illustrations/actions/window-bed-v9.png"
+  },
+  {
+    "name": "foot-safety-v9",
+    "prompt": "Use case illustration-story. Mature polished Japanese 2D anime editorial illustration for adults and upper elementary learners. Realistic adult anatomy and proportions, restrained teal wood cream colors, ordinary lived-in Japanese home. Landscape 3:2, no text, logos, watermark, no children, no chibi, no toys or plushies. Adult seated on a stable sofa on a clear rug uses a flashlight to examine a few small broken glass fragments on wood floor beyond the rug. Sturdy closed shoes within reach beside sofa on safe rug. Nobody walking on fragments. Calm safety check after earthquake, everyday living room visible. Focus on checking floor BEFORE moving.",
+    "source": "/Users/sui/.codex/generated_images/01a095f6-fbd6-7a52-ba0d-d60d8b98958a/exec-c4f6bdca-b4db-4640-93b3-97427d08e6d3.png",
+    "path": "public/illustrations/review/foot-safety-v9.png"
+  }
+]

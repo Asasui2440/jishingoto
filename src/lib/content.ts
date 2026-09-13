@@ -30,6 +30,10 @@ export type RoomObjectType =
   | "desk"
   | "bed"
   | "loose_objects"
+  | "instrument"
+  | "clothes_rack"
+  | "pet_cage"
+  | "washing_machine"
   | "other";
 
 export const RISK_KINDS: Record<
@@ -144,7 +148,7 @@ export type Question = {
   /** 出題前に「どの場所の話か」を示すラベル。riskKind とセットで使う */
   place?: string;
   adultPlace?: string;
-  /** 「しゅんかん判断」など、画面上部に出す小見出し */
+  /** 「瞬間判断」など、画面上部に出す小見出し */
   category: string;
   situation: string;
   /** 固有の検出物名を含む、大人向けの完全文。 */
@@ -162,7 +166,7 @@ export const QUESTIONS: Question[] = [
     axis: "initial",
     riskKind: "fall",
     place: "大[おお]きな本棚[ほんだな]",
-    category: "しゅんかん判断[はんだん]",
+    category: "瞬間判断[はんだん]",
     situation: "強[つよ]いゆれがはじまり、背[せ]の高[たか]い本棚[ほんだな]のそばにいます。",
     highlight: { x: 8, y: 15, w: 30, h: 70, label: "たおれそう！" },
     seconds: 10,
@@ -362,7 +366,7 @@ export const QUESTIONS: Question[] = [
   {
     id: "q5",
     axis: "judgement",
-    category: "情報[じょうほう]のあつかい",
+    category: "情報[じょうほう]の扱い",
     situation: "SNSで「このあと大[おお]きな地震[じしん]が来[く]る」という投稿[とうこう]を見[み]かけました。",
     seconds: 12,
     choices: [
@@ -423,8 +427,8 @@ export const CHECKLIST: ChecklistItem[] = [
 
 /** 安全度の帯。リザルト・シェアカードのラベルに使う。 */
 export function safetyBand(score: number): { label: string; color: string } {
-  if (score >= 0.8) return { label: "とても安全", color: "var(--color-safe)" };
-  if (score >= 0.6) return { label: "安全", color: "var(--color-safe)" };
-  if (score >= 0.4) return { label: "あとすこし", color: "var(--color-warn)" };
+  if (score >= 0.8) return { label: "よく判断できた", color: "var(--color-safe)" };
+  if (score >= 0.6) return { label: "判断できた", color: "var(--color-safe)" };
+  if (score >= 0.4) return { label: "確認してみよう", color: "var(--color-warn)" };
   return { label: "見直[みなお]そう", color: "var(--color-danger)" };
 }

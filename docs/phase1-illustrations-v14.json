@@ -1,0 +1,23 @@
+{
+  "tool": "image_gen (built-in)",
+  "images": [
+    {
+      "key": "glass-film-v14",
+      "ref": "actions/glass-door-v11.png",
+      "prompt": "Edit target in same warm Japanese hand drawn anime illustration style, same glass interior sliding door and palette. Show one adult (woman in patterned casual blouse, no child) applying a nearly transparent shatter-retention film to the middle portion of the glass door with a small plastic squeegee. Both feet on floor, work at chest height, door closed and stable. One hand holds a slightly peeled transparent film corner, other hand smooths film with squeegee. Clearly recognizable as sticking protective film on glass, subtle film edge and small un-smoothed area, no opaque paper. No breaking glass, no tools floating, no text. Landscape 1536x1024.",
+      "output": "public/illustrations/actions/glass-film-v14.png"
+    },
+    {
+      "key": "anchor-shelf-v14",
+      "ref": "actions/lower-items-v13.png",
+      "prompt": "Create a new explanatory illustration using reference ONLY for exact warm Japanese anime drawing style and natural home/clothing details. Main subject is a tall wood shelving cabinet securely anchored to wall with TWO visible metal L brackets at its top corners fixed to wall and cabinet. No people necessary. Show whole cabinet from slightly elevated three-quarter perspective so top brackets are clearly visible and physically attached to both wall and shelf. Cabinet contains neatly arranged household boxes, books and ceramic vessels; each open shelf has a low retaining bar across front preventing contents sliding out; heavier items lower. Cabinet stable upright, normal warm living room with rug and side sofa, no toys, no mess, no quake. Clear educational purpose: anchor cabinet AND prevent stored objects falling out. No labels or text, no collage. 1536x1024 landscape.",
+      "output": "public/illustrations/actions/anchor-shelf-v14.png"
+    },
+    {
+      "key": "check-floor-v14",
+      "ref": "review/foot-safety-v13.png",
+      "prompt": "Replace pose/action of reference while preserving exact warm Japanese anime style, older elementary 11-year-old boy, olive zip hoodie over striped tee, trousers, serious attentive expression and cozy room. He stands STILL wearing sturdy closed-toe sneakers with thick soles on a completely clear patch of floor by sofa. Both feet fully visible on floor, no stepping, hands empty naturally at sides, head tilted down LOOKING at floor and path toward doorway. Elevated wide three-quarter camera so small zone of broken picture-frame glass by shelf and a DIFFERENT clear open path around it toward doorway are both easily understood. Broken glass subtle modest scattered fragments only near shelf, clear floor under boy, no barefoot or socks alone, NO phone, NO flashlight, NO calling for help, NO speech or text, NO arrows. This is calmly checking floor and finding an unobstructed route after shaking has stopped. 1536x1024.",
+      "output": "public/illustrations/review/check-floor-v14.png"
+    }
+  ]
+}

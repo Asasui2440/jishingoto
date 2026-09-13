@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { AftermathCard } from "@/components/AftermathCard";
 import { ActionReview } from "@/components/ActionReview";
 import { EvacuationGuide } from "@/components/EvacuationGuide";
 import { Meter } from "@/components/ui/Bits";
@@ -10,25 +11,20 @@ import { Card } from "@/components/ui/Card";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { withAdultSituation } from "@/lib/api";
-import { AXIS_LABEL, CHECKLIST, safetyBand, type Axis } from "@/lib/content";
-import { useHaptics, useSettings } from "@/lib/settings";
-import { getSession, overallSafety, scoreByAxis, strengths, useSession } from "@/lib/session";
+import { AXIS_LABEL, type Axis } from "@/lib/content";
+import { useSettings } from "@/lib/settings";
+import { getSession, scoreByAxis, strengths, useSession } from "@/lib/session";
 
 const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 
 export default function ResultPage() {
   const router = useRouter();
-  const { answers, risks, questions, checked, toggleChecked, reset } = useSession();
-  const vibrate = useHaptics();
+  const { answers, risks, questions, photoUrl, checked, toggleChecked, reset, resultStep, update } = useSession();
   const { audience } = useSettings();
   const adult = audience === "adult";
-  const [step, setStep] = useState(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const scores = useMemo(() => scoreByAxis(answers, risks), [answers, risks]);
   const wins = useMemo(() => strengths(answers, questions, audience), [answers, questions, audience]);
-  // 設問ごとの正誤ではなく、ぜんたいの傾向としてまとめて見せる
-  const overall = useMemo(() => safetyBand(overallSafety(answers)), [answers]);
-
   // ふりかえり。答えた順に、選んだ行動と解説を並べる。
   // 1問ずつの安全度は出さない（結果は全部終わってからまとめて見せる方針）。
   const review = useMemo(
@@ -49,30 +45,15 @@ export default function ResultPage() {
   }, [router]);
 
 
-  // 見つかった危険に合わせてチェックリストを絞る
-  const items = useMemo(() => {
-    const kinds = new Set(risks.filter((r) => r.confirmed).map((r) => r.kind));
-    const relevant = CHECKLIST.filter((c) => !c.riskKind || kinds.has(c.riskKind));
-    return relevant.length >= 3 ? relevant : CHECKLIST;
-  }, [risks]);
-
-  // 「今日すぐにできること」などの区分ごとにまとめる
-  const groups = useMemo(() => {
-    const map = new Map<string, typeof items>();
-    for (const item of items) {
-      map.set(item.group, [...(map.get(item.group) ?? []), item]);
-    }
-    return [...map.entries()];
-  }, [items]);
-
   // 部屋の危険はクイズ前に確認済み。結果では選んだ行動だけを振り返る。
   const summaryStep = review.length;
   const checklistStep = summaryStep + 1;
   const lastStep = checklistStep;
+  const step = Math.min(resultStep ?? 0, lastStep);
   const stepLabel = step < summaryStep ? `行動の振り返り ${step + 1} / ${review.length}`
     : step === summaryStep ? "今回のまとめ" : "今日からできること";
   const moveStep = (next: number) => {
-    setStep(next);
+    update(prev => ({ ...prev, resultStep: next }));
     window.scrollTo({ top: 0, behavior: "instant" });
     headingRef.current?.focus();
   };
@@ -99,13 +80,7 @@ export default function ResultPage() {
           <p className="font-display text-sm font-bold text-ink">
             <Furigana text="あなたの防災[ぼうさい]4つのチカラ" />
           </p>
-          <p className="mt-1 text-13 text-ink-muted">
-            {adult ? "総合的には" : "全体としては"}
-            <span className="font-display font-bold" style={{ color: overall.color }}>
-              「<Furigana text={overall.label} />」
-            </span>
-            {adult ? "に近い行動が多く見られました。" : "に近い行動が多く見られました。"}
-          </p>
+          <p className="mt-1 text-13 text-ink-muted">今回の判断を振り返り、次の備えにつなげましょう。</p>
           <div className="mt-3 flex flex-col gap-2">
             {AXES.map((axis) => {
               const score = scores[axis];
@@ -136,7 +111,6 @@ export default function ResultPage() {
           </div>
         </Card>
 
-        <EvacuationGuide />
 
         {wins.length > 0 ? (
           <div className="rounded-tile bg-safe-soft p-4">
@@ -150,6 +124,7 @@ export default function ResultPage() {
             </ul>
           </div>
         ) : null}
+        <AftermathCard photoUrl={photoUrl} risks={risks} />
 
         </>}
         {step < summaryStep && <Card className="p-[18px]">
@@ -170,69 +145,9 @@ export default function ResultPage() {
           <h2 className="text-lg font-bold">室内の備え</h2>
           <p className="mt-2 font-bold text-safe" role="status">{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
           <ul className="mt-3 space-y-2">{risks.map(r => <li key={r.id}><label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-field bg-canvas p-3"><input type="checkbox" checked={checked.includes(`prepared:${r.id}`)} onChange={() => toggleChecked(`prepared:${r.id}`)} className="size-5 accent-teal-700" /><span className="flex-1"><Furigana text={r.name} adult={r.adultName} /></span><span className="text-sm font-bold text-safe">{checked.includes(`prepared:${r.id}`) ? "対策済み！" : "対策したらチェック"}</span></label></li>)}</ul>
-        </Card><Card className="p-[18px]">
-          <p className="font-display text-15 font-bold text-ink">
-            <Furigana text="部屋[へや]をさらに安全[あんぜん]にするためのチェックリスト" />
-          </p>
-          <div className="mt-3 flex flex-col gap-2.5">
-            {groups.map(([group, list]) => (
-              <div key={group} className="rounded-field bg-canvas p-2.5">
-                <p className="font-display text-11 font-bold text-primary-ink">
-                  <Furigana text={group} />
-                </p>
-                <ul className="mt-1 flex flex-col gap-1.5">
-                  {list.map((item) => {
-                    const on = checked.includes(item.id);
-                    return (
-                      <li key={item.id}>
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={on}
-                            onChange={() => {
-                              vibrate();
-                              toggleChecked(item.id);
-                            }}
-                            className="sr-only"
-                          />
-                          <span
-                            aria-hidden
-                            className={[
-                              "grid size-[18px] shrink-0 place-items-center rounded border-2 transition-colors",
-                              on ? "border-primary-mid bg-primary" : "border-border bg-surface",
-                            ].join(" ")}
-                          >
-                            {on ? (
-                              <svg viewBox="0 0 14 14" className="size-3" aria-hidden>
-                                <path
-                                  d="M2.5 7.5 5.5 10.5 11.5 3.5"
-                                  fill="none"
-                                  stroke="var(--color-ink)"
-                                  strokeWidth="2.4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            ) : null}
-                          </span>
-                          <span
-                            className={[
-                              "flex-1 text-13",
-                              on ? "text-ink-faint line-through" : "text-ink",
-                            ].join(" ")}
-                          >
-                            <Furigana text={item.text} />
-                          </span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
         </Card>
 
+          <EvacuationGuide />
           <div className="flex flex-col gap-2">
             <p className="text-center text-sm text-ink-muted">
               <Furigana text="次は、避難場所[ひなんばしょ]までの道を確認しよう。" adult="次は、避難場所までの経路を確認します。" />
@@ -252,7 +167,7 @@ export default function ResultPage() {
         </>}
         <nav aria-label="結果のページ切り替え" className="sticky bottom-0 flex gap-3 border-t border-border bg-canvas py-3">
           <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}>戻る</Button>
-          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果[けっか]をシェア" />}</Button>
+          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果を共有" adult="結果を保存・共有" />}</Button>
         </nav>
       </div>
 

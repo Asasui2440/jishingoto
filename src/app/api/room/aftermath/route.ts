@@ -36,11 +36,15 @@ export async function POST(request: Request) {
 
   let upstream: Response;
   try {
-    upstream = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body: form });
-  } catch {
-    return Response.json({ error: "openai-unreachable" }, { status: 502 });
+    upstream = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(110_000) });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error && error.name === "TimeoutError" ? "openai-timeout" : "openai-unreachable" }, { status: 502 });
   }
-  if (!upstream.ok) return Response.json({ error: "openai-error" }, { status: 502 });
+  if (!upstream.ok) {
+    // 写真やAPIキー、上流のエラーメッセージはログに出さない。
+    console.error("Room image generation failed", { status: upstream.status, requestId: upstream.headers.get("x-request-id") });
+    return Response.json({ error: upstream.status === 429 ? "openai-rate-limit" : "openai-error" }, { status: 502 });
+  }
   const json = await upstream.json() as { data?: { b64_json?: string; url?: string }[] };
   const first = json.data?.[0];
   const imageUrl = first?.b64_json ? `data:image/png;base64,${first.b64_json}` : first?.url;

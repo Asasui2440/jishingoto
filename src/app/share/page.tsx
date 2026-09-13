@@ -1,5 +1,6 @@
 "use client";
 
+import { SocialImageShare } from "@/components/SocialImageShare";
 import { AftermathShare } from "@/components/AftermathShare";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -32,6 +33,8 @@ export default function SharePage() {
   const { answers, risks, photoUrl, checked } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [saving, setSaving] = useState(false);
+  const [roomFile, setRoomFile] = useState<File | null>(null);
+  const [resultFile, setResultFile] = useState<File | null>(null);
 
   const scores = useMemo(() => scoreByAxis(answers, risks), [answers, risks]);
   const date = useMemo(() => new Date(), []);
@@ -42,9 +45,14 @@ export default function SharePage() {
 
   // 画面に見えているカードと同じ内容を、書き出し用に Canvas にも描いておく
   useEffect(() => {
+    let alive = true;
     if (canvasRef.current) {
       drawShareCard(canvasRef.current, { rows: axisRows(scores), date, audience });
+      canvasRef.current.toBlob(blob => {
+        if (alive) setResultFile(blob ? new File([blob], "jishingoto-result.png", { type: "image/png" }) : null);
+      }, "image/png");
     }
+    return () => { alive = false; };
   }, [scores, date, audience]);
 
   const download = () => {
@@ -63,7 +71,6 @@ export default function SharePage() {
     }, "image/png");
   };
 
-  const openShare = (href: string) => window.open(href, "_blank", "noopener,noreferrer");
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
@@ -71,7 +78,7 @@ export default function SharePage() {
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
           <h1 className="font-display text-lg font-bold text-ink">
-            <Furigana text="けっかを友達[ともだち]にシェア" />
+            <Furigana text="結果を共有" adult="結果を保存・共有" />
           </h1>
           <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"}>
             <XCircleDarkIcon className="size-6 text-ink" />
@@ -92,7 +99,7 @@ export default function SharePage() {
           </div>
 
           <div className="mt-4 text-center">
-            <p className="font-display text-xl font-black text-primary-ink">
+            <p className="whitespace-nowrap font-display text-[clamp(11px,3.5vw,16px)] font-black text-primary-ink">
               <Furigana text="じぶんの部屋[へや]の安全[あんぜん]チェック、したよ！" />
             </p>
             <p className="mt-1 text-13 text-ink-muted">シミュレーション結果サマリー</p>
@@ -118,43 +125,23 @@ export default function SharePage() {
           </div>
 
           <p className="mt-3 text-sm font-bold text-safe">✓ 室内の備え：{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
-          <AftermathShare photoUrl={photoUrl} risks={risks} />
+          <AftermathShare photoUrl={photoUrl} risks={risks} onFileReady={setRoomFile} allowShare={audience === "adult"} />
 
-          <p className="mt-4 text-center font-display text-13 font-bold text-primary-ink">
-            <Furigana text="みんなもスマホで「ジシンゴト」を検索[けんさく]してみてね！" />
+          <p className="mt-4 whitespace-nowrap text-center font-display text-[clamp(9px,2.9vw,13px)] font-bold text-primary-ink">
+            <Furigana text="気づいたことを家族と話して、部屋の備えにつなげよう。" adult="気づいたことを、次の備えにつなげましょう。" />
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-field bg-safe-soft p-3">
+        {audience === "adult" && <div className="flex items-center gap-2 rounded-field bg-safe-soft p-3">
           <ShieldCheck2Icon className="size-4 shrink-0" />
           <p className="text-11 font-semibold text-ink-muted">
-            <Furigana text="下のボタンは結果サマリー用です。予想図[よそうず]は、画像の下の「予想図を共有」から送れます。" />
+            <Furigana text="X・LINEに、部屋の予想図とリザルトの2枚を共有できます。" />
           </p>
-        </div>
+        </div>}
 
         <div className="flex flex-col gap-2.5">
-          <Button
-            size="md"
-            variant="line"
-            onClick={() =>
-              openShare(
-                `https://line.me/R/msg/text/?${encodeURIComponent(`${shareText}\n${shareUrl()}`)}`,
-              )
-            }
-          >
-            結果をLINEで送る
-          </Button>
-          <Button
-            size="md"
-            variant="x"
-            onClick={() =>
-              openShare(
-                `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl())}`,
-              )
-            }
-          >
-            結果をXにポスト
-          </Button>
+          <SocialImageShare platform="LINE" room={roomFile} result={resultFile} text={shareText} url={shareUrl()} />
+          {audience === "adult" && <SocialImageShare platform="X" room={roomFile} result={resultFile} text={shareText} url={shareUrl()} />}
           <Button size="md" variant="outline" onClick={download} disabled={saving}>
             <Furigana text={saving ? "作成中[さくせいちゅう]..." : "結果サマリーを画像で保存"} />
           </Button>

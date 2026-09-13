@@ -62,14 +62,17 @@ export async function applyPrivacyMasks(dataUrl: string, regions: MaskRegion[]):
 export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const requestId = useRef(0);
   const [state, setState] = useState<CameraState>("idle");
 
   const stop = useCallback(() => {
+    requestId.current += 1;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
 
   const start = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     if (!navigator.mediaDevices?.getUserMedia) {
       setState("unavailable");
       return;
@@ -80,13 +83,19 @@ export function useCamera() {
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
         audio: false,
       });
+      // 許可待ちの間に「戻る」を押した場合も、遅れて届く映像を停止する。
+      if (currentRequest !== requestId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
       }
-      setState("live");
+      if (currentRequest === requestId.current) setState("live");
     } catch (err) {
+      if (currentRequest !== requestId.current) return;
       // NotAllowedError は権限拒否、それ以外は端末側の都合
       setState((err as DOMException)?.name === "NotAllowedError" ? "denied" : "unavailable");
     }

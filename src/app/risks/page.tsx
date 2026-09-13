@@ -1,6 +1,5 @@
 "use client";
 
-import { AftermathCard } from "@/components/AftermathCard";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,13 +7,19 @@ import roomRisk from "@/../public/figma/img/room-risk.jpg";
 import { Button } from "@/components/ui/Button";
 import { Furigana, plain } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { type RiskKind, type RoomObjectType } from "@/lib/content";
+import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { focusDescription } from "@/lib/focus-description";
 import { SafetyProducts } from "@/components/SafetyProducts";
 import { RISK_KINDS } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
-import { roomAdviceImage, roomAdvice } from "@/lib/room-guidance";
+import { roomAdviceImages, roomAdvice } from "@/lib/room-guidance";
+
+function AdviceIllustration({ risk }: { risk: Risk }) {
+  const [variant] = useState(() => Math.random());
+  const image = roomAdviceImages(risk, variant)[0];
+  return image ? <Image src={image.src} alt={image.alt} width={1536} height={1024} className="mt-3 h-auto w-full rounded-field" /> : null;
+}
 
 const DANGER_TEXT: Record<RiskKind, { child: string; adult: string }> = {
   fall: { child: "たおれたり落[お]ちたりして、けがや逃[に]げ道[みち]をふさぐ原因[げんいん]になる可能性[かのうせい]があります。", adult: "転倒・落下により負傷したり、避難経路を塞いだりする可能性があります。" },
@@ -34,6 +39,10 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
   { value: "desk", label: "机・テーブル", kind: "fall" },
   { value: "bed", label: "ベッド", kind: "fall" },
   { value: "loose_objects", label: "床に置いてあるもの", kind: "block" },
+  { value: "instrument", label: "楽器", kind: "fall" },
+  { value: "clothes_rack", label: "衣類・バッグのラック", kind: "fall" },
+  { value: "pet_cage", label: "ペットのケージ", kind: "fall" },
+  { value: "washing_machine", label: "洗濯機", kind: "fall" },
   { value: "other", label: "その他", kind: "fall" },
 ];
 
@@ -118,7 +127,7 @@ export default function RoomRecognitionPage() {
           <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
           <h2 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h2>
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
-          {roomAdviceImage(selected) && <Image src={roomAdviceImage(selected)!.src} alt={roomAdviceImage(selected)!.alt} width={1536} height={1024} className="mt-3 h-auto w-full rounded-field" />}
+          <AdviceIllustration key={selected.id} risk={selected} />
           <div className="mt-3 rounded-field bg-primary-soft p-3">
             <p className="text-11 font-bold text-primary-ink"><Furigana text="地震[じしん]の前[まえ]にできること" adult="事前にできる対策" /></p>
             <p className="mt-1 font-display text-15 font-bold"><Furigana text={selectedAdvice.headline} /></p>
@@ -126,10 +135,10 @@ export default function RoomRecognitionPage() {
               {selectedAdvice.steps.map((text, index) => <li key={text} className="flex gap-2 text-13"><span className="font-bold text-primary-ink">{index + 1}</span><Furigana text={text} /></li>)}
             </ol>
           </div>
-          <div className="mt-3 rounded-field bg-canvas p-3">
+          {selectedAdvice.detail && <div className="mt-3 rounded-field bg-canvas p-3">
             <h3 className="min-h-8 text-13 font-bold"><Furigana text="対策[たいさく]のポイント" adult="対策の詳細・注意点" /></h3>
             <p className="mt-2 text-base leading-relaxed"><Furigana text={selectedAdvice.detail} /></p>
-          </div>
+          </div>}
           <label className="mt-4 flex min-h-12 cursor-pointer items-center gap-3 rounded-field border border-safe p-3 font-bold text-safe">
             <input type="checkbox" checked={checked.includes(`prepared:${selected.id}`)} onChange={() => toggleChecked(`prepared:${selected.id}`)} className="size-5 accent-teal-700" />
             <Furigana text="この家具・場所は対策[たいさく]済[ず]み" adult="この家具・場所は対策済み" />
@@ -174,7 +183,11 @@ export default function RoomRecognitionPage() {
           </ul>
           {risks.length === 0 && <p className="mt-3 text-13 text-ink-muted">家具や場所を読み取れませんでした。共通の問題で体験するか、写真を撮り直せます。</p>}
         </section>
-        <AftermathCard photoUrl={photoUrl} risks={risks.map((risk) => ({ ...risk, confirmed: true }))} />
+        <section className="rounded-panel bg-primary-soft p-5">
+          <p className="text-sm font-bold text-primary-ink">備えを確認したら、次は行動の体験へ</p>
+          <h2 className="mt-2 text-xl font-bold"><Furigana text="この部屋で、地震が起きたら？" /></h2>
+          <p className="mt-2 text-base leading-relaxed"><Furigana text="今見た家具や場所のそばで揺れが始まったとき、どう動くかを選んでみよう。" adult="確認した家具や場所をもとに、揺れている間と収まった後の行動をシミュレーションします。" /></p>
+        </section>
         <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-canvas py-3">
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" size="md" disabled={editing !== null || risks.length < 2} onClick={() => { setSelectedId(risks[(selectedIndex + 1) % risks.length].id); focusDescription("selected-room-photo"); }}><Furigana text={selectedIndex === risks.length - 1 ? "最初の家具へ" : "次の家具へ"} /></Button>
