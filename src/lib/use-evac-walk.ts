@@ -16,6 +16,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   const [notice, setNotice] = useState<string | null>(null);
   const [timerOverride, setTimerOverride] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const scenario = evac.scenario ?? "earthquake";
   const source = evac.mode === "api" ? evac.analysisMode ?? "geo-ai" : "sample";
   const choosing = useRef(false);
   const mounted = useRef(false);
@@ -28,7 +29,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
-    void fetchDecisionPoints(route, { source, signal: controller.signal }).then((points) => {
+    void fetchDecisionPoints(route, { source, scenario, signal: controller.signal }).then((points) => {
       if (alive) update((prev) => ({ ...prev,
         routes: prev.routes.map((r) => r.id === route.id ? { ...r, eventCount: points.length } : r),
         walk: { source, routeId: route.id, steps: buildWalkSteps(route, points), index: 0 },
@@ -37,7 +38,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
       if (alive) setError(problem instanceof Error ? problem.message : "解析できませんでした。再試行してください。");
     });
     return () => { alive = false; controller.abort(); };
-  }, [route, walk, update, source, attempt]);
+  }, [route, walk, update, source, scenario, attempt]);
 
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
@@ -95,12 +96,12 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     try {
       const current = getEvac();
       const detour = choice.reroute && current.shelter
-        ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode)
+        ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode, scenario)
         : null;
       if (choice.reroute && !detour) throw new Error("迂回路を取得できませんでした。もう一度試すか、別の行動を選んでください。");
       const excluded = [...current.decisions.map((d) => d.eventId), step.event.id];
       const remaining = Math.max(0, 3 - current.decisions.length - 1);
-      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, excludedEventIds: excluded, maxPoints: remaining }) : [];
+      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded, maxPoints: remaining }) : [];
       if (!mounted.current || getEvac().walk !== walk) return;
       const nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
       // 迂回の移動時間は新しい経路に含まれる。追加時間を二重に加算しない。

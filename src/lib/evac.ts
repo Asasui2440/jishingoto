@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import type { EvacMode } from "./evac-mode";
 import type { WalkProgress } from "./evac-walk";
+import type { EvacScenario } from "./evac-scenario";
 import { DEFAULT_TIMER_SECONDS, type LatLng, type RouteOption, type Shelter } from "./evac-content";
 import { createPersistentStore, useStore } from "./store";
 
@@ -28,6 +29,7 @@ export type EvacDecision = {
 };
 
 export type EvacSession = {
+  scenario: EvacScenario;
   mode: EvacMode;
   analysisMode: "geo-ai" | "sample";
   /** 連続して体験したフェーズ1の完了時刻。部屋の写真はコピーしない。 */
@@ -53,6 +55,7 @@ export type EvacSession = {
 };
 
 const EMPTY: EvacSession = {
+  scenario: "earthquake",
   mode: "mock",
   analysisMode: "geo-ai",
   roomFinishedAt: null,
@@ -98,8 +101,8 @@ export function useEvac() {
     [set],
   );
 
-  const reset = useCallback(() => set((prev) => ({ ...EMPTY, mode: prev.mode, analysisMode: prev.analysisMode, roomFinishedAt: prev.roomFinishedAt, startedAt: Date.now() })), [set]);
-  const setMode = useCallback((mode: EvacMode) => set((prev) => prev.mode === mode ? prev : { ...EMPTY, mode, roomFinishedAt: prev.roomFinishedAt, startedAt: Date.now() }), [set]);
+  const reset = useCallback(() => set((prev) => ({ ...EMPTY, mode: prev.mode, scenario: prev.scenario ?? "earthquake", roomFinishedAt: prev.roomFinishedAt, startedAt: Date.now() })), [set]);
+  const setMode = useCallback((mode: EvacMode) => set((prev) => prev.mode === mode ? prev : { ...EMPTY, mode, scenario: prev.scenario ?? "earthquake", roomFinishedAt: prev.roomFinishedAt, startedAt: Date.now() }), [set]);
 
   // 同じ部屋から戻った場合は進捗を維持し、新しく体験した部屋なら屋外の記録を初期化する。
   const linkRoom = useCallback((finishedAt: number | null) => set((prev) => {

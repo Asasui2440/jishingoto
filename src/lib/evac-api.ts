@@ -1,9 +1,12 @@
 "use client";
 
+import { EVAC_SCENARIOS, SHELTER_DISASTERS, type EvacScenario } from "./evac-scenario";
+import { floodPracticeEvent } from "./geo-events";
+
 /**
  * フェーズ2の取得境界。フェーズ1のfixture/liveと同様、モードを明示する。
  * mock: サンプル避難場所・合成ルート。外部サービスを呼ばない。
- * api: GSI/Placesの候補と、Maps JS Routes Libraryの徒歩ルート。
+ * api: 災害種別に対応するGSIの避難場所と、Maps JS Routes Libraryの徒歩ルート。
  * API失敗時はエラーを返し、モックへ自動で置き換えない。
  */
 
@@ -81,8 +84,8 @@ export function headingAt(path: LatLng[], t: number) {
  */
 const NEARBY_RADIUS_M = 3000;
 
-/** API版は公的データ→Places候補の順に取得し、固定データには置き換えない。 */
-export async function fetchShelters(near: LatLng, mode: EvacMode): Promise<Shelter[]> {
+/** 選択した災害に対応する公的な指定緊急避難場所だけを返す。 */
+export async function fetchShelters(near: LatLng, mode: EvacMode, scenario: EvacScenario = "earthquake"): Promise<Shelter[]> {
   const nearby = (list: Shelter[]) =>
     [...list]
       .filter((s) => distanceM(near, s.position) <= NEARBY_RADIUS_M)
@@ -93,16 +96,9 @@ export async function fetchShelters(near: LatLng, mode: EvacMode): Promise<Shelt
   if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
 
   try {
-    const official = nearby(await fetchGsiShelters(near));
-    if (official.length > 0) return official;
+    return nearby(await fetchGsiShelters(near, scenario));
   } catch {
-    // 公的データを取れなければ次の手段へ
-  }
-
-  try {
-    return nearby(await fetchPlaceShelters(near));
-  } catch {
-    throw new Error("避難場所を取得できませんでした。接続とGoogle APIの設定を確認して再試行してください。");
+    throw new Error(`${EVAC_SCENARIOS[scenario].label}に対応する指定緊急避難場所を取得できませんでした。通信を確認して再試行してください。`);
   }
 }
 
@@ -119,7 +115,7 @@ export async function fetchShelters(near: LatLng, mode: EvacMode): Promise<Shelt
  * @see https://www.gsi.go.jp/bousaichiri/hinanbasho.html
  */
 const GSI_ZOOM = 10;
-const GSI_EARTHQUAKE_LAYER = "skhb04";
+
 
 /** 緯度経度 → タイル座標（小数のまま。境界までの近さを測るのに使う） */
 function tileFloat(p: LatLng, z: number) {
@@ -161,22 +157,24 @@ type GsiFeature = {
 };
 
 /**
- * 地理院タイルの GeoJSON（地震の指定緊急避難場所）から、周囲の候補を集める。
+ * 地理院タイルの GeoJSON（選択した災害の指定緊急避難場所）から、周囲の候補を集める。
  *
- * 取得できない環境（CORS・オフラインなど）では例外にして、呼び出し側が次の手段に移る。
+ * 取得できない環境（CORS・オフラインなど）では例外にして、呼び出し側が再試行を案内する。
  */
-async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
+async function fetchGsiShelters(near: LatLng, scenario: EvacScenario): Promise<Shelter[]> {
   const tiles = tilesAround(near, GSI_ZOOM, NEARBY_RADIUS_M);
 
   const results = await Promise.all(
     tiles.map(async (t) => {
       const res = await fetch(
-        `https://maps.gsi.go.jp/xyz/${GSI_EARTHQUAKE_LAYER}/${GSI_ZOOM}/${t.x}/${t.y}.geojson`,
+        `https://maps.gsi.go.jp/xyz/${EVAC_SCENARIOS[scenario].layer}/${GSI_ZOOM}/${t.x}/${t.y}.geojson`,
         { signal: AbortSignal.timeout(8000) },
       );
-      if (!res.ok) return [] as GsiFeature[];
+      if (res.status === 404) return [] as GsiFeature[];
+      if (!res.ok) throw new Error("gsi-unavailable");
       const json = (await res.json()) as { features?: GsiFeature[] };
-      return json.features ?? [];
+      if (!Array.isArray(json.features)) throw new Error("invalid-shelter-data");
+      return json.features;
     }),
   );
 
@@ -193,7 +191,8 @@ async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
   return results.flat().flatMap((f): Shelter[] => {
     const c = f.geometry?.coordinates;
     const props = f.properties ?? {};
-    if (!c || c.length < 2) return [];
+    if (!c || c.length < 2 || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) return [];
+    if (String(props[EVAC_SCENARIOS[scenario].flag]) !== "1") return [];
     const name = pick(props, ["name", "名称", "施設・場所名"]);
     if (!name) return [];
     const id = `gsi-${c[0].toFixed(5)}-${c[1].toFixed(5)}`;
@@ -203,50 +202,17 @@ async function fetchGsiShelters(near: LatLng): Promise<Shelter[]> {
       {
         id,
         name,
-        kind: "指定緊急避難場所",
+        kind: `指定緊急避難場所（${EVAC_SCENARIOS[scenario].label}）`,
+        supportedDisasters: SHELTER_DISASTERS.filter((_, i) => String(props[`disaster${i + 1}`]) === "1"),
         address: pick(props, ["address", "住所", "所在地"]),
         position: { lat: c[1], lng: c[0] },
-        source: "国土地理院「指定緊急避難場所データ」（地震）",
+        source: `国土地理院「指定緊急避難場所データ」（${EVAC_SCENARIOS[scenario].label}）`,
         note: "対応[たいおう]する災害[さいがい]の種別[しゅべつ]は、自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。",
       },
     ];
   });
 }
 
-/* --- 2. Google Places（避難場所になりやすい施設の候補） ---------------- */
-
-async function fetchPlaceShelters(near: LatLng): Promise<Shelter[]> {
-  const maps = await loadMaps();
-  const { Place, SearchNearbyRankPreference } = (await maps.importLibrary(
-    "places",
-  )) as google.maps.PlacesLibrary;
-
-  const { places } = await Place.searchNearby({
-    fields: ["displayName", "location", "formattedAddress", "primaryTypeDisplayName"],
-    locationRestriction: { center: near, radius: 1500 },
-    includedPrimaryTypes: ["park", "primary_school", "school", "community_center"],
-    maxResultCount: 8,
-    rankPreference: SearchNearbyRankPreference.DISTANCE,
-    language: "ja",
-    region: "JP",
-  });
-
-  return places.flatMap((p): Shelter[] => {
-    const loc = p.location;
-    if (!loc) return [];
-    return [
-      {
-        id: `place-${p.id}`,
-        name: p.displayName ?? "名称不明",
-        kind: p.primaryTypeDisplayName ?? "施設",
-        address: p.formattedAddress ?? "",
-        position: { lat: loc.lat(), lng: loc.lng() },
-        source: "Google マップの施設情報（避難場所の候補）",
-        note: "自治体[じちたい]が指定[してい]した避難場所[ひなんばしょ]とは限[かぎ]りません。実際[じっさい]の指定[してい]は自治体[じちたい]の一覧[いちらん]で確[たし]かめてください。",
-      },
-    ];
-  });
-}
 
 /* --- 住所から地点を探す ------------------------------------------------ */
 
@@ -328,10 +294,10 @@ const WALK_SPEED = 1.2;
  * **どちらが安全かは断定しない**。画面には距離・時間・イベント数と、
  * 経路データから言える事実（曲がる回数など）だけを出す。
  */
-export async function fetchRoutes(home: LatLng, shelter: Shelter, mode: EvacMode): Promise<RouteOption[]> {
+export async function fetchRoutes(home: LatLng, shelter: Shelter, mode: EvacMode, scenario: EvacScenario = "earthquake"): Promise<RouteOption[]> {
   if (mode === "mock") return demoRoutes(home, shelter);
   if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
-  const routes = await fetchRoutesFromGoogle(home, shelter);
+  const routes = await fetchRoutesFromGoogle(home, shelter, scenario);
   if (!routes.length) throw new Error("この場所への徒歩ルートが見つかりませんでした。場所を選び直してください。");
   return routes;
 }
@@ -359,7 +325,7 @@ function detourVia(home: LatLng, to: LatLng): LatLng {
   };
 }
 
-async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter): Promise<RouteOption[]> {
+async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter, scenario: EvacScenario): Promise<RouteOption[]> {
   const found = await requestWalkingRoutes(home, shelter.position);
   const sorted = [...found].sort((a, b) => a.distanceM - b.distanceM);
   if (!sorted.length) return [];
@@ -390,7 +356,7 @@ async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter): Promise<Ro
       eventCount,
     };
   });
-  return assessRouteOptions(options);
+  return assessRouteOptions(options, scenario);
 }
 
 type AssessmentResponse = {
@@ -403,13 +369,14 @@ type AssessmentResponse = {
  * Google経路の取得自体は成功しているため、比較APIだけが失敗したときは
  * 経路を捨てず、未評価であることをカードへ明示する。
  */
-async function assessRouteOptions(routes: RouteOption[]): Promise<RouteOption[]> {
+async function assessRouteOptions(routes: RouteOption[], scenario: EvacScenario = "earthquake"): Promise<RouteOption[]> {
   try {
     const response = await fetch("/api/evac/assess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(20000),
       body: JSON.stringify({
+        scenario,
         routes: routes.map(({ id, path, distanceM, durationS }) => ({
           id,
           path,
@@ -501,6 +468,7 @@ export async function fetchDetourFrom(
   from: LatLng,
   shelter: Shelter,
   mode: EvacMode,
+  scenario: EvacScenario = "earthquake",
 ): Promise<RouteOption | null> {
   if (mode === "mock") {
     const route = demoRoutes(from, shelter)[1];
@@ -534,7 +502,7 @@ export async function fetchDetourFrom(
       path: connectedPath,
       eventCount: 2,
     };
-    return (await assessRouteOptions([option]))[0] ?? option;
+    return (await assessRouteOptions([option], scenario))[0] ?? option;
   } catch {
     return null;
   }
@@ -563,11 +531,11 @@ export type DecisionPoint = {
  * geo-aiは別途取り込んだ地形データをAIで分析する。sampleは固定の練習用配置。
  * Googleの地図画像やStreet ViewはAIへ送らない。
  */
-export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; scenario?: EvacScenario; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
   if (options?.source === "geo-ai") {
     const response = await fetch("/api/evac/analyze", {
       method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(55000)]) : AbortSignal.timeout(55000),
-      body: JSON.stringify({ route: { id: route.id, path: route.path, durationS: route.durationS }, excludedEventIds: options.excludedEventIds ?? [] }),
+      body: JSON.stringify({ scenario: options?.scenario ?? "earthquake", route: { id: route.id, path: route.path, durationS: route.durationS }, excludedEventIds: options.excludedEventIds ?? [] }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message ?? "地理データのAI解析に接続できませんでした。");
@@ -576,7 +544,7 @@ export async function fetchDecisionPoints(route: RouteOption, options?: { source
   }
   await wait(200);
   // 最短ルートは3件、もう一方は2件（仕様 4：1体験につき2〜3件）
-  const plan =
+  const plan = options?.scenario === "flood" ? [{ t: 0.5, eventId: "practice-flood" }] :
     route.kind === "short"
       ? [
           { t: 0.28, eventId: "wall" },
@@ -591,7 +559,7 @@ export async function fetchDecisionPoints(route: RouteOption, options?: { source
   const total = pathLengthM(route.path);
 
   return plan.flatMap(({ t, eventId }, i) => {
-    const event = HAZARD_EVENTS.find((e) => e.id === eventId);
+    const event = eventId === "practice-flood" ? floodPracticeEvent() : HAZARD_EVENTS.find((e) => e.id === eventId);
     if (!event) return [];
     return [
       {

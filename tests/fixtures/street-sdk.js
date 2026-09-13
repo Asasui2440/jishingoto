@@ -36,6 +36,10 @@
       ...(params.has("missedQuestion") && i === 0 ? { pointId: "missed", event: { id: "wall" } } : {}),
     })) },
   }));
+  if (params.has("analysisFailure")) {
+    const saved = JSON.parse(sessionStorage.getItem("jishingoto.evac.v2"));
+    sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify({...saved,scenario:"flood",analysisMode:"geo-ai",walk:null}));
+  }
   class Events {
     listeners = {};
     addListener(name, fn) { (this.listeners[name] ??= new Set()).add(fn); return { remove: () => this.listeners[name].delete(fn) }; }
@@ -77,6 +81,7 @@
   }
   window.google = { maps: {
     Map: MapView, StreetViewPanorama: Panorama,
+    importLibrary: async () => ({ Route: { computeRoutes: async request => ({ routes: [{ path: [request.origin, request.destination], distanceMeters: 200, durationMillis: 180000 }] }) } }),
     StreetViewService: class { async getPanorama(request) {
       test.lookups++;
       const isArrival = request.radius === 150;

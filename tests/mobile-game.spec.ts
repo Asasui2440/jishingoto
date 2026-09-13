@@ -324,3 +324,70 @@ test("避難先の敷地内が別の接続でも道路側ノードで到着し�
   await page.waitForTimeout(2000);
   expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual(["B", "C"]);
 });
+
+test("現在地で場所を選びルート比較でケースを切り替える", async ({ page }, testInfo) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "geolocation", { value: { getCurrentPosition: (success: (value: unknown) => void) => success({coords:{latitude:35.001,longitude:139}}) } });
+  });
+  await page.route("https://maps.gsi.go.jp/xyz/skhb*/**", async route => {
+    const flood = route.request().url().includes("skhb01");
+    await route.fulfill({json:{features:[{geometry:{coordinates:[139,flood ? 35.003 : 35.002]},properties:{name:flood ? "洪水の避難先" : "地震の避難先",address:"テストの住所",[flood ? "disaster1" : "disaster4"]:1}}]}});
+  });
+  await page.goto("/evac?mode=api");
+  await expect(page.getByRole("button", { name: "現在地から始める" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "固定の練習問題", exact:true })).toHaveCount(0);
+  await expect(page.getByRole("combobox",{name:"災害ケース"})).toHaveCount(0);
+  await page.getByRole("button",{name:"現在地から始める"}).click();
+  await expect(page.getByText("現在地を設定しました",{exact:true})).toBeVisible();
+  const session = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(session.scenario).toBe("earthquake");
+  expect(session.analysisMode).toBe("geo-ai");
+  expect(session.home).toEqual({lat:35.001,lng:139});
+  expect(session.routes).toEqual([]);
+  expect(session.shelter).toBeNull();
+  await noPageOverflow(page,page.getByRole("button",{name:"現在地から始める"}));
+  await page.route("**/api/evac/assess",route=>route.fulfill({status:503,json:{}}));
+  await page.getByRole("region",{name:"避難先を選ぶ"}).getByRole("button",{name:/地震の避難先/}).click();
+  await page.getByRole("button",{name:"ルートを比べる"}).click();
+  await expect(page.getByRole("heading",{name:"どの道で行こう？"})).toBeVisible();
+  await expect(page.getByRole("button",{name:"この道でスタート"})).toBeEnabled();
+  await page.getByRole("combobox",{name:"災害ケース"}).selectOption("flood");
+  await expect(page.getByText("洪水に対応する避難先を選んでください")).toBeVisible();
+  await expect(page).toHaveURL(/\/evac\/routes/);
+  await page.getByRole("region",{name:"ルートを比較する"}).getByRole("button",{name:/洪水の避難先/}).click();
+  await expect(page.getByRole("button",{name:"この道でスタート"})).toBeEnabled();
+  expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).scenario)).toBe("flood");
+  await noPageOverflow(page,page.getByRole("button",{name:"この道でスタート"}));
+  await capture(page,testInfo,"scenario-routes");
+});
+
+test("現在地の許可がない場合も住所検索を案内する", async ({ page }) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "geolocation", { value: { getCurrentPosition: (_success: unknown, failure: (error: unknown) => void) => failure({code:1}) } });
+  });
+  await page.route("https://maps.gsi.go.jp/xyz/skhb*/**",route=>route.fulfill({json:{features:[]}}));
+  await page.goto("/evac?mode=api");
+  await page.getByRole("button",{name:"現在地から始める"}).click();
+  await expect(page.getByText(/位置情報の利用が許可されていません/)).toBeVisible();
+  await expect(page.getByRole("textbox",{name:"住所・駅名で出発地点を検索"})).toBeEnabled();
+});
+
+test("解析失敗時だけ固定問題を案内し洪水ケースのまま続ける", async ({ page }) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  const requests: Record<string,unknown>[]=[];
+  await page.route("**/api/evac/analyze", async route => {
+    requests.push(route.request().postDataJSON());
+    await route.fulfill({status:502,json:{message:"地形データを取得できませんでした。"}});
+  });
+  await page.goto("/evac/walk?analysisFailure=1");
+  await expect(page.getByRole("alert").filter({hasText:"地形データを取得できませんでした。"})).toBeVisible();
+  expect(requests[0].scenario).toBe("flood");
+  await page.getByRole("button",{name:"固定の練習問題で始める"}).click();
+  await expect(page.getByRole("button",{name:"自動で歩く"})).toBeEnabled();
+  const session=await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(session.scenario).toBe("flood");
+  expect(session.walk.source).toBe("sample");
+  expect(session.walk.steps.filter((step:{event?:{id:string}})=>step.event).map((step:{event:{id:string}})=>step.event.id)).toEqual(["practice-flood"]);
+});

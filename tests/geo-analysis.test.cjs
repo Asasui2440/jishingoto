@@ -563,3 +563,31 @@ test("preset data stays available without a tile download and weak-risk classifi
   const tile = dynamicGeo.parseTerrainTile(terrainTile("10305"),{x:1,y:2});
   assert.deepEqual(tile[0].categories, []);
 });
+
+test("flood analysis and comparison use flood terrain rather than earthquake categories", async () => {
+  const floodRegion = geo.regionForScenario(region,"flood");
+  assert(floodRegion.features.some(f=>f.categories.includes("flood")));
+  assert(floodRegion.features.every(f=>f.categories.every(c=>c==="flood")));
+  const route = {...request,scenario:"flood"};
+  await withKey(async () => {
+    let sent;
+    const result = await geo.analyzeGeoRoute(route,undefined,async (_url,opts)=> {
+      sent=JSON.parse(opts.body);
+      const input=JSON.parse(sent.input[0].content);
+      assert.equal(input.disaster,"flood");
+      assert(input.features.every(f=>f.availableCategories.every(c=>c==="flood")));
+      return response({candidates:[{featureId:input.features[0].featureId,category:"flood",reason:"低地の一般的な傾向を確認する",uncertainties:["浸水深は未確認"]}]});
+    });
+    assert(result.points.length>0);
+    assert(result.points.every(p=>p.event.situation.includes("洪水")));
+    assert(sent.instructions.includes("浸水中の徒歩避難を勧めない"));
+  });
+  const comparison = routeAssessment.assessRouteCandidates({scenario:"flood",routes:[{...request.route,distanceM:900}]});
+  const assessment = comparison.assessments[request.route.id];
+  assert(assessment.terrain.floodM>0);
+  assert.equal(assessment.terrain.liquefactionM,0);
+  assert.equal(assessment.terrain.shakingM,0);
+  assert(assessment.notes.some(n=>n.includes("浸水深")));
+  assert.throws(()=>geo.parseGeoRequest({...request,scenario:"typo"}),/ケース/);
+  assert.throws(()=>routeAssessment.parseRouteAssessmentRequest({scenario:"typo",routes:[{...request.route,distanceM:900}]}),/ケース/);
+});

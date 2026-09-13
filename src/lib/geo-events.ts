@@ -5,6 +5,12 @@ const descriptions: Record<
   GeoCategory,
   { title: string; situation: string; hint: string; followUp: string }
 > = {
+  flood: {
+    title: "大雨[おおあめ]に備[そな]えて道[みち]を確認[かくにん]する想定[そうてい]",
+    situation: "周辺の地形は、洪水や浸水に注意を考える材料になる分類です。浸水が始まる前に避難する想定で、どの情報や道を確認しますか？この地点の浸水や水深を確認した情報ではありません。",
+    hint: "自治体の洪水ハザードマップと避難情報を確認し、早めの避難を考えます。すでに浸水した道を歩く練習ではありません。",
+    followUp: "自治体の洪水ハザードマップで避難先・経路・避難を始めるタイミングを確認する",
+  },
   slope: {
     title: "斜面[しゃめん]の近[ちか]くで揺[ゆ]れた想定[そうてい]",
     situation:
@@ -30,21 +36,21 @@ const descriptions: Record<
 };
 export function makeGeoEvent(
   category: GeoCategory,
-  evidence: GeoEvidence,
+  evidence?: GeoEvidence,
 ): HazardEvent {
   const description = descriptions[category];
   return {
-    id: `geo:${evidence.featureId}:${category}`,
+    id: evidence ? `geo:${evidence.featureId}:${category}` : `practice-${category}`,
     kind: "terrain",
     ...description,
     evidence,
     zone: { x: 0, y: 0, w: 100, h: 100 },
-    reference: { label: evidence.sourceName, url: evidence.sourceUrl },
+    reference: evidence ? { label: evidence.sourceName, url: evidence.sourceUrl } : { label: "内閣府：風水害から身を守る", url: "https://www.bousai.go.jp/kohou/kouhoubousai/h24/67/special_01.html" },
     choices: [
       {
         id: "go",
-        label: "周囲を確かめながら進む",
-        detail: "足元と道の状況を見ながら進む",
+        label: category === "flood" ? "避難情報と道の状況を確認して早めに進む" : "周囲を確かめながら進む",
+        detail: category === "flood" ? "まだ浸水していない想定で、避難先と経路を確かめる" : "足元と道の状況を見ながら進む",
         feedback: "進みながら確かめたことを振り返りましょう。",
         pros: ["移動を続けながら情報を集められる"],
         cons: ["先の区間の状況が分からないまま近づく可能性がある"],
@@ -76,4 +82,9 @@ export function makeGeoEvent(
       },
     ],
   };
+}
+
+export function floodPracticeEvent(): HazardEvent {
+  const event = makeGeoEvent("flood");
+  return { ...event, id:"practice-flood", situation:"固定の練習問題です。大雨に備えて、浸水が始まる前に避難する想定です。現在地の地形や被害に基づく出題ではありません。どの情報や道を確認しますか？", reference:{label:"内閣府：風水害から身を守る",url:"https://www.bousai.go.jp/kohou/kouhoubousai/h24/67/special_01.html"} };
 }
