@@ -1,203 +1,123 @@
 # ジシンゴト
 
-地震を「知識」から「自分事の行動」へ変える、スマートフォン向けの防災シミュレーション。
-部屋の写真を撮って危ないところを見つけ、地震のときの動きを試してから、
-その部屋に合わせたチェックリストを持ち帰る、という流れの Web アプリ。
+部屋の写真から地震時に気をつけたい場所を確認し、行動クイズと振り返りを通して備えを考える Web アプリです。小学生向け・大人向けの表示を選べます。フェーズ1は室内、フェーズ2は避難経路を扱います。
 
-Figma:
-[Codex祭](https://www.figma.com/design/rWWLKU9N8JD4mtaRojBL94/Codex%E7%A5%AD?node-id=8-8&m=dev)
+AIの認識結果やアニメ風の予想図は、固定状態・実際の被害・安全性を保証するものではありません。
 
-## 動かす
+## 開発環境を起動する
+
+Node.js 20.9.0以上とnpmが必要です。Next.js 16.3.4、React 19.2.8、TypeScript、Tailwind CSS 4を使用しています。
 
 ```bash
+npm ci
+# 初回のみ。既存の .env.local がある場合は上書きしないでください。
+cp .env.example .env.local
 npm run dev
 ```
 
-Phase 1 の実画像解析とアニメ予想図を使うには、`.env.local` にサーバー用キーを設定する。
-キーは Route Handler の中だけで使用し、ブラウザには配布しない。
+`.env.local` に必要なキーを設定して、[localhost:3000](http://localhost:3000)を開きます。スマートフォンを中心にした画面構成で、PCからも利用できます。環境変数を変更したら開発サーバーを再起動してください。
 
-```text
-OPENAI_API_KEY=...
-OPENAI_VISION_MODEL=gpt-5.6-luna # 任意
-OPENAI_IMAGE_MODEL=gpt-image-2   # 任意
-```
+### 環境変数
 
-写真はブラウザで最大 1280px に縮小し、プライバシー確認画面で指定した領域を
-画像データ自体からマスクしてから OpenAI API へ送る。写真は Web Storage へ保存しない。
+ファイル名は **`.env.local`**（先頭にドットあり）で、`package.json` と同じ階層に置きます。各メンバーの環境で設定が必要です。キー本体や `.env.local` はGitに追加しません。
 
-フェーズ2で本物の地図・ストリートビューを出すときは、`.env.local` にキーを置く
-（`.env.example` を参照。**無くても動く**：デモ表示のイラストに切り替わる）。
+| 変数 | 用途・未設定時の動作 |
+|---|---|
+| `OPENAI_API_KEY` | 部屋の画像解析・予想図生成に使用するサーバー用キー。未設定では実際のAI解析・生成はできません |
+| `OPENAI_VISION_MODEL` | 任意。画像解析のモデル。コードの既定値は `gpt-5.6-luna` |
+| `OPENAI_IMAGE_MODEL` | 任意。画像生成のモデル。コードの既定値は `gpt-image-2` |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | フェーズ2のブラウザ用Google Mapsキー。未設定では地図・Street Viewなどがデモ表示になります |
+| `GOOGLE_MAPS_SERVER_KEY` | 任意。Routes APIを `/api/routes` 経由で利用するためのサーバー用キー |
 
-```
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
-```
+OpenAIには管理画面で付けたキーの名前ではなく、**発行されたキー本体**を設定します。`OPENAI_API_KEY` に `NEXT_PUBLIC_` は付けません。モデルを変更する場合は、そのプロジェクトで利用できるモデルを指定してください。
 
-http://localhost:3000 をスマホ幅（〜402px）で開くのが想定。
-PC のブラウザでも中央に寄せて表示される。
+Google MapsはOpenAIとは別の設定です。ブラウザ用キーの設定対象は Maps JavaScript API、Routes API、Geocoding API、Places API (New)です。公開先とlocalhostのリファラー制限・API制限を設定してください。サーバー用キーはブラウザ用のリファラー制限付きキーと分けます。設定項目は [.env.example](.env.example)、実際の経路取得処理は [evac-api.ts](src/lib/evac-api.ts) を参照してください。
 
 ## 画面の流れ
 
-| ルート | Figma のフレーム | 内容 |
-|---|---|---|
-| `/` | `onboarding` (8:8) | タイトル・体験の説明・表示設定 |
-| `/camera` | `camera-guide` (8:47) | 撮影ガイドとカメラプレビュー |
-| `/privacy` | `privacy-blur` (8:95) | 顔や個人情報のぼかし確認 |
-| `/analyzing` | `analysis-loading` (8:137) | 解析中の演出と豆知識 |
-| `/risks` | `risk-confirmation` (8:185) | 見つかった危険の確認・追加・削除 |
-| `/quiz` | `simulation-question` (8:398) | 出題。5問を続けて出す（途中で結果は出さない） |
-| `/result` | `result-checklist` (8:509) | 4軸の評価とチェックリスト |
-| `/share` | `share-card` (8:592) | シェアカードの生成と共有 |
-
-### フェーズ2（ひなん経路シミュレーション）
+### フェーズ1：室内の確認
 
 | ルート | 内容 |
 |---|---|
-| `/evac` | 住所・現在地・地図タップで自宅付近を指定し、近くの避難場所を確認 |
-| `/evac/routes` | 徒歩の候補経路2本の比較・制限時間の設定 |
-| `/evac/walk` | ストリートビューで経路を歩き、途中で判断（2〜3件） |
-| `/evac/report` | 結果レポート |
+| `/` | 小学生向け・大人向けの選択、体験開始、表示設定 |
+| `/camera` | 写真を撮る／保存済み画像を選ぶ。撮影ガイドも表示 |
+| `/privacy` | 写真の隠したい箇所を手動で指定し、送信を確定 |
+| `/analyzing` | 3段階のプログレス表示と防災豆知識 |
+| `/risks` | 認識した家具・場所を番号順に確認。選択した対象の修正・削除、事前対策、対策済みチェック |
+| `/quiz` | 部屋の確認結果に応じた行動クイズ。問題数は可変で、回答中に採点結果は表示しません |
+| `/result` | 各問の振り返り、あなたの防災4つのチカラ、できたこと、地震後の予想図 |
+| `/share` | 結果と予想図の画像保存・共有。戻ると結果画面の最後に戻ります |
+| `/test-room` | OpenAI APIを呼ばず、固定の写真と解析結果で体験を確認 |
 
-入口はトップの「ひなん経路をためす（フェーズ2）」。
-**→ 詳しくは [docs/PHASE2.md](docs/PHASE2.md)**（API・安全表現・保存方針）
+結果画面と共有画面からもフェーズ2へ進めます。
 
-## 構成
+### フェーズ2：避難経路のシミュレーション
 
+| ルート | 内容 |
+|---|---|
+| `/evac` | 住所検索・現在地・地図タップで出発地点を指定し、近くの避難場所を確認 |
+| `/evac/routes` | 徒歩の候補経路を比較し、判断の制限時間を設定 |
+| `/evac/walk` | Street Viewまたはデモ表示で経路を進み、想定場面で行動を選択 |
+| `/evac/report` | 経路上の判断を振り返るレポート |
+
+避難場所は公的データ、Google Placesの候補、デモデータの順に取得を試みます。判断場面は事前に用意したルールデータで、Street Viewの画像をAIで解析しているわけではありません。実在する経路の安全性や、施設が現在開設されていることを保証する機能ではありません。
+
+## 写真・AI処理・保存
+
+- 写真はブラウザで最大辺1280pxに縮小します。プライバシー画面で指定した箇所は画像データ自体をマスクします。顔や住所の自動検出は未実装で、利用者が隠す場所を指定します。
+- プライバシー画面の「OK」で、**マスク後の同じ写真**を使う部屋解析と予想図生成を並行して開始します。OpenAIへのリクエストはサーバーのRoute Handlerから送ります。
+- 解析中の3段階バーは時間に応じた演出です。約1.4秒ごとに段階が進み、最後の段階で解析完了を待ちます。APIの実際の処理率を示すものではなく、経過秒数も表示しません。
+- 解析に失敗すると、警告付きでサンプルの認識結果に切り替わります。予想図の生成に失敗した場合は、元写真を使った代替表示と再試行を案内します。
+- 生成結果は同じ写真についてメモリ内で再利用し、結果画面の「あなたの防災4つのチカラ」などの下と、共有画面に表示します。生成済み画像を表示するために毎回生成し直すことはありません。
+- 写真と生成画像はWeb Storageに保存しません。画面を完全に再読み込みすると失われることがあります。回答などの体験状態は `sessionStorage`、表示設定は `localStorage` を使用します。
+- 小学生向けはLINE共有と画像保存、大人向けはX・LINE共有と画像保存に対応します。画像2枚の共有は端末のファイル共有機能と共有先アプリの対応状況に依存し、対応しない場合は画像を保存して添付します。SNSへ自動投稿はしません。
+
+## 認識・対策・クイズ
+
+認識結果は最大8件です。物体の分類は、本棚、食器棚、棚の上の物、背の高い家具、テレビ、窓・ガラス、出入口、壁掛けの物、机、ベッド、床の物、楽器、衣類・バッグ掛け、ペットケージ、洗濯機、その他に対応しています。写真にある物を必ずすべて認識できるわけではなく、番号や囲みの位置も確認・修正が必要です。
+
+- 対策文と説明イラストは、認識した分類・名称に応じて用意済みのデータから選びます。防災用品も対象物に応じた製品例で、毎回AIが商品を検索して推薦する仕組みではありません。小学生向けには商品購入リンクを出しません。
+- クイズは確認済みの対象から組み立て、情報の扱いに関する共通問題も出します。コンロの問題は確認結果にコンロがある場合に出します。「対策済み」チェックと出題対象の確認は別の状態です。
+- 最初の問題では、黒い「揺れが始まりました！」画面を0.7秒表示した後、1.6秒の揺れ演出を入れます。
+- 回答を終えてから1問ずつ振り返ります。解説は折りたたまず、選んだ行動に応じたフィードバックを表示します。部屋の対象にひもづく問題では、撮影した写真と対象を囲む枠も表示します。
+- 「4つのチカラ」は回答から集計する振り返りの指標です。実際の安全性を判定するものではありません。
+
+## 表示設定と端末機能
+
+- 小学生向け・大人向けで文言を切り替えます。ふりがなは両方で利用でき、`漢字[かんじ]` 記法に加えて、注記のない漢字の読みをサーバーのkuromoji辞書で補完します。固有名詞などは誤読や未対応があり得ます。
+- 文字サイズを変更できます。文言を必ず1行に収める前提にはせず、大きくした場合の折り返しを考慮します。
+- カメラは権限とセキュアな接続（localhostまたはHTTPS）が必要です。利用できない場合もファイル選択やサンプル写真で確認できます。
+- 音と端末の振動は設定で切り替えられます。視覚的な揺れには `prefers-reduced-motion` を考慮しています。
+- 多言語の設定型はありますが、翻訳辞書は未実装です。
+
+## 主なコード
+
+| 場所 | 役割 |
+|---|---|
+| [src/app](src/app) | 画面、レイアウト、サーバーのAPIルート |
+| [部屋解析API](src/app/api/room/analyze/route.ts) / [予想図API](src/app/api/room/aftermath/route.ts) | OpenAIとの接続、入力検証、失敗時の応答 |
+| [api.ts](src/lib/api.ts) / [room-preparation.ts](src/lib/room-preparation.ts) | ブラウザからのAPI呼び出し、並行実行、結果の再利用、クイズ組み立て |
+| [room-guidance.ts](src/lib/room-guidance.ts) / [recommendations.ts](src/lib/recommendations.ts) | 物体別の対策と製品例 |
+| [content.ts](src/lib/content.ts) / [scenarios.ts](src/lib/scenarios.ts) / [trivia.ts](src/lib/trivia.ts) | 型、設問、場面、防災豆知識 |
+| [session.tsx](src/lib/session.tsx) / [settings.tsx](src/lib/settings.tsx) | 体験状態、集計、表示設定 |
+| [readings API](src/app/api/readings/route.ts) | ふりがなの読みの補完 |
+| [share-images.ts](src/lib/share-images.ts) / [aftermath-share.ts](src/lib/aftermath-share.ts) | 共有画像の準備、予想図の保存・共有用加工 |
+| [evac-api.ts](src/lib/evac-api.ts) / [経路API](src/app/api/routes/route.ts) | 避難場所と経路の取得 |
+| [public/illustrations](public/illustrations) | 対策・行動・製品などの説明用イラスト |
+
+UIの色や文字サイズは [globals.css](src/app/globals.css) にあります。Figma由来のアイコンは [generate-icons.mjs](scripts/generate-icons.mjs) から生成します。デザインの参考：[Figma](https://www.figma.com/design/rWWLKU9N8JD4mtaRojBL94/Codex%E7%A5%AD?node-id=8-8&m=dev)。現在の画面は初期デザインから更新されています。
+
+## 確認・ビルド
+
+```bash
+npm run lint
+node --test tests/*.test.cjs
+npm run build
+npm start
 ```
-src/
-  app/            各画面（すべてクライアントコンポーネント）
-    evac/         フェーズ2（ひなん経路シミュレーション）
-  components/
-    icons.tsx     Figma から書き出した SVG（自動生成・直接編集しない）
-    ui/           Screen / Button / Card / Furigana など共通パーツ
-    SettingsSheet.tsx
-    evac/         フェーズ2の地図・ストリートビュー・判断シート
-  lib/
-    api.ts        ★ OpenAI Route Handler と画面の境界（失敗時はデモへフォールバック）
-    content.ts    設問・危険の種類・チェックリストなどの文言データ
-    session.tsx   体験1回ぶんの状態と集計
-    settings.tsx  ふりがな・文字サイズ・音の設定
-    store.ts      sessionStorage / localStorage を外部ストアとして扱う土台
-    camera.ts     MediaDevices のラッパー
-    audio.ts      Web Audio による地鳴り・効果音
-    share-card.ts Canvas でのシェア画像生成
-    gmaps.ts      Maps JavaScript API のローダー（キーが無ければ読み込まない）
-    evac-api.ts   ★ フェーズ2のバックエンド境界（避難場所・経路・判断地点）
-    evac-content.ts フェーズ2の避難場所・判断イベント・文言
-    evac.ts       フェーズ2の状態と集計
-public/figma/     Figma から書き出した画像とアイコン
-```
 
-## バックエンドをつなぐとき
+`npm start` はビルド済みアプリの起動用です。自動テストと `/test-room` は実際のOpenAI APIを呼びません。実写真による解析・生成の確認は別途必要で、API利用が発生します。
 
-**→ 詳しい仕様は [docs/BACKEND_API.md](docs/BACKEND_API.md)**
-（エンドポイントごとの入出力、JSON の形、CORS、つなぎこみ手順）
+## 変更をpushするとき
 
-差し替えるのは **`src/lib/api.ts` の中身だけ** でいいようにしてある。
-シグネチャはそのままに、`fetch` に置き換える。
-
-```ts
-export async function analyzeRoom(photo?: Blob): Promise<Risk[]>
-export async function detectBlurRegions(photo?: Blob): Promise<BlurRegion[]>
-export async function fetchQuestions(risks: Risk[]): Promise<Question[]>
-export async function generateAftermath(photo: string | null, risks: Risk[]): Promise<Aftermath>
-```
-
-- `Risk` / `Question` / `BlurRegion` の型は `src/lib/content.ts` と `src/lib/api.ts` にある。
-- 体験1回ぶんの状態は `sessionStorage`（`jishingoto.session.v1`）に入る。
-  撮影した写真だけは `blob:` URL なので保存対象から外している。
-- 設問データはいま `content.ts` にベタ書きだが、`fetchQuestions` が
-  同じ形を返せばそのまま差し替えられる。
-
-## 実装メモ
-
-### デザイン
-- 色・角丸・文字サイズは `src/app/globals.css` の `@theme` にまとめてある。
-- **配色は黄色基調**。Figma では操作系が青だったが、仕様の「黄色調」に合わせて置き換えた。
-  黄は明るいので、載せるものによって濃さを変えないと読めなくなる（`#ffcc00` に白文字は
-  コントラスト比 **1.5:1**、WCAG AA の 4.5:1 に遠く届かない）。そのため4段階に分けている:
-
-  | トークン | 値 | 用途 | コントラスト |
-  |---|---|---|---|
-  | `--color-primary` | `#ffcc00` | 塗り（ボタン・マーカー） | 上に `--color-ink` を載せて 10.8:1 |
-  | `--color-primary-mid` | `#b87d00` | バー・枠線 | 明るい面に対して 3.2:1 |
-  | `--color-primary-ink` | `#8a5a00` | 明るい面に置く文字・アイコン | 白地に対して 5.9:1 |
-  | `--color-primary-soft` | `#fff6d6` | 淡い面（チップの背景など） | 上に `primary-ink` を載せて 5.5:1 |
-
-  **黄の塗りの上に白文字を置かないこと。** ボタンの文字は `text-ink` を使う。
-- `--color-accent` はロゴタイプ専用。Figma のブランド表現をそのまま残している。
-- アイコンは Figma の書き出しをそのまま React 化したもの。
-  差し替えるときは `public/figma/icons/` に SVG を置いて
-  `node scripts/generate-icons.mjs` を叩く。手で `src/components/icons.tsx` を触らない。
-  Figma の書き出しは色が焼き込まれているので、置かれる面に応じて濃さを変えたいアイコンは
-  `scripts/generate-icons.mjs` の `RECOLOR` に登録して `currentColor` に変換し、
-  使う側で `text-ink` / `text-primary-ink` などを指定する。
-
-### 端末 API
-- **カメラ**（`MediaDevices`）は、権限が降りない・HTTPS でない・PC などの場合に
-  自動でサンプル写真かファイル選択に切り替わる。PC でも一通り触れる。
-- **音**（Web Audio）は音源ファイルを持たず、ブラウンノイズを合成して地鳴りを作っている。
-- **振動**（`navigator.vibrate`）と音は設定でまとめて切れる。
-- `prefers-reduced-motion` が有効なときは、揺れを含むアニメーションを止める。
-
-### リザルトの見せかた
-仕様の「リザルトはまとめて」「正解をはっきり出すのは良くない」に合わせている。
-
-- **1問ごとのフィードバックは出さない。** 5問を続けて出題し、
-  全部終わってから `/result` でまとめて見せる。
-  Figma の `simulation-feedback` (8:457) にあった安全度スケールは、この方針のため使っていない。
-- 回答したときの音と振動は、**選んだ内容によらず同じ**にしてある。
-  違えてしまうと、その場で正解・不正解が分かってしまうため。
-- 選択肢は内部的に `safety: 0–1` を持つが、**画面には数値も帯も出さない**。
-  使うのは4軸の集計と、リザルトの「ふりかえり」の並び順だけ。
-- リザルトの「ふりかえり」は、選んだ行動と解説を折りたたみで並べる。評価はつけない。
-- 出題されなかった軸は「今回はなし」と表示する（点をでっちあげない）。
-- 「できたこと」は安全度の高かった選択だけを拾い、低い選択を名指ししない。
-- 時間切れで自動送りになった場合は「時間切れ」と明示する。
-
-### 部屋の危険と設問のひもづけ
-`/risks` で「あぶない」とチェックした場所が、そのまま次の問題になる。
-
-- `Question.riskKind`（`fall` / `break` / `block`）が、部屋で見つかる危険の種類に対応する。
-- `fetchQuestions(risks)` が、チェック済みの危険にひもづく設問を先に並べ、
-  そのあと共通の設問を足す。
-- 設問を増やすときは `content.ts` の `QUESTIONS` に足し、
-  部屋の場所に紐づくものなら `riskKind` と `place` を書く。
-
-### 地震の演出
-揺れ（`animate-quake` + 地鳴り + 振動）は **最初の1問だけ**。
-毎問やると体験が間延びするため、`QuestionView` に `shake` を渡して制御している。
-
-### 「もし地震がきたら」の予想図
-リザルトの先頭に、部屋がどうなるかの予想図を出す（`src/components/AftermathCard.tsx`）。
-
-画像は **バックエンドで AI に生成してもらう想定**で、`api.ts` の `generateAftermath()` が
-`{ imageUrl, events }` を返す。`imageUrl` が入ればそれを表示し、
-いまは `null` なので元の写真に「何がどうなったか」のマーカーを重ねて代用している。
-
-### ふりがな・多言語・年齢層
-- `content.ts` の文言は `漢字[かんじ]` 記法で書く。`<Furigana>` が `<ruby>` に変換し、
-  表示の有無は `:root[data-furigana]` で切り替わる（再レンダー不要）。
-- 文字サイズはルートの `font-size` を変える方式。
-  そのため画面側の文字サイズは px ではなく rem ベースの
-  `text-11` / `text-13` / `text-15` などを使うこと（`--text-*` は `globals.css` で定義）。
-- 多言語は `Settings.locale` に口だけ用意してある（`ja` / `easy` / `en`）。
-  文言の辞書はまだ入れていない。
-
-### フェーズ2の安全表現
-実在の場所を題材にするぶん、断定しない書き方を徹底している。詳細は
-[docs/PHASE2.md](docs/PHASE2.md) にまとめたが、要点は3つ。
-
-- 危険はすべて「〜した想定」。画面上部に「想定シナリオ」の帯を常時出す。
-- ストリートビューに重ねるのは半透明の想定範囲と番号だけ。
-  実在の建物が壊れて見える加工はしない。Google の帰属表示も隠さない。
-- 経路に「安全です」と書かない。距離・時間・イベント数・曲がる回数など、
-  経路データから言えることだけを並べる。
-
-ストリートビューの画像は保存もキャッシュもせず、パノラマ ID にも依存しない
-（毎回 緯度経度から取り直す）。
-
-## まだ入っていないもの
-
-- 3D（Three.js / React Three Fiber / Drei / GLTF）を使った部屋の再現と演出
-- 多言語の文言辞書（`Settings.locale` の受け口だけある）
-- ハザードマップの重ね合わせ、夜間・雨天の想定（フェーズ2）
+変更した画面・機能・起動手順・環境変数・制約がREADMEの説明と一致しているか確認し、必要な更新を同じ変更に含めます。実装済みの機能と、デモ・未実装・試作の内容を区別してください。作業ルールは [AGENTS.md](AGENTS.md) にも記載しています。
