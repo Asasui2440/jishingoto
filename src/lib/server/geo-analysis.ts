@@ -1,3 +1,4 @@
+import mockCandidate from "@/data/mock/geo-candidate.json";
 import dataset from "@/data/evac-geo/regions.json";
 import { makeGeoEvent } from "../geo-events";
 import type { LatLng } from "../evac-content";
@@ -46,7 +47,7 @@ export type GeoRequest = {
 };
 export function geoConfig(): GeoConfig {
   return {
-    aiConfigured: !!process.env.OPENAI_API_KEY?.trim(),
+    aiConfigured: process.env.OPENAI_MOCK_MODE === "true" || !!process.env.OPENAI_API_KEY?.trim(),
     source: dataset.source,
     regions: regions.map(
       ({ id, name, center, bounds, version, downloadedAt, featureCount }) => ({
@@ -396,7 +397,8 @@ export async function analyzeGeoRoute(
 ): Promise<GeoAnalysisResult> {
   const region = routeRegion(request.route.path);
   const key = process.env.OPENAI_API_KEY?.trim();
-  if (!key)
+  const mock = process.env.OPENAI_MOCK_MODE === "true";
+  if (!key && !mock)
     throw new GeoError(
       "ai_not_configured",
       "AI解析のキーが未設定です。管理者がOPENAI_API_KEYを設定すると利用できます。",
@@ -414,6 +416,20 @@ export async function analyzeGeoRoute(
       points: [],
       note: "この経路の近くでは、今回の地形データから出題できる候補が見つかりませんでした。安全を確認した意味ではありません。",
     };
+  if (mock) {
+    const raw = { candidates: matches.slice(0, 3).map(({ feature }) => ({
+      featureId: feature.id,
+      category: feature.categories[0],
+      reason: mockCandidate.reason,
+      uncertainties: mockCandidate.uncertainties,
+    })) };
+    return {
+      source: "geo-ai",
+      regionIds: [region.id],
+      points: candidatesToPoints(raw, request, region, matches),
+      note: mockCandidate.note,
+    };
+  }
   const schema = {
     type: "object",
     additionalProperties: false,

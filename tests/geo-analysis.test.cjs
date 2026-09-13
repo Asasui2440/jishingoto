@@ -445,3 +445,39 @@ test("HTTP origin check accepts the actual Host behind a normalized Next.js URL"
   });
   assert.equal((await endpoint.POST(req)).status, 422);
 });
+
+test("OpenAI mock mode serves fixture data through existing endpoints without provider calls", async () => {
+  const beforeMode = process.env.OPENAI_MOCK_MODE;
+  const beforeKey = process.env.OPENAI_API_KEY;
+  const beforeFetch = global.fetch;
+  process.env.OPENAI_MOCK_MODE = "true";
+  process.env.OPENAI_API_KEY = "invalid-for-mock-test";
+  let calls = 0;
+  global.fetch = async () => { calls++; throw new Error("mock must not call OpenAI"); };
+  try {
+    for (const [kind, fixture] of [["analyze", "room-analysis"], ["aftermath", "room-aftermath"]]) {
+      const handler = load(`src/app/api/room/${kind}/route.ts`);
+      const response = await handler.POST(new Request(`http://localhost/api/room/${kind}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: "data:image/jpeg;base64,c2FtcGxl" }),
+      }));
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      assert.deepEqual(await response.json(), load(`src/data/mock/${fixture}.json`));
+      const invalid = await handler.POST(new Request(`http://localhost/api/room/${kind}`, { method: "POST", body: "{}" }));
+      assert.equal(invalid.status, 400);
+    }
+    delete process.env.OPENAI_API_KEY;
+    assert.equal(geo.geoConfig().aiConfigured, true);
+    const result = await geo.analyzeGeoRoute(request, undefined, global.fetch);
+    assert(result.points.length > 0);
+    assert.match(result.note, /モックデータ/);
+    assert(result.points.every((point) => matches.some((hit) => point.id.includes(hit.feature.id))));
+    assert.equal(calls, 0);
+    process.env.OPENAI_MOCK_MODE = "false";
+    await assert.rejects(geo.analyzeGeoRoute(request), (error) => error.code === "ai_not_configured");
+  } finally {
+    if (beforeMode === undefined) delete process.env.OPENAI_MOCK_MODE; else process.env.OPENAI_MOCK_MODE = beforeMode;
+    if (beforeKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = beforeKey;
+    global.fetch = beforeFetch;
+  }
+});

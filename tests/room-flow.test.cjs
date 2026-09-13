@@ -190,3 +190,19 @@ test("purchase candidates require confirmed, identifiable, matching objects", ()
   assert.equal(safetyProductsFor([risk("window", "break")])[0].id, "safety-film");
   assert.equal(safetyProductsFor([risk("tv")])[0].id, "tv-belt");
 });
+
+test("room responses retain mock provenance for the existing warning and image display", async () => {
+  const { analyzeRoom, generateAftermath } = load("src/lib/api.ts");
+  const originalFetch = global.fetch;
+  try {
+    global.fetch = async (url) => Response.json(JSON.parse(fs.readFileSync(`src/data/mock/${url.endsWith("analyze") ? "room-analysis" : "room-aftermath"}.json`, "utf8")));
+    const analysis = await analyzeRoom("data:image/jpeg;base64,c2FtcGxl");
+    assert.equal(analysis.source, "demo");
+    assert.match(analysis.warning, /モックデータ/);
+    const image = await generateAftermath("data:image/jpeg;base64,c2FtcGxl");
+    assert.equal(image.source, "test");
+    assert(fs.existsSync(`public${image.imageUrl}`));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

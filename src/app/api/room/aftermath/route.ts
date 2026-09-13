@@ -1,3 +1,4 @@
+import mockResponse from "@/data/mock/room-aftermath.json";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -11,7 +12,8 @@ function imageFile(dataUrl: string): File | null {
 
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return Response.json({ error: "openai-not-configured" }, { status: 503 });
+  const mock = process.env.OPENAI_MOCK_MODE === "true";
+  if (!apiKey && !mock) return Response.json({ error: "openai-not-configured" }, { status: 503 });
 
   let body: { image?: unknown };
   try {
@@ -21,6 +23,8 @@ export async function POST(request: Request) {
   }
   const file = typeof body.image === "string" ? imageFile(body.image) : null;
   if (!file) return Response.json({ error: "bad-request" }, { status: 400 });
+
+  if (mock) return Response.json(mockResponse, { headers: { "Cache-Control": "no-store" } });
 
   const form = new FormData();
   form.set("model", process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2");
