@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 import { reviewNotes } from "@/lib/review-copy";
 import Image from "next/image";
@@ -9,6 +10,7 @@ import { reviewIllustration, reviewImagePath } from "@/lib/review-illustrations"
 import { Furigana } from "@/components/ui/Furigana";
 
 export function ActionReview({ question, choice, timedOut, number }: { question: Question; choice: Choice; timedOut: boolean; number: number }) {
+  const { photoUrl } = useSession();
   const { audience } = useSettings();
   const scene = reviewIllustration(question);
   const best = question.choices.reduce((best, next) => next.safety > best.safety ? next : best, choice);
@@ -32,12 +34,12 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
       </figcaption>
     </figure>}
     {!scene && (timedOut || choice.id !== best.id) && <div className="bg-secondary-soft p-4">
-      <p className="text-sm font-bold text-secondary-ink">安全のために覚えておきたい行動</p>
+      <p className="text-sm font-bold text-secondary-ink"><Furigana text={"安全のために覚えておきたい行動"} /></p>
       <p className="mt-1 text-15 font-bold"><Furigana text={best.label} /></p>
     </div>}
     <div className="space-y-3 p-4">
       <div className="border-l-[3px] border-border pl-3">
-        {!timedOut && <><p className="text-11 text-ink-muted">あなたが選んだ行動</p><p className="mt-1 text-sm font-bold"><Furigana text={choice.label} /></p></>}
+        {!timedOut && <><p className="text-11 text-ink-muted"><Furigana text={"あなたが選んだ行動"} /></p><p className="mt-1 text-sm font-bold"><Furigana text={choice.label} /></p></>}
         <p className="mt-1 text-13 font-bold text-ink-muted"><span aria-hidden>{safe ? "✓ " : timedOut ? "◷ " : "! "}</span><Furigana text={feedback} /></p>
       </div>
       <DetailSheet title="理由・注意点を読む" summary="問題の場面と参考資料も確認">
@@ -45,11 +47,19 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
           <h3 className="text-sm font-bold text-ink-muted">この問題の場面</h3>
           {scene && <p className="mt-1 text-xs text-ink-muted">{scene.timing}</p>}
           <p className="mt-2 text-base leading-relaxed"><Furigana text={question.situation} adult={question.adultSituation} /></p>
+      {photoUrl && question.sourceRiskId && question.highlight && <figure className="mt-3 overflow-hidden rounded-field border border-border">
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoUrl} alt="問題で確認した家具が写っている部屋の写真" className="block h-auto w-full" />
+          <div aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary shadow-[0_0_0_1px_white]" style={{ left: `${question.highlight.x}%`, top: `${question.highlight.y}%`, width: `${question.highlight.w}%`, height: `${question.highlight.h}%` }} />
+        </div>
+        <figcaption className="bg-primary-soft p-3 text-base font-bold text-primary-ink"><Furigana text={question.highlight.label} adult={question.adultPlace} /></figcaption>
+      </figure>}
         </section>
         <section>
           <h3 className="text-base font-bold"><Furigana text="ここを覚[おぼ]えよう" adult="理由・注意点" /></h3>
           {reviewNotes(question, audience).map((text, i) => <p key={i} className="mt-3 text-base leading-relaxed text-ink"><Furigana text={text} /></p>)}
-          {question.sources?.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" className="mt-2 block text-11 text-primary-ink underline">{source.title} ↗</a>)}
+          {question.sources?.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" className="mt-2 block text-11 text-primary-ink underline"><Furigana text={source.title} /> ↗</a>)}
         </section>
       </DetailSheet>
     </div>

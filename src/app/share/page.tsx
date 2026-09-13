@@ -99,10 +99,10 @@ export default function SharePage() {
           </div>
 
           <div className="mt-4 text-center">
-            <p className="whitespace-nowrap font-display text-[clamp(11px,3.5vw,16px)] font-black text-primary-ink">
+            <p className="font-display text-base font-black text-primary-ink">
               <Furigana text="じぶんの部屋[へや]の安全[あんぜん]チェック、したよ！" />
             </p>
-            <p className="mt-1 text-13 text-ink-muted">シミュレーション結果サマリー</p>
+            <p className="mt-1 text-13 text-ink-muted"><Furigana text={"シミュレーション結果サマリー"} /></p>
           </div>
 
           <div className="mt-4 flex flex-col gap-2 rounded-tile bg-canvas p-3">
@@ -124,10 +124,10 @@ export default function SharePage() {
             })}
           </div>
 
-          <p className="mt-3 text-sm font-bold text-safe">✓ 室内の備え：{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
+          <p className="mt-3 text-sm font-bold text-safe"><Furigana text={"✓ 室内の備え："} />{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} <Furigana text={"か所 対策済み"} /></p>
           <AftermathShare photoUrl={photoUrl} risks={risks} onFileReady={setRoomFile} allowShare={audience === "adult"} />
 
-          <p className="mt-4 whitespace-nowrap text-center font-display text-[clamp(9px,2.9vw,13px)] font-bold text-primary-ink">
+          <p className="mt-4 text-center text-balance font-display text-sm font-bold text-primary-ink">
             <Furigana text="気づいたことを家族と話して、部屋の備えにつなげよう。" adult="気づいたことを、次の備えにつなげましょう。" />
           </p>
         </div>
@@ -148,7 +148,7 @@ export default function SharePage() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => router.push("/result")}>戻る</Button>
+          <Button variant="outline" onClick={() => router.push("/result")}><Furigana text={"戻る"} /></Button>
           <Button onClick={() => router.push("/evac")}>フェーズ2へ</Button>
         </div>
 

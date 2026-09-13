@@ -13,8 +13,8 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES = {
-  lg: "h-14 px-6 text-lg rounded-pill",
-  md: "h-12 px-4 text-15 rounded-[24px]",
+  lg: "min-h-14 px-6 py-3 text-lg rounded-pill",
+  md: "min-h-12 px-4 py-2 text-15 rounded-[24px]",
 } as const;
 
 export function Button({

@@ -49,7 +49,7 @@ export default function OnboardingPage() {
             </span>
             <p className="font-display text-40 leading-none font-black text-accent">ジシンゴト</p>
           </div>
-          <p className="font-display text-base font-bold text-ink">地震＋自分事</p>
+          <p className="font-display text-base font-bold text-ink"><Furigana text={"地震＋自分事"} /></p>
         </header>
 
         <div role="radiogroup" aria-label="表示モード" className="grid grid-cols-2 gap-1 rounded-tile bg-border p-1">
@@ -67,7 +67,7 @@ export default function OnboardingPage() {
                   active ? "bg-surface text-ink shadow-sm" : "text-ink-soft",
                 ].join(" ")}
               >
-                <span>{value === "child" ? `${label}向け` : label}</span>
+                <span><Furigana text={value === "child" ? `${label}向け` : label} /></span>
               </button>
             );
           })}
@@ -78,8 +78,8 @@ export default function OnboardingPage() {
           <span aria-hidden className="absolute inset-0 bg-white/[0.18]" />
         </div>
 
-        <h1 className={`text-center font-display leading-[1.3] font-extrabold text-ink whitespace-nowrap text-[clamp(15px,4.8vw,20px)]`}>
-          {adult ? "室内の地震リスクを確認" : <Furigana text="自分[じぶん]の部屋[へや]の安全[あんぜん]、確[たし]かめよう" />}
+        <h1 className={`text-center text-balance font-display leading-[1.3] font-extrabold text-ink text-xl`}>
+          <Furigana text="自分[じぶん]の部屋[へや]の安全[あんぜん]、確[たし]かめよう" adult="室内の地震リスクを確認" />
         </h1>
 
         <Button onClick={start}>
@@ -88,7 +88,7 @@ export default function OnboardingPage() {
         </Button>
 
         <Button variant="outline" size="md" onClick={() => router.push("/evac")}>
-          {adult ? "避難経路をシミュレーション（フェーズ2）" : <Furigana text="ひなん経路[けいろ]をためす（フェーズ2）" />}
+          <Furigana text="避難経路をためす（フェーズ2）" adult="避難経路をシミュレーション（フェーズ2）" />
         </Button>
 
         <DetailSheet title="この体験でわかること"><Card className="flex flex-col gap-3 p-[18px]">
@@ -104,7 +104,7 @@ export default function OnboardingPage() {
         </Card></DetailSheet>
 
         <button type="button" onClick={() => setSettingsOpen(true)} className="mx-auto font-display text-13 font-bold text-ink-soft underline underline-offset-2">
-          {adult ? "表示・アクセシビリティ設定" : "ふりがな・文字の大きさをかえる"}
+          <Furigana text={adult ? "表示・アクセシビリティ設定" : "ふりがな・文字の大きさをかえる"} />
         </button>
       </main>
 

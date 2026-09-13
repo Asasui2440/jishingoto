@@ -123,7 +123,7 @@ export default function PrivacyBlurPage() {
             >
               <span className="flex flex-col items-center gap-0.5">
                 <EyeOffIcon className="size-4 text-ink" />
-                <span className="font-display text-11 font-bold text-ink">ぼかし済</span>
+                <span className="font-display text-11 font-bold text-ink"><Furigana text={"ぼかし済"} /></span>
               </span>
             </button>
           ))}
@@ -153,7 +153,7 @@ export default function PrivacyBlurPage() {
         <p className="text-sm leading-relaxed text-ink-muted">
           <Furigana text="「OK」を押すと、隠[かく]した部分を除いた画像をOpenAIに送り、部屋の確認と予想図づくりに使います。" />
         </p>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="text-sm text-danger"><Furigana text={error} /></p>}
         <Button disabled={busy} onClick={() => void continueWithMaskedPhoto()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>

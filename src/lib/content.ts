@@ -166,7 +166,7 @@ export const QUESTIONS: Question[] = [
     axis: "initial",
     riskKind: "fall",
     place: "大[おお]きな本棚[ほんだな]",
-    category: "瞬間判断[はんだん]",
+    category: "瞬間[しゅんかん]判断[はんだん]",
     situation: "強[つよ]いゆれがはじまり、背[せ]の高[たか]い本棚[ほんだな]のそばにいます。",
     highlight: { x: 8, y: 15, w: 30, h: 70, label: "たおれそう！" },
     seconds: 10,
