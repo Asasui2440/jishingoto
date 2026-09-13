@@ -128,7 +128,7 @@ export default function ResultPage() {
         ) : null}
 
         </>}
-        {step < summaryStep && <div className="-mx-6">
+        {step < summaryStep && <div>
             {review.slice(step, step + 1).map(({ id, q, c, timedOut }) => (
               <ActionReview key={id} question={q} choice={c} timedOut={!!timedOut} number={step + 1} />
             ))}

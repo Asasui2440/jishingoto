@@ -153,7 +153,7 @@ export default function RoomRecognitionPage() {
           {risks.length === 0 && <p className="mt-3 text-13 text-ink-muted">家具や場所を読み取れませんでした。共通の問題で体験するか、写真を撮り直せます。</p>}
         </section>
         </DetailSheet>
-        <div id="selected-room-photo" tabIndex={-1} className="-mx-5 scroll-mt-16 overflow-hidden bg-ink">
+        <div id="selected-room-photo" tabIndex={-1} className="scroll-mt-16 overflow-hidden rounded-panel bg-ink">
         <div className="relative w-full">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

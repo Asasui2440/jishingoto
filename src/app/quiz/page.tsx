@@ -123,7 +123,7 @@ function QuestionView({
           </div>
         ) : null}
 
-        <div className="-mx-6 overflow-hidden bg-ink"><div className="relative w-full">
+        <div className="overflow-hidden rounded-panel bg-ink"><div className="relative w-full">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
