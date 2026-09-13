@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import roomThumb from "@/../public/figma/img/room-thumb.jpg";
 import {
+  CheckCircleTealIcon,
+  DotBlueIcon,
+  DotGrayIcon,
   LightbulbTealIcon,
   XCircleBlueIcon,
 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { TitleBlock } from "@/components/ui/Bits";
+import { Meter, TitleBlock } from "@/components/ui/Bits";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { roomTimings } from "@/lib/room-test";
 import { prepareRoom } from "@/lib/room-preparation";
-import { TRIVIA } from "@/lib/content";
+import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { useSession } from "@/lib/session";
 
 export default function AnalysisLoadingPage() {
@@ -34,7 +37,7 @@ export default function AnalysisLoadingPage() {
     let alive = true;
     const job = prepareRoom(photoUrl);
     const started = roomTimings().analysis?.start ?? performance.now();
-    const timer = setInterval(() => setElapsed(Math.floor((performance.now() - started) / 1000)), 1000);
+    const timer = setInterval(() => setElapsed((performance.now() - started) / 1000), 250);
     void job.then((analysis) => {
       if (!alive) return;
       update({
@@ -47,6 +50,10 @@ export default function AnalysisLoadingPage() {
     }).catch(() => { if (alive) { clearInterval(timer); setFailed(true); } });
     return () => { alive = false; clearInterval(timer); };
   }, [cancelled, photoUrl, update, router]);
+
+  // 待機中の3段階の演出。以前の1.4秒から6秒に延ばし、最後の段階で解析完了を待つ。
+  const step = Math.min(ANALYSIS_STEPS.length - 1, Math.floor(elapsed / 6));
+  const progress = (step + 0.35) / ANALYSIS_STEPS.length;
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
@@ -79,10 +86,44 @@ export default function AnalysisLoadingPage() {
           role="status"
           aria-live="polite"
         >
-          {!failed && <progress className="analysis-progress" aria-label="部屋の写真を解析中。完了率は取得できません。" />}
-          <p className="mt-3 text-base font-bold"><Furigana text={failed ? "読み込みに失敗しました。写真を選び直してください。" : "写真に写っている家具や場所を確認しています"} /></p>
-          <p className="mt-2 text-sm text-ink-muted"><Furigana text="経過時間" />：{elapsed}<Furigana text="秒" /></p>
-          {!failed && elapsed >= 20 && <p className="mt-2 text-sm"><Furigana text="少し時間がかかっています。そのままお待ちください。" /></p>}
+          {!failed && <div aria-hidden="true"><Meter value={progress} height={10} track="var(--color-canvas)" /></div>}
+          {failed ? <p className="mt-3 text-base font-bold"><Furigana text="読み込みに失敗しました。写真を選び直してください。" /></p> : (
+          <ol className="mt-3 flex flex-col gap-2">
+            {ANALYSIS_STEPS.map((label, i) => {
+              const done = i < step;
+              const active = i === step;
+              return (
+                <li
+                  key={label}
+                  className={[
+                    "flex items-center gap-2 transition-opacity",
+                    done || active ? "opacity-100" : "opacity-40",
+                  ].join(" ")}
+                >
+                  {done ? (
+                    <CheckCircleTealIcon className="size-4 shrink-0 text-safe" />
+                  ) : active ? (
+                    <DotBlueIcon className="size-4 shrink-0 animate-pulse text-primary-ink" />
+                  ) : (
+                    <DotGrayIcon className="size-4 shrink-0 text-ink-faint" />
+                  )}
+                  <span
+                    className={[
+                      "text-13",
+                      active
+                        ? "font-bold text-primary-ink"
+                        : done
+                          ? "font-bold text-ink"
+                          : "text-ink-muted",
+                    ].join(" ")}
+                  >
+                    <Furigana text={label} />
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          )}
 
         </div>
       </div>
