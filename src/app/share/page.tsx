@@ -88,7 +88,7 @@ export default function SharePage() {
 
       <div className="animate-rise flex flex-col gap-4 px-6 pt-3 pb-6">
         {/* プレビュー。書き出す PNG と同じ中身を HTML で組んでいる */}
-        <div className="rounded-panel border-[3px] border-primary-mid bg-surface p-5 shadow-[0_8px_12px_rgba(0,0,0,0.05)]">
+        <div className="rounded-panel border-[3px] border-primary-ink bg-surface p-5 shadow-[0_8px_12px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between">
             <span className="rounded-chip bg-primary-soft px-2 py-0.5 font-display text-11 font-black text-primary-ink">
               ジシンゴト

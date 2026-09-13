@@ -31,6 +31,11 @@
   /* ロゴタイプ専用。Figma のブランド表現をそのまま残している */
   --color-accent: #ffcc00;
 
+  /* 補足・強調カード。黄色の操作ボタンと区別する。 */
+  --color-secondary: #2ec4b6;
+  --color-secondary-soft: #e6f9f7;
+  --color-secondary-ink: #11685f;
+
   /* セマンティック */
   --color-safe: #2ec4b6;
   --color-safe-soft: #e6f9f7;
@@ -265,3 +270,13 @@ ruby > rt {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Phase 1: primary content stays visible; supporting detail opens separately. */
+.phase-one-navigation { position: fixed; top: max(4px, env(safe-area-inset-top)); left: max(12px, calc(50% - 189px)); z-index: 60; }
+body:has(.phase-one-navigation) [data-status-bar] { visibility: hidden; height: calc(52px + env(safe-area-inset-top)); }
+.detail-sheet { position: fixed; inset: 0; margin: auto; padding: 0; width: min(100% - 24px, 440px); max-width: none; max-height: calc(100dvh - 24px); border: 0; border-radius: 20px; color: var(--color-ink); background: var(--color-canvas); }
+.detail-sheet::backdrop { background: rgb(15 23 42 / 55%); backdrop-filter: blur(3px); }
+.detail-sheet-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
+.detail-sheet-content { overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.phase-one-actions { position: sticky; bottom: 0; z-index: 25; background: var(--color-canvas); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+html { scroll-padding-top: 60px; }

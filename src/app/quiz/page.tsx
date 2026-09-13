@@ -41,7 +41,7 @@ function QuestionView({
   onAnswer: (choice: Choice, timedOut: boolean) => void;
   photoUrl: string | null;
 }) {
-  const { sound, audience } = useSettings();
+  const { sound } = useSettings();
   const vibrate = useHaptics();
   const [remaining, setRemaining] = useState(question.seconds > 0 ? question.seconds : null);
   const [shaking, setShaking] = useState(false);
@@ -98,20 +98,19 @@ function QuestionView({
             音・振動: {sound ? "ON" : "OFF"}
           </span>
         </div>
-        {index === 0 && <p className="mx-6 mt-3 rounded-field bg-warn-soft p-3 text-lg font-bold">揺れが始まりました！ あなたならどうする？</p>}
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
           <p className="mb-2 text-13 font-bold text-primary-ink" aria-live="polite">
             <Furigana text={question.phase === "after" ? "② ゆれがおさまったあと → まわりを確認[かくにん]" : "① 地震[じしん]が発生[はっせい] → 身[み]を守[まも]る"} adult={question.phase === "after" ? "② 揺れが収まった後：周囲の確認・避難の判断" : "① 地震発生：揺れている間の初動"} />
           </p>
-          <Meter value={(index + 1) / total} height={6} track="var(--color-border)" />
+          <Meter color="var(--color-primary)" value={(index + 1) / total} height={6} track="var(--color-border)" />
           <p className="mt-1 text-right text-11 text-ink-soft">
             {index + 1} / {total}
           </p>
         </div>
       </div>
 
-      <div className={["flex flex-col gap-4 px-6 pt-2", shaking ? "animate-quake" : ""].join(" ")}>
+      <div className={["flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
         {/* 部屋で「あぶない」と確認した場所が、そのまま問題になる */}
         {kind && question.place ? (
           <div className="flex items-center gap-2">
@@ -119,32 +118,24 @@ function QuestionView({
               <Furigana text={kind.label} />
             </Tag>
             <span className="font-display text-13 font-bold text-ink-muted">
-              {audience === "adult" ? "あなたの部屋で検出した「" : "あなたの部屋の「"}
-              <Furigana text={question.place} adult={question.adultPlace} />」{audience === "adult" ? "について" : "の話"}
+              <Furigana text={question.place} adult={question.adultPlace} />
             </span>
           </div>
         ) : null}
 
-        <Card className="p-4">
-          <p className="font-display text-lg font-bold text-ink">
-            <Furigana text={question.situation} adult={question.adultSituation} />
-          </p>
-        </Card>
-
-        {!question.sourceRiskId && <p className="rounded-field bg-canvas p-3 text-sm text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
-        {(question.sourceRiskId || question.id === "home-kitchen-after") && <div className="relative w-full overflow-hidden rounded-panel bg-ink">
+        <div className="-mx-6 overflow-hidden bg-ink"><div className="relative w-full">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
-            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="354px" className="h-auto w-full" priority />
+            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 402px) 100vw, 402px" className="block h-auto w-full" priority />
           )}
 
           {question.highlight ? (
             <>
               <span
                 aria-hidden
-                className="absolute rounded-field border-[3px] border-warn bg-warn/20"
+                className="absolute rounded-field border-[3px] border-primary bg-primary/15"
                 style={{
                   left: `${question.highlight.x}%`,
                   top: `${question.highlight.y}%`,
@@ -153,7 +144,7 @@ function QuestionView({
                 }}
               />
               <Tag
-                color="var(--color-warn)"
+                color="var(--color-primary-ink)"
                 className="absolute rounded-chip"
                 style={{
                   left: `${question.highlight.x + question.highlight.w / 2}%`,
@@ -167,7 +158,7 @@ function QuestionView({
           ) : null}
 
           {remaining !== null ? (
-            <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-2">
+            <div role="timer" className="absolute top-3 right-3 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-2">
               <span
                 aria-hidden
                 className={[
@@ -180,7 +171,16 @@ function QuestionView({
               </span>
             </div>
           ) : null}
-        </div>}
+        </div></div>
+
+        <Card className="p-3">
+          <p className="font-display text-lg font-bold text-ink">
+            <Furigana text={question.situation} adult={question.adultSituation} />
+          </p>
+        </Card>
+
+        {!question.sourceRiskId && <p className="text-xs text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
+
 
         <ul className="flex flex-col gap-2.5">
           {question.choices.map((c, i) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { DetailSheet } from "@/components/ui/DetailSheet";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import heroRoom from "@/../public/figma/img/hero-room.jpg";
@@ -40,7 +41,7 @@ export default function OnboardingPage() {
 
   return (
     <Screen>
-      <main className="flex flex-1 flex-col gap-5 px-6 pt-2 pb-6">
+      <main className="flex flex-1 flex-col gap-3 px-6 pt-2 pb-4">
         <header className="flex flex-col items-center gap-2.5">
           <div className="flex items-center gap-3">
             <span className="grid size-14 place-items-center rounded-full bg-primary-soft">
@@ -72,7 +73,7 @@ export default function OnboardingPage() {
           })}
         </div>
 
-        <div className="relative h-[210px] w-full overflow-hidden rounded-panel shadow-[0_10px_24px_-8px_rgba(0,0,0,0.07)]">
+        <div className="relative h-[160px] w-full overflow-hidden rounded-panel shadow-[0_10px_24px_-8px_rgba(0,0,0,0.07)]">
           <Image src={heroRoom} alt="部屋の家具を固定して安全対策をする様子" fill priority sizes="402px" className="object-cover" />
           <span aria-hidden className="absolute inset-0 bg-white/[0.18]" />
         </div>
@@ -90,7 +91,7 @@ export default function OnboardingPage() {
           {adult ? "避難経路をシミュレーション（フェーズ2）" : <Furigana text="ひなん経路[けいろ]をためす（フェーズ2）" />}
         </Button>
 
-        <Card className="flex flex-col gap-3 p-[18px]">
+        <DetailSheet title="この体験でわかること"><Card className="flex flex-col gap-3 p-[18px]">
           {INFO[audience].map(({ Icon, bg, fg, title, body }) => (
             <div key={title} className="flex items-center gap-3">
               <IconChip bg={bg}><Icon className="size-5" style={{ color: fg }} /></IconChip>
@@ -100,7 +101,7 @@ export default function OnboardingPage() {
               </div>
             </div>
           ))}
-        </Card>
+        </Card></DetailSheet>
 
         <button type="button" onClick={() => setSettingsOpen(true)} className="mx-auto font-display text-13 font-bold text-ink-soft underline underline-offset-2">
           {adult ? "表示・アクセシビリティ設定" : "ふりがな・文字の大きさをかえる"}

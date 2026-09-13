@@ -17,7 +17,7 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
 
   return (
     <Card className="overflow-hidden p-0">
-      <div className="border-b border-border bg-primary-soft px-[18px] py-4">
+      <div className="border-b border-border bg-canvas px-[18px] py-4">
         <p className="font-display text-15 font-bold text-ink">
           {adult ? "検出結果に合った防災用品" : <Furigana text="見[み]つかった危険[きけん]に合[あ]う防災[ぼうさい]グッズ" />}
         </p>
@@ -60,7 +60,7 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
                   href={amazonSearchUrl(product.query)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-pill border-2 border-primary-mid bg-surface px-4 font-display text-13 font-bold text-primary-ink active:bg-primary-soft"
+                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-pill border-2 border-primary-mid bg-surface px-4 font-display text-13 font-bold text-primary-ink active:bg-canvas"
                   aria-label={`${product.name}をAmazonで検索（新しいタブで開きます）`}
                 >
                   Amazonで候補を見る&nbsp; ↗
