@@ -76,6 +76,10 @@ async function walkTo(
   const { computeHeading, computeDistanceBetween } = maps.geometry.spherical;
   const dest = new maps.LatLng(target.lat, target.lng);
 
+  // ボタンを押した時点で、いったん経路の進行方向へ戻す。
+  // 利用者が直前に周囲を見回していても、次の移動方向を見失わないようにする。
+  pano.setPov({ heading: facing, pitch: 0 });
+
   for (let hop = 0; hop < MAX_HOPS; hop++) {
     if (!isCurrent()) return;
 
@@ -100,8 +104,15 @@ async function walkTo(
       }
     }
     if (!best?.pano || bestDiff > MAX_TURN_DEG) break;
+    const nextHeading = best.heading;
+    if (typeof nextHeading !== "number") break;
 
+    // Street View はパノラマ切り替え時に以前の視点を引き継ぐため、
+    // 実際に辿るリンクの方向へ、移動の前後で明示的に向け直す。
+    pano.setPov({ heading: nextHeading, pitch: 0 });
     await hopTo(pano, best.pano);
+    if (!isCurrent()) return;
+    pano.setPov({ heading: nextHeading, pitch: 0 });
 
     // 近づいていなければ堂々巡り。抜ける。
     const now = pano.getPosition();
@@ -124,6 +135,10 @@ async function walkTo(
   }
 
   pano.setPov({ heading: facing, pitch: 0 });
+  // パノラマ描画が同じフレーム内で視点を更新する場合にも、経路の向きを優先する。
+  requestAnimationFrame(() => {
+    if (isCurrent()) pano.setPov({ heading: facing, pitch: 0 });
+  });
 }
 
 type Props = {
@@ -280,7 +295,15 @@ export function StreetStage({
   }, []);
 
   return (
-    <div role="region" aria-label="Street Viewで進む体験" data-scene-state={mode} className="relative w-full overflow-hidden rounded-panel bg-ink" style={{ height }}>
+    <div
+      role="region"
+      aria-label="Street Viewで進む体験"
+      data-scene-state={mode}
+      data-route-heading={Math.round((heading + 360) % 360)}
+      data-pov-heading={Math.round((pov + 360) % 360)}
+      className="relative w-full overflow-hidden rounded-panel bg-ink"
+      style={{ height }}
+    >
       {/* パノラマの器。sketch のときは隠す（画像は保存もキャッシュもしない） */}
       <div
         ref={boxRef}

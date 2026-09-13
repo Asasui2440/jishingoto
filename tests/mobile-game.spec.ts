@@ -37,10 +37,20 @@ async function openMockRoute(page: Page, testInfo?: TestInfo) {
   await start.click();
 }
 
-async function jumpToNextDecision(page: Page) {
+async function jumpToNextDecision(page: Page, expectAttention = true) {
   await page.getByRole("button", { name: "遊び方・設定" }).click();
   const help = page.getByRole("dialog", { name: "歩き方・設定" });
-  await help.getByRole("button", { name: "次の判断ポイントへ進む" }).click();
+  if (!expectAttention) {
+    await help.getByRole("button", { name: "次の判断ポイントへ進む" }).click();
+    return;
+  }
+  const toast = page.getByTestId("attention-toast");
+  // 1秒だけの通知なので、クリック前から表示待ちを始めて取り逃がさない。
+  await Promise.all([
+    toast.waitFor({ state: "visible", timeout: 2_000 }),
+    help.getByRole("button", { name: "次の判断ポイントへ進む" }).click(),
+  ]);
+  await expect(toast).not.toBeVisible({ timeout: 2_000 });
 }
 
 test("MainのStreet View体験をコンパクトな画面で最後まで進める", async ({ page }, testInfo) => {
@@ -77,7 +87,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
     await expect(decision).not.toBeVisible();
   }
 
-  await jumpToNextDecision(page);
+  await jumpToNextDecision(page, false);
   const reflect = page.getByRole("button", { name: "ふりかえる" });
   await noPageOverflow(page, reflect);
   await reflect.click();

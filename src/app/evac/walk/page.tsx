@@ -17,14 +17,24 @@ export default function EvacWalkPage() {
   const router = useRouter();
   const [sheet, setSheet] = useState<"map" | "help" | null>(null);
   const [readyStepId, setReadyStepId] = useState<string | null>(null);
+  const [announcedPointId, setAnnouncedPointId] = useState<string | null>(null);
   const game = useEvacWalk({ readyStepId, paused: sheet !== null });
   const { evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry } = game;
   const { mode, home, shelter, walk, decisions, timerSeconds, update } = evac;
+  const ready = !!step && readyStepId === step.id;
+  const announcingPoint = !!pending && ready && announcedPointId !== step?.pointId;
+  const decisionVisible = !!pending && ready && !announcingPoint;
   useEffect(() => {
     const state = getEvac();
     if (!state.startRouteId || !state.shelter) router.replace("/evac");
     else if (state.finishedAt) router.replace("/evac/report");
   }, [router]);
+  useEffect(() => {
+    if (!announcingPoint || !step?.pointId) return;
+    const pointId = step.pointId;
+    const timer = setTimeout(() => setAnnouncedPointId(pointId), 1000);
+    return () => clearTimeout(timer);
+  }, [announcingPoint, step?.pointId]);
 
   if (!route || !step || !walk || !home || !shelter) return <GameShell>
     <GameHeader title="道を準備しています" step={2} onBack={() => router.push("/evac/routes")} />
@@ -34,7 +44,6 @@ export default function EvacWalkPage() {
     </main>
   </GameShell>;
 
-  const ready = readyStepId === step.id;
   const moving = walking && ready && !pending && !notice && !arrived && !busy && !sheet;
   const events = walk.steps.filter(s => s.event);
   const decisionIndex = events.findIndex(s => s.pointId === step.pointId);
@@ -61,15 +70,16 @@ export default function EvacWalkPage() {
             <span className="rounded-xl bg-black/70 px-3 py-2 text-11 font-bold text-white">残り {formatDistance(arrived ? 0 : step.remainingM)}<br />{formatDuration(arrived ? 0 : step.remainingS)}</span>
             <button type="button" onClick={() => showSheet("map")} className="pointer-events-auto inline-flex min-h-11 items-center gap-1 rounded-full bg-white px-3 text-11 font-bold text-ink"><GameIcon name="route" className="size-4" />地図</button>
           </div>
+          {announcingPoint ? <div role="status" data-testid="attention-toast" className={styles.attentionToast}><span aria-hidden>⚠</span><span>注意ポイントだよ</span></div> : null}
         </StreetStage>
       </div>
       {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
-      {pending ? <EventSheet key={step.pointId} event={pending} index={decisionIndex} total={events.length}
+      {decisionVisible ? <EventSheet key={step.pointId} event={pending} index={decisionIndex} total={events.length}
         seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready} busy={busy}
         onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
         : <section className={styles.actions} aria-label="歩行の操作">
-          <p role="status" className="text-11 leading-relaxed text-ink-muted">{!ready ? "風景を読み込んでいます…" : notice ?? (arrived ? "通った道と選んだ行動をふりかえろう。" : moving ? "歩いています。判断地点で止まります。" : "ドラッグで周りを見回せます。")}</p>
-          {arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
+          <p role="status" className="text-11 leading-relaxed text-ink-muted">{!ready ? "風景を読み込んでいます…" : announcingPoint ? "注意ポイントを確認しています…" : notice ?? (arrived ? "通った道と選んだ行動をふりかえろう。" : moving ? "歩いています。判断地点で止まります。" : "ドラッグで周りを見回せます。")}</p>
+          {pending ? null : arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
             : <div className="flex gap-2">
               <Button size="md" disabled={!ready || busy} onClick={forward}><GameIcon name="walk" />{notice ? "先へ進む" : "進む"}</Button>
               <Button size="md" variant="outline" disabled={!ready || busy} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>
