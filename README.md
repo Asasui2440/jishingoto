@@ -13,6 +13,8 @@ Figma:
 npm run dev
 ```
 
+開発サーバーは `http://localhost:3000` で起動する。
+
 Phase 1 の実画像解析とアニメ予想図を使うには、`.env.local` にサーバー用キーを設定する。
 キーは Route Handler の中だけで使用し、ブラウザには配布しない。
 
@@ -25,8 +27,8 @@ OPENAI_IMAGE_MODEL=gpt-image-2   # 任意
 写真はブラウザで最大 1280px に縮小し、プライバシー確認画面で指定した領域を
 画像データ自体からマスクしてから OpenAI API へ送る。写真は Web Storage へ保存しない。
 
-フェーズ2で本物の地図・ストリートビューを出すときは、`.env.local` にキーを置く
-（`.env.example` を参照。**無くても動く**：デモ表示のイラストに切り替わる）。
+フェーズ2は「遊び方・設定」でモック版／API版を切り替えられる。API版で本物の地図・
+徒歩経路・Street Viewを出すときは、`.env.local` にキーを置く。モック版はキー不要。
 
 ```
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
@@ -58,6 +60,8 @@ PC のブラウザでも中央に寄せて表示される。
 | `/evac/report` | 結果レポート |
 
 入口はトップの「ひなん経路をためす（フェーズ2）」。
+準備と比較では地図、歩行中はStreet Viewを主画面にする。詳細説明・地図・設定は
+必要なときだけ下から開き、通常のスマホ表示では主要操作をページスクロールなしで使える。
 **→ 詳しくは [docs/PHASE2.md](docs/PHASE2.md)**（API・安全表現・保存方針）
 
 ## 構成
@@ -72,7 +76,7 @@ src/
     SettingsSheet.tsx
     evac/         フェーズ2の地図・ストリートビュー・判断シート
   lib/
-    api.ts        ★ OpenAI Route Handler と画面の境界（失敗時はデモへフォールバック）
+    api.ts        ★ OpenAI Route Handler と画面の境界（モックモードでは固定データを使用）
     content.ts    設問・危険の種類・チェックリストなどの文言データ
     session.tsx   体験1回ぶんの状態と集計
     settings.tsx  ふりがな・文字サイズ・音の設定

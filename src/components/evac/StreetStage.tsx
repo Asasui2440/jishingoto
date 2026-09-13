@@ -11,6 +11,7 @@ const ZONE_LABELS: Record<EventKind, string> = {
   wall: "想定：塀・ブロック",
   fall: "想定：落下物",
   closed: "想定：通行止め",
+  terrain: "想定：地形の注意点",
 };
 
 /* ------------------------------------------------------------------ */
@@ -144,7 +145,10 @@ type Props = {
   onAdvance?: () => void;
   /** 避難場所に着いたか。着いたときの演出に使う */
   arrived?: boolean;
-  height?: number;
+  height?: number | string;
+  demo?: boolean;
+  sceneKey?: string;
+  onSettled?: (key: string) => void;
   children?: React.ReactNode;
 };
 
@@ -174,6 +178,9 @@ export function StreetStage({
   onAdvance,
   arrived = false,
   height = 260,
+  demo = false,
+  sceneKey = "",
+  onSettled,
   children,
 }: Props) {
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -195,14 +202,24 @@ export function StreetStage({
   const moveIdRef = useRef(0);
 
   useEffect(() => {
-    if (!hasMapsKey()) return;
+    if (demo || !hasMapsKey()) {
+      let active = true;
+      queueMicrotask(() => { if (active) { setMode("sketch"); onSettled?.(sceneKey); } });
+      return () => { active = false; };
+    }
     const moveId = ++moveIdRef.current;
-    const isCurrent = () => moveIdRef.current === moveId;
     let alive = true;
+    const isCurrent = () => alive && moveIdRef.current === moveId;
+    const deadline = setTimeout(() => {
+      if (!isCurrent()) return;
+      ++moveIdRef.current;
+      setMode("sketch");
+      onSettled?.(sceneKey);
+    }, 18000);
 
     void loadMaps()
       .then(async (maps) => {
-        if (!alive || !boxRef.current) throw new Error("gone");
+        if (!isCurrent() || !boxRef.current) throw new Error("gone");
 
         if (!panoRef.current) {
           // 最初の1回だけ、緯度経度からパノラマを探す（ID は保存しない）
@@ -212,7 +229,7 @@ export function StreetStage({
             radius: 120,
             source: maps.StreetViewSource.OUTDOOR,
           });
-          if (!alive || !boxRef.current || !data.location?.latLng) {
+          if (!isCurrent() || !boxRef.current || !data.location?.latLng) {
             throw new Error("no-pano");
           }
           panoRef.current = new maps.StreetViewPanorama(boxRef.current, {
@@ -220,7 +237,7 @@ export function StreetStage({
             pov: { heading, pitch: 0 },
             zoom: 0,
             // 帰属表示（Google ロゴ・撮影時期）はそのまま出す
-            addressControl: true,
+            addressControl: false,
             linksControl: false,
             panControl: false,
             zoomControl: false,
@@ -239,20 +256,31 @@ export function StreetStage({
           // 2回目以降は隣のパノラマを辿って歩く（ワープさせない）
           await walkTo(panoRef.current, maps, { lat, lng }, heading, isCurrent);
         }
-        if (alive) setMode("pano");
+        if (isCurrent()) { setMode("pano"); onSettled?.(sceneKey); }
       })
       .catch(() => {
         // パノラマが無い・キーが無効などのときは想定図に切り替える
-        if (alive) setMode("sketch");
-      });
+        if (isCurrent()) { setMode("sketch"); onSettled?.(sceneKey); }
+      }).finally(() => clearTimeout(deadline));
 
     return () => {
       alive = false;
+      clearTimeout(deadline);
     };
-  }, [lat, lng, heading]);
+  }, [lat, lng, heading, demo, sceneKey, onSettled]);
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const observer = new ResizeObserver(() => {
+      if (panoRef.current && window.google?.maps) window.google.maps.event.trigger(panoRef.current, "resize");
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-panel bg-ink" style={{ height }}>
+    <div role="region" aria-label="Street Viewで進む体験" data-scene-state={mode} className="relative w-full overflow-hidden rounded-panel bg-ink" style={{ height }}>
       {/* パノラマの器。sketch のときは隠す（画像は保存もキャッシュもしない） */}
       <div
         ref={boxRef}
