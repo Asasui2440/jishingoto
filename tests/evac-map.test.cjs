@@ -490,3 +490,33 @@ test("a disconnected facility tour resolves to a proven road-side node and arriv
   assert.equal(reachedStreetArrival({...snapshot,pano:"nearby"}),false);
   await assert.rejects(prepareStreetRoute([start,road,facility],"A","courtyard",async id=>nodes[id],{goalPosition:{lat:35.002,lng:139}}),/接続/);
 });
+
+test("shelter lookup uses the selected disaster layer and excludes incompatible facilities", async () => {
+  const live = modules(true).api;
+  const before = global.fetch;
+  const urls = [];
+  const feature = (name, flags) => ({geometry:{coordinates:[135.495,34.702]},properties:{name,address:"大阪",...flags}});
+  global.fetch = async url => { urls.push(String(url)); return Response.json({features:[feature("洪水のみ",{disaster1:1}),feature("地震のみ",{disaster4:1}),feature("両方",{disaster1:"1",disaster4:1})]}); };
+  try {
+    const flood = await live.fetchShelters({lat:34.702,lng:135.495},"api","flood");
+    assert.deepEqual(flood.map(s=>s.name),["洪水のみ"]); // duplicate location is shown once
+    assert(flood.every(s=>s.kind.includes("洪水") && s.supportedDisasters.includes("洪水")));
+    assert(urls.every(url=>url.includes("/skhb01/")));
+    urls.length=0;
+    const quake = await live.fetchShelters({lat:34.702,lng:135.495},"api","earthquake");
+    assert.equal(quake[0].name,"地震のみ");
+    assert(urls.every(url=>url.includes("/skhb04/")));
+    global.fetch = async () => new Response(null,{status:503});
+    await assert.rejects(live.fetchShelters({lat:34.702,lng:135.495},"api","flood"),/洪水/);
+  } finally { global.fetch=before; }
+});
+
+test("flood fallback questions stay explicitly synthetic and cannot become earthquake questions", async () => {
+  const route = (await api.fetchRoutes(content.DEMO_HOME,content.DEMO_SHELTERS[0],"mock"))[0];
+  const points = await api.fetchDecisionPoints(route,{source:"sample",scenario:"flood"});
+  assert.equal(points.length,1);
+  assert.equal(points[0].event.id,"practice-flood");
+  assert.equal(points[0].event.evidence,undefined);
+  assert(points[0].event.situation.includes("固定の練習問題"));
+  assert(points[0].event.situation.includes("浸水"));
+});

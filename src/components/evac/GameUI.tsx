@@ -35,12 +35,12 @@ export function GameShell({ children, className = "" }: { children: ReactNode; c
   </div>;
 }
 
-export function GameHeader({ title, subtitle, step, onBack, onHelp, actions }: {
-  title: string; subtitle?: string; step: 1 | 2 | 3; onBack?: () => void; onHelp?: () => void; actions?: ReactNode;
+export function GameHeader({ title, subtitle, step, onBack, onHelp, actions, leading }: {
+  title: string; subtitle?: string; step: 1 | 2 | 3; onBack?: () => void; onHelp?: () => void; actions?: ReactNode; leading?: ReactNode;
 }) {
   return <header className="shrink-0 px-4 pt-3 pb-2">
     <div className="flex items-center gap-2">
-      {onBack ? <button type="button" onClick={onBack} aria-label="戻る" className="grid size-11 shrink-0 place-items-center rounded-full bg-white"><GameIcon name="back" /></button> : <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary"><GameIcon name="route" /></span>}
+      {leading ?? (onBack ? <button type="button" onClick={onBack} aria-label="戻る" className="grid size-11 shrink-0 place-items-center rounded-full bg-white"><GameIcon name="back" /></button> : <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary"><GameIcon name="route" /></span>)}
       <div className="min-w-0 flex-1"><h1 className="font-display text-lg font-bold leading-snug"><Furigana text={title} /></h1>{subtitle ? <p className="truncate text-11 text-ink-muted" title={subtitle}><Furigana text={subtitle} /></p> : null}</div>
       {actions}
       {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" className="flex min-h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-2 text-11 font-bold"><GameIcon name="info" className="size-4" />使い方</button> : null}

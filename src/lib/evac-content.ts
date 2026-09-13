@@ -42,6 +42,7 @@ export type LatLng = { lat: number; lng: number };
 
 /** 自治体オープンデータ由来の避難場所 */
 export type Shelter = {
+  supportedDisasters?: string[];
   id: string;
   name: string;
   /** 「指定緊急避難場所」「指定避難所」など、出典どおりの区分 */
@@ -73,6 +74,7 @@ export type RouteAssessment = {
     slopeM: number;
     liquefactionM: number;
     shakingM: number;
+    floodM?: number;
   } | null;
   notes: string[];
   source: { name: string; url: string } | null;

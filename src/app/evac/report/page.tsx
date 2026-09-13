@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { BottomSheet, GameHeader, GameIcon, GameShell, Toast } from "@/components/evac/GameUI";
 import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
 import { RouteLegend } from "@/components/evac/RouteLegend";
@@ -81,7 +82,7 @@ export default function EvacReportPage() {
     <GameShell>
       <GameHeader
         title="ふりかえり"
-        subtitle="歩[ある]いた道[みち]と、選[えら]んだこと"
+        subtitle={`${EVAC_SCENARIOS[evac.scenario ?? "earthquake"].label}｜歩いた道と、選んだこと`}
         step={3}
         onHelp={() => setSheet("help")}
         actions={connectedRoom ? (
@@ -131,8 +132,8 @@ export default function EvacReportPage() {
           </div> : <button type="button" onClick={() => setSheet("help")} className="flex min-h-11 w-full items-center gap-2 rounded-field bg-primary-soft px-3 py-2 text-left text-11 text-primary-ink"><GameIcon name="info" className="size-4 shrink-0" /><span>今回は出題なし。経路の安全を示すものではありません。</span></button>}
         </section>
 
-        <button type="button" onClick={() => setSheet("followUp")} className={`flex min-h-14 shrink-0 items-center gap-3 rounded-tile px-3 py-2 text-left ${followUp ? "border border-[#b3e2d9] bg-safe-soft" : "bg-primary-soft"}`}>
-          <span className={`grid size-9 shrink-0 place-items-center rounded-full ${followUp ? "bg-[#b3e2d9] text-[#176457]" : "bg-primary text-ink"}`}><GameIcon name={followUp ? "check" : "flag"} className="size-5" /></span>
+        <button type="button" onClick={() => setSheet("followUp")} className={`flex min-h-14 shrink-0 items-center gap-3 rounded-tile px-3 py-2 text-left ${followUp ? "border border-amber-200 bg-amber-50" : "bg-primary-soft"}`}>
+          <span className={`grid size-9 shrink-0 place-items-center rounded-full ${followUp ? "bg-amber-200 text-amber-900" : "bg-primary text-ink"}`}><GameIcon name={followUp ? "check" : "flag"} className="size-5" /></span>
           <span className="min-w-0 flex-1"><span className="block text-13 font-bold">{followUp ? "次に確かめること" : "次に確かめることを、ひとつ"}</span><span className="mt-0.5 block truncate text-11 text-ink-muted">{followUp ? <Furigana text={followUp} /> : "平常時にできることを選ぼう"}</span></span>
           <GameIcon name="chevron" className="size-4 shrink-0" />
         </button>
@@ -163,12 +164,12 @@ export default function EvacReportPage() {
             <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}><GameIcon name="back" className="size-4" />前の判断</Button>
             <Button size="md" variant="quiet" disabled={selectedIndex === rows.length - 1} onClick={() => setSelectedId(rows[selectedIndex + 1].d.pointId)}>次の判断<GameIcon name="chevron" className="size-4" /></Button>
           </div> : null}
-          <section className="rounded-tile bg-safe-soft p-3">
-            <h4 className="mb-1 text-11 font-bold text-[#176457]">この選択の利点</h4>
+          <section className="rounded-tile bg-amber-50 p-3">
+            <h4 className="mb-1 text-11 font-bold text-amber-900">この選択の利点</h4>
             <ul className="list-disc space-y-1 pl-4 text-13 text-ink-muted">{selected.choice.pros.map((text) => <li key={text}><Furigana text={text} /></li>)}</ul>
           </section>
-          <section className="rounded-tile bg-warn-soft p-3">
-            <h4 className="mb-1 text-11 font-bold text-[#925600]">気をつけたい点</h4>
+          <section className="rounded-tile bg-blue-50 p-3">
+            <h4 className="mb-1 text-11 font-bold text-blue-900">気をつけたい点</h4>
             <ul className="list-disc space-y-1 pl-4 text-13 text-ink-muted">{selected.choice.cons.map((text) => <li key={text}><Furigana text={text} /></li>)}</ul>
           </section>
           <details key={selected.d.pointId} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">

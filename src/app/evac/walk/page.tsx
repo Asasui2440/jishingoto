@@ -1,5 +1,6 @@
 "use client";
 
+import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EventSheet } from "@/components/evac/EventSheet";
@@ -90,11 +91,12 @@ export default function EvacWalkPage() {
   const showSheet = (next: "map" | "help") => { setSheet(next); };
 
   return <GameShell className={styles.shell}>
-    <GameHeader title={arrived ? "避難先付近に到着" : "道を歩いてみよう"} subtitle={plain(shelter.name)} step={2}
+    <GameHeader title={arrived ? "避難先付近に到着" : "道を歩いてみよう"} subtitle={`${EVAC_SCENARIOS[evac.scenario ?? "earthquake"].label}｜${plain(shelter.name)}`} step={2}
       onBack={() => { setWalking(false); router.push("/evac/routes"); }} onHelp={() => showSheet("help")} />
     <main className={styles.main} aria-label="避難ルートの体験">
       <div className={styles.status}>
         <span className="rounded-md bg-blue-50 px-2 py-1 text-11 font-bold text-blue-800">想定シナリオ</span>
+        {mode === "api" && walk.source === "sample" ? <span className="text-11 text-ink-muted">固定の練習問題</span> : null}
         <span className="text-11 text-ink-muted">判断 {decisions.length} / {events.length}</span>
       </div>
       <div className={styles.scene}>
