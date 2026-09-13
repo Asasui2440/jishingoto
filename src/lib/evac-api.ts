@@ -408,7 +408,7 @@ async function assessRouteOptions(routes: RouteOption[]): Promise<RouteOption[]>
     const response = await fetch("/api/evac/assess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(20000),
       body: JSON.stringify({
         routes: routes.map(({ id, path, distanceM, durationS }) => ({
           id,
@@ -566,7 +566,7 @@ export type DecisionPoint = {
 export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
   if (options?.source === "geo-ai") {
     const response = await fetch("/api/evac/analyze", {
-      method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(45000)]) : AbortSignal.timeout(45000),
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(55000)]) : AbortSignal.timeout(55000),
       body: JSON.stringify({ route: { id: route.id, path: route.path, durationS: route.durationS }, excludedEventIds: options.excludedEventIds ?? [] }),
     });
     const result = await response.json();

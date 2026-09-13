@@ -118,9 +118,9 @@ export function useEvac() {
 /** 想定の所要時間（秒）。選んだ行動ぶんの遅れを足す。 */
 export function totalSeconds(evac: EvacSession) {
   const route = evac.routes.find((r) => r.id === evac.startRouteId);
-  const base = evac.walk
+  const base = evac.walk?.street?.elapsedS ?? (evac.walk
     ? evac.walk.steps.slice(0, evac.walk.index + 1).reduce((s, step) => s + step.travelSeconds, 0)
-    : route?.durationS ?? 0;
+    : route?.durationS ?? 0);
   return base + evac.decisions.reduce((s, d) => s + d.extraSeconds, 0);
 }
 

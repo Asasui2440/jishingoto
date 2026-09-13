@@ -17,7 +17,7 @@ import { useHaptics } from "@/lib/settings";
 import { useSession } from "@/lib/session";
 
 const GUIDES = [
-  { n: "1", bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", text: "部屋[へや]ぜんたいがうつるようにしよう" },
+  { n: "1", bg: "var(--color-secondary-soft)", fg: "var(--color-secondary-ink)", text: "部屋[へや]ぜんたいがうつるようにしよう" },
   { n: "2", bg: "var(--color-safe-soft)", fg: "var(--color-safe)", text: "ドアや出入[でい]り口[ぐち]もいれてね" },
   { n: "3", bg: "var(--color-warn-soft)", fg: "var(--color-warn)", text: "背[せ]の高[たか]い家具[かぐ]もわすれずに！" },
 ];
@@ -73,7 +73,7 @@ export default function CameraGuidePage() {
       <main className="flex flex-1 flex-col justify-center gap-6 px-6 py-8">
         <h1 className="text-center font-display text-28 font-bold"><Furigana text="部屋の写真を用意しよう" adult="部屋の写真を用意する" /></h1>
         <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・背の高い家具まで広く入れた部屋のイラスト" className="h-auto w-full rounded-panel" priority />
-        <div className="rounded-panel bg-primary-soft p-4 text-base leading-relaxed">
+        <div className="rounded-panel bg-secondary-soft p-4 text-base leading-relaxed">
           <p className="font-bold"><Furigana text="部屋全体が入るように撮[と]ろう" adult="部屋全体を撮影してください" /></p>
           <p className="mt-2"><Furigana text="床から家具の上まで、部屋が広く写るようにしよう！" adult="床から家具の上まで、部屋を広く写しましょう。" /></p>
           <div className="mt-3 grid grid-cols-3 gap-2">{["床", "出入口", "家具の上"].map((label, i) => <div key={label} className="flex flex-col items-center gap-1 rounded-field bg-surface px-2 py-3 font-bold"><span className="grid size-7 place-items-center rounded-full bg-primary text-sm">{i + 1}</span><span>{label}</span></div>)}</div>
@@ -95,9 +95,9 @@ export default function CameraGuidePage() {
     <div className="flex min-h-dvh flex-col justify-between bg-ink">
       <div>
         <StatusBar tone="light" />
-        <div className="flex items-center gap-2 bg-primary-soft px-4 py-3">
+        <div className="flex items-center gap-2 bg-secondary-soft px-4 py-3">
           <AlertOctagonIcon className="size-[18px] shrink-0" />
-          <p className="font-display text-13 font-bold text-primary-ink">
+          <p className="font-display text-13 font-bold text-secondary-ink">
             <Furigana text="顔や住所が写った場合は、次の画面で隠せます" />
           </p>
         </div>

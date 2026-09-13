@@ -32,6 +32,7 @@ export function StatusBar({ tone = "dark" }: { tone?: "dark" | "light" }) {
 
   return (
     <div
+      data-status-bar
       className={[
         "flex h-11 shrink-0 items-center justify-between px-6",
         tone === "light" ? "text-white" : "text-ink",

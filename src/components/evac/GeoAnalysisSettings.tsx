@@ -63,12 +63,12 @@ export function GeoAnalysisSettings({
         ))}
       </div>
       <p className="text-11 leading-relaxed text-ink-muted">
-        AIは収録した地理データを読み、地震時に注意を考える地点を選びます。Googleマップの画像はAIに送りません。
+        選んだ経路の周辺の地形データを取得し、AIが地震時に注意を考える地点を選びます。Googleマップの画像はAIに送りません。
       </p>
       {config ? (
         <>
           <p className="text-13 font-bold text-primary-ink">
-            地理データを収録したエリア
+            開始地点の例
           </p>
           <div className="flex flex-wrap gap-2">
             {config.regions.map((region) => (
@@ -83,7 +83,7 @@ export function GeoAnalysisSettings({
             ))}
           </div>
           <p className="text-11 text-ink-muted">
-            各中心地の周辺の一部を収録しています。東京・神奈川の全域には対応していません。経路が範囲を外れる場合は案内します。
+            住所検索・現在地・地図から別の場所も選べます。国土地理院の地形データがない区間は解析できません。その場合は「固定の練習問題」で体験できます。
           </p>
           {!config.aiConfigured && analysisMode !== "sample" ? (
             <p

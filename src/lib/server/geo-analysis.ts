@@ -1,5 +1,6 @@
 import mockCandidate from "@/data/mock/geo-candidate.json";
 import dataset from "@/data/evac-geo/regions.json";
+import { loadRouteRegion } from "./route-geodata";
 import { makeGeoEvent } from "../geo-events";
 import type { LatLng } from "../evac-content";
 import type {
@@ -395,7 +396,6 @@ export async function analyzeGeoRoute(
   signal?: AbortSignal,
   fetcher: typeof fetch = fetch,
 ): Promise<GeoAnalysisResult> {
-  const region = routeRegion(request.route.path);
   const key = process.env.OPENAI_API_KEY?.trim();
   const mock = process.env.OPENAI_MOCK_MODE === "true";
   if (!key && !mock)
@@ -404,6 +404,7 @@ export async function analyzeGeoRoute(
       "AI解析のキーが未設定です。管理者がOPENAI_API_KEYを設定すると利用できます。",
       503,
     );
+  const region = await loadRouteRegion(request.route.path, signal, fetcher);
   const matches = matchFeatures(
     region,
     request.route.path,

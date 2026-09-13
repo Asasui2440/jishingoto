@@ -216,7 +216,7 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
       <a href={SHELTER_SOURCE_LINK.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center text-11 text-primary-ink underline">{SHELTER_SOURCE_LINK.label}</a>
     </BottomSheet>
     <BottomSheet open={sheet === "route"} title="経路の詳細" onClose={() => setSheet(null)}>
-      {active ? <div className="space-y-3"><p className="text-base font-bold"><Furigana text={active.label} /></p><p>{formatDistance(active.distanceM)} · {formatDuration(active.durationS)}</p><div className="space-y-2">{active.notes.map(n => <p key={n} className="text-13 text-ink-muted"><Furigana text={n} /></p>)}</div><p className="rounded-2xl bg-primary-soft p-3 text-11">{active.demo ? "練習用の経路です。実際の道路とは異なります。" : "距離や地形の比較は学習用です。安全性や現在の通行状況を保証するものではありません。"}</p>{mode === "api" ? <p className="text-13 text-ink-muted">{analysisMode === "sample" ? "実際の道で固定の練習問題を体験します。" : "収録済みの地形データからAIが出題します。範囲外では解析を始めません。"}</p> : null}</div> : null}
+      {active ? <div className="space-y-3"><p className="text-base font-bold"><Furigana text={active.label} /></p><p>{formatDistance(active.distanceM)} · {formatDuration(active.durationS)}</p><div className="space-y-2">{active.notes.map(n => <p key={n} className="text-13 text-ink-muted"><Furigana text={n} /></p>)}</div><p className="rounded-2xl bg-primary-soft p-3 text-11">{active.demo ? "練習用の経路です。実際の道路とは異なります。" : "距離や地形の比較は学習用です。安全性や現在の通行状況を保証するものではありません。"}</p>{mode === "api" ? <p className="text-13 text-ink-muted">{analysisMode === "sample" ? "実際の道で固定の練習問題を体験します。" : "経路周辺の地形データを取得してAIが出題します。データがない区間は解析できません。"}</p> : null}</div> : null}
     </BottomSheet>
   </>;
 }

@@ -49,7 +49,7 @@ export function AftermathCard({
       </div>
 
       {result ? (
-        <p className="border-b border-border bg-primary-soft px-4 py-2 text-11 font-bold text-primary-ink">
+        <p className="border-b border-border bg-canvas px-4 py-2 text-11 font-bold text-ink-muted">
           {result.source === "test" ? "APIなしのテスト用画像です。生成結果の代わりに固定の元写真を表示しています。" : result.source === "ai"
             ? "写真をもとにAIが描いた想像図です。実際の被害を断定するものではありません。"
             : "AI画像を作成できなかったため、写真に危険候補を重ねています。"}
@@ -61,7 +61,7 @@ export function AftermathCard({
           // 生成待ち
           <div className="absolute inset-0 grid place-items-center bg-canvas">
             <div className="flex flex-col items-center gap-2">
-              <span className="size-8 animate-spin rounded-full border-[3px] border-border border-t-primary-mid" />
+              <span className="size-8 animate-spin rounded-full border-[3px] border-border border-t-primary" />
               <p className="text-11 text-ink-soft">
                 <Furigana text="AIが予想図[よそうず]をつくっています..." />
               </p>
