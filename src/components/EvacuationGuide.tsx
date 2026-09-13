@@ -15,7 +15,7 @@ export function EvacuationGuide() {
       <p className="mt-3 text-base font-bold leading-relaxed"><Furigana text="海の近くで強い揺[ゆ]れや長い揺[ゆ]れを感じたら、警報[けいほう]を待たず高い安全な場所へ。" adult="海の近くで強い揺れや長く続く揺れを感じたら、津波警報を待たず高台など安全な場所へ避難してください。" /></p>
       <p className="mt-3 text-base leading-relaxed"><Furigana text="安全に取り出せるなら、ヘルメットをかぶって頭を守ろう。探すために逃[に]げ遅[おく]れないようにしよう。" adult="安全に取り出せる場合はヘルメットで頭を保護します。探すために避難を遅らせないでください。" /></p>
     </div>
-    <p className="text-xs text-ink-muted">説明のためのイラストです。</p>
-    <a href="https://www.tfd.metro.tokyo.lg.jp/lfe/bou_topic/jisin/point10.html" target="_blank" rel="noopener noreferrer" className="block text-sm underline">参考：東京消防庁 地震その時10のポイント ↗</a>
+    <p className="text-xs text-ink-muted"><Furigana text={"説明のためのイラストです。"} /></p>
+    <a href="https://www.tfd.metro.tokyo.lg.jp/lfe/bou_topic/jisin/point10.html" target="_blank" rel="noopener noreferrer" className="block text-sm underline"><Furigana text={"参考：東京消防庁 地震その時10のポイント ↗"} /></a>
   </section>;
 }

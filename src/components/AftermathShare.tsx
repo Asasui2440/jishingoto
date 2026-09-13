@@ -1,5 +1,7 @@
 "use client";
 
+import { Furigana } from "@/components/ui/Furigana";
+
 import { createAftermathShareFile } from "@/lib/aftermath-share";
 import { useEffect, useState } from "react";
 import { prepareAftermath } from "@/lib/room-preparation";
@@ -55,16 +57,16 @@ export function AftermathShare({ photoUrl, risks, onFileReady, allowShare = true
     } finally { setBusy(false); }
   };
   return <section className="mt-4 space-y-3 border-t border-border pt-4" aria-label={allowShare ? "予想図の共有" : "予想図を家族と見る"}>
-    <h2 className="text-lg font-bold">この部屋の地震後の予想図</h2>
+    <h2 className="text-lg font-bold"><Furigana text={"この部屋の地震後の予想図"} /></h2>
     {preview && <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={preview} alt="AIによる地震後の部屋の予想図。実際の被害写真ではありません" className="h-auto w-full rounded-field" />
-      {allowShare && <p className="text-sm leading-relaxed">公開前に、顔・名前・住所などが残っていないか確認してください。</p>}
-      <div className={allowShare ? "grid grid-cols-2 gap-2" : "flex justify-center"}>{allowShare && <Button size="md" onClick={() => void share()} disabled={busy}>予想図を共有</Button>}<Button size="md" variant="outline" onClick={save} disabled={busy}>予想図を保存</Button></div>
+      {allowShare && <p className="text-sm leading-relaxed"><Furigana text={"公開前に、顔・名前・住所などが残っていないか確認してください。"} /></p>}
+      <div className={allowShare ? "grid grid-cols-2 gap-2" : "flex justify-center"}>{allowShare && <Button size="md" onClick={() => void share()} disabled={busy}><Furigana text={"予想図を共有"} /></Button>}<Button size="md" variant="outline" onClick={save} disabled={busy}><Furigana text={"予想図を保存"} /></Button></div>
 
     </>}
-    {failed && photoUrl?.startsWith("data:image/") && <Button size="md" variant="outline" onClick={() => { setFailed(false); setStatus("予想図を生成しています…"); setAttempt(value => value + 1); }}>予想図をもう一度生成</Button>}
-    {failed && !photoUrl?.startsWith("data:image/") && <a href="/camera" className="inline-block py-3 underline">写真を選び直す</a>}
-    {status && <p role="status" className="text-sm leading-relaxed text-ink-muted">{status}</p>}
+    {failed && photoUrl?.startsWith("data:image/") && <Button size="md" variant="outline" onClick={() => { setFailed(false); setStatus("予想図を生成しています…"); setAttempt(value => value + 1); }}><Furigana text={"予想図をもう一度生成"} /></Button>}
+    {failed && !photoUrl?.startsWith("data:image/") && <a href="/camera" className="inline-block py-3 underline"><Furigana text={"写真を選び直す"} /></a>}
+    {status && <p role="status" className="text-sm leading-relaxed text-ink-muted"><Furigana text={status} /></p>}
   </section>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Furigana } from "@/components/ui/Furigana";
+
 import { useEffect, useId, useRef } from "react";
 import { XCircleDarkIcon } from "@/components/icons";
 import { useSettings, type UiScale } from "@/lib/settings";
@@ -23,8 +25,8 @@ function Row({
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="min-w-0">
-        <p className="font-display text-15 font-bold text-ink">{label}</p>
-        {hint ? <p className="mt-0.5 text-xs text-ink-soft">{hint}</p> : null}
+        <p className="font-display text-15 font-bold text-ink"><Furigana text={label} /></p>
+        {hint ? <p className="mt-0.5 text-xs text-ink-soft"><Furigana text={hint} /></p> : null}
       </div>
       {children}
     </div>
@@ -100,7 +102,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="font-display text-lg font-bold text-ink">
-            {adult ? "表示設定" : "ひょうじの設定"}
+            <Furigana text={adult ? "表示設定" : "ひょうじの設定"} />
           </h2>
           <button type="button" onClick={onClose} aria-label={adult ? "閉じる" : "とじる"} className="p-1">
             <XCircleDarkIcon className="size-6" />
@@ -108,7 +110,6 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         </div>
 
         <div className="divide-y divide-border">
-          {!adult ? (
             <Row label="ふりがな" hint="漢字に読みがなをつける">
               <Toggle
                 label="ふりがな"
@@ -116,10 +117,9 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                 onChange={(v) => settings.update({ furigana: v })}
               />
             </Row>
-          ) : null}
 
           <div className="py-3">
-            <p className="font-display text-15 font-bold text-ink">文字の大きさ</p>
+            <p className="font-display text-15 font-bold text-ink"><Furigana text={"文字の大きさ"} /></p>
             <div className="mt-2 flex gap-2" role="radiogroup" aria-label="文字の大きさ">
               {SCALES.map((s) => {
                 const active = settings.uiScale === s.value;
@@ -139,7 +139,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                   >
                     <span style={{ fontSize: `${s.sample}px` }}>あ</span>
                     <span className="mt-0.5 block text-11">
-                      {adult ? adultText(s.label) : s.label}
+                      <Furigana text={adult ? adultText(s.label) : s.label} />
                     </span>
                   </button>
                 );
@@ -157,8 +157,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         </div>
 
         <p className="safe-bottom pt-4 text-center text-11 text-ink-faint">
-          設定はこの端末にだけ保存されます
-        </p>
+          <Furigana text={"設定はこの端末にだけ保存されます"} /></p>
       </div>
     </div>
   );

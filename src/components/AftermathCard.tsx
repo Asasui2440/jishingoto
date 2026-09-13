@@ -50,9 +50,9 @@ export function AftermathCard({
 
       {result ? (
         <p className="border-b border-border bg-primary-soft px-4 py-2 text-11 font-bold text-primary-ink">
-          {result.source === "test" ? "APIなしのテスト用画像です。生成結果の代わりに固定の元写真を表示しています。" : result.source === "ai"
+          <Furigana text={result.source === "test" ? "APIなしのテスト用画像です。生成結果の代わりに固定の元写真を表示しています。" : result.source === "ai"
             ? "写真をもとにAIが描いた想像図です。実際の被害を断定するものではありません。"
-            : "AI画像を作成できなかったため、写真に危険候補を重ねています。"}
+            : "AI画像を作成できなかったため、写真に危険候補を重ねています。"} />
         </p>
       ) : null}
 
@@ -104,8 +104,8 @@ export function AftermathCard({
       </div>
 
       {result?.source === "preview" && <div className="space-y-3 px-4 py-3">
-        <p role="status" className="text-sm">{result.error ?? "予想図を生成できませんでした。"}</p>
-        {photoUrl?.startsWith("data:image/") ? <button type="button" className="min-h-11 rounded-pill border border-border px-4 font-bold" onClick={() => { setResult(null); setAttempt(value => value + 1); }}>予想図をもう一度生成</button> : <a href="/camera" className="inline-block py-3 underline">写真を選び直す</a>}
+        <p role="status" className="text-sm"><Furigana text={result.error ?? "予想図を生成できませんでした。"} /></p>
+        {photoUrl?.startsWith("data:image/") ? <button type="button" className="min-h-11 rounded-pill border border-border px-4 font-bold" onClick={() => { setResult(null); setAttempt(value => value + 1); }}><Furigana text={"予想図をもう一度生成"} /></button> : <a href="/camera" className="inline-block py-3 underline"><Furigana text={"写真を選び直す"} /></a>}
       </div>}
       {result && result.events.length === 0 && !result.imageUrl && !result.error ? (
         <p className="px-4 py-3 text-13 text-ink-muted">

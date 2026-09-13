@@ -76,16 +76,16 @@ export default function CameraGuidePage() {
         <div className="rounded-panel bg-primary-soft p-4 text-base leading-relaxed">
           <p className="font-bold"><Furigana text="部屋全体が入るように撮[と]ろう" adult="部屋全体を撮影してください" /></p>
           <p className="mt-2"><Furigana text="床から家具の上まで、部屋が広く写るようにしよう！" adult="床から家具の上まで、部屋を広く写しましょう。" /></p>
-          <div className="mt-3 grid grid-cols-3 gap-2">{["床", "出入口", "家具の上"].map((label, i) => <div key={label} className="flex flex-col items-center gap-1 rounded-field bg-surface px-2 py-3 font-bold"><span className="grid size-7 place-items-center rounded-full bg-primary text-sm">{i + 1}</span><span>{label}</span></div>)}</div>
+          <div className="mt-3 grid grid-cols-3 gap-2">{["床", "出入口", "家具の上"].map((label, i) => <div key={label} className="flex flex-col items-center gap-1 rounded-field bg-surface px-2 py-3 font-bold"><span className="grid size-7 place-items-center rounded-full bg-primary text-sm">{i + 1}</span><span><Furigana text={label} /></span></div>)}</div>
         </div>
         <div className="flex flex-col items-center gap-3">
           <Button onClick={() => setMode("camera")} disabled={busy}><CameraWhiteIcon className="size-5" /><Furigana text="写真[しゃしん]を撮[と]る" /></Button>
           <Button variant="outline" size="md" className="max-w-44" onClick={() => fileRef.current?.click()} disabled={busy}><Furigana text="画像[がぞう]を選[えら]ぶ" /></Button>
           <input ref={fileRef} type="file" accept="image/*" aria-label="画像を選ぶ" onChange={onPick} disabled={busy} hidden />
         </div>
-        {busy && <p role="status" className="text-center text-base">画像を準備しています…</p>}
+        {busy && <p role="status" className="text-center text-base"><Furigana text={"画像を準備しています…"} /></p>}
         {error && <p role="alert" className="text-base text-danger"><Furigana text={error} /></p>}
-        <button type="button" onClick={() => router.push("/")} className="min-h-11 text-sm underline">ホームへ戻る</button>
+        <button type="button" onClick={() => router.push("/")} className="min-h-11 text-sm underline"><Furigana text={"ホームへ戻る"} /></button>
       </main>
       <DisclaimerFooter />
     </div>
@@ -134,7 +134,7 @@ export default function CameraGuidePage() {
                   className="grid size-6 shrink-0 place-items-center rounded-xl font-display text-sm font-bold"
                   style={{ background: g.bg, color: g.fg }}
                 >
-                  {g.n}
+                  <Furigana text={g.n} />
                 </span>
                 <p className="font-display text-13 font-bold text-ink">
                   <Furigana text={g.text} />
@@ -150,7 +150,7 @@ export default function CameraGuidePage() {
       </div>
 
       <div className="flex flex-col items-center gap-4 px-6 pb-5">
-        <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline">APIを使わずテストする</button>
+        <button type="button" onClick={() => router.push("/test-room")} className="min-h-11 text-sm text-white underline"><Furigana text={"APIを使わずテストする"} /></button>
         {!usingFallback ? (
           <Button onClick={onShoot} disabled={busy || state !== "live"}>
             <CameraWhiteIcon className="size-5 text-ink" />
