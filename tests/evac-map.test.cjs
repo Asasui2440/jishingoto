@@ -27,6 +27,13 @@ const { api, walk, content, state } = modules();
 const nearly = (a, b, tolerance = 0.01) => assert(Math.abs(a - b) < tolerance, `${a} differs from ${b}`);
 const samePosition = (a, b) => nearly(api.distanceM(a, b), 0);
 
+test("Street View strides stop at a right-angle corner before heading down the next road", () => {
+  const positions = [{lat: 35, lng: 139}, {lat: 35.0002, lng: 139}, {lat: 35.0002, lng: 139.0005}];
+  const progress = {index: 0, steps: positions.map(position => ({position}))};
+  assert.equal(walk.nextStreetIndex(progress, []), 1);
+  assert.equal(walk.nextStreetIndex({...progress, index: 1}, []), 2);
+});
+
 async function fixture() {
   const route = (await api.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "mock"))[0];
   return { route, progress: { routeId: route.id, steps: api.buildWalkSteps(route, await api.fetchDecisionPoints(route)), index: 0 } };

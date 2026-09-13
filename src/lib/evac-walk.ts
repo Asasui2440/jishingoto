@@ -41,6 +41,15 @@ export function nextStreetIndex(walk: WalkProgress, answeredIds: string[]) {
     distance += distanceM(walk.steps[i - 1].position, walk.steps[i].position);
     const pointId = walk.steps[i].pointId;
     if (pointId && !answeredIds.includes(pointId)) return i;
+    const following = walk.steps[i + 1];
+    if (following && distance > 5) {
+      const before = walk.steps[i - 1].position;
+      const here = walk.steps[i].position;
+      const after = following.position;
+      const bearing = (a: typeof here, b: typeof here) => Math.atan2((b.lng - a.lng) * Math.cos(a.lat * Math.PI / 180), b.lat - a.lat) * 180 / Math.PI;
+      const turn = Math.abs(((bearing(here, after) - bearing(before, here) + 540) % 360) - 180);
+      if (turn >= 25) return i;
+    }
     if (distance >= 65) return i;
   }
   return walk.steps.length - 1;

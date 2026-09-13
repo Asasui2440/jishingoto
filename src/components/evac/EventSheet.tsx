@@ -45,10 +45,10 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
   };
 
   return <>
-    <section className="flex min-h-0 max-h-[56dvh] shrink flex-col gap-2 overflow-hidden rounded-t-[24px] border-t border-border bg-surface px-4 pt-3 pb-3 shadow-[0_-4px_18px_rgba(91,66,11,0.04)]" aria-label={`判断ポイント ${index + 1} / ${total}`}>
+    <section className="flex w-full min-h-0 max-h-[56dvh] shrink flex-col gap-2 overflow-hidden rounded-[24px] border border-border bg-surface px-4 pt-3 pb-3 shadow-[0_-4px_18px_rgba(91,66,11,0.04)]" aria-label={`判断ポイント ${index + 1} / ${total}`}>
       <div className="flex min-h-0 shrink flex-col gap-2 overflow-y-auto overscroll-contain">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold tracking-wide text-primary-ink">POINT {index + 1} / {total} ・ 想定</p>
+        <p className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold tracking-wide text-blue-800">POINT {index + 1} / {total} ・ 想定</p>
         <button type="button" disabled={busy} onClick={() => setTimerSettings(true)} className={`inline-flex min-h-8 items-center gap-1 rounded-full bg-canvas px-2.5 text-11 font-bold tabular-nums ${remaining !== null && remaining <= 3 ? "text-danger" : "text-ink-muted"}`} aria-label="制限時間の設定">
           <GameIcon name={paused ? "pause" : "clock"} className="size-3.5" />{remaining === null ? "制限なし" : `${remaining}秒`}
         </button>

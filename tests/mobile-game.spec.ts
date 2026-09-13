@@ -38,6 +38,7 @@ async function openMockRoute(page: Page, testInfo?: TestInfo) {
 }
 
 async function jumpToNextDecision(page: Page, expectAttention = true, testInfo?: TestInfo) {
+  const originalScene = await page.getByRole("region", { name: "Street Viewで進む体験" }).boundingBox();
   await page.getByRole("button", { name: "遊び方・設定" }).click();
   const help = page.getByRole("dialog", { name: "歩き方・設定" });
   if (!expectAttention) {
@@ -56,6 +57,7 @@ async function jumpToNextDecision(page: Page, expectAttention = true, testInfo?:
   await expect(toast).not.toBeVisible({ timeout: 2_000 });
   const heightAfterNotice = await scene.evaluate((element) => element.getBoundingClientRect().height);
   expect(Math.abs(heightAfterNotice - heightDuringNotice)).toBeLessThan(1);
+  expect(Math.abs(heightAfterNotice - originalScene!.height)).toBeLessThan(1);
 }
 
 test("MainのStreet View体験をコンパクトな画面で最後まで進める", async ({ page }, testInfo) => {

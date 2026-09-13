@@ -6,7 +6,7 @@ import { hasMapsKey } from "@/lib/gmaps";
 import { EVAC_MODE_LABEL, type EvacMode } from "@/lib/evac-mode";
 
 export function EvacModeSelector({ mode, onChange }: { mode: EvacMode; onChange: (mode: EvacMode) => void }) {
-  return <section aria-label="体験バージョン" className="rounded-panel border border-primary/40 bg-primary-soft p-4">
+  return <section aria-label="体験バージョン" className="rounded-panel border border-blue-100 bg-blue-50 p-4">
     <p className="mb-3 font-display text-sm font-bold text-ink">体験するバージョン</p>
     <div className="grid grid-cols-2 gap-2">
       {(["mock", "api"] as const).map((value) => <button type="button" key={value} aria-pressed={mode === value} onClick={() => onChange(value)}

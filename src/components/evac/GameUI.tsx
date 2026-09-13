@@ -4,9 +4,10 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Furigana } from "@/components/ui/Furigana";
 import styles from "./GameUI.module.css";
 
-type IconName = "pin" | "route" | "walk" | "flag" | "settings" | "info" | "close" | "back" | "check" | "locate" | "search" | "chevron" | "play" | "pause" | "eye" | "clock";
+type IconName = "map" | "pin" | "route" | "walk" | "flag" | "settings" | "info" | "close" | "back" | "check" | "locate" | "search" | "chevron" | "play" | "pause" | "eye" | "clock";
 export function GameIcon({ name, className = "size-5" }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
+    map: <><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16" /></>,
     pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
     route: <><circle cx="5" cy="5" r="2" /><circle cx="19" cy="19" r="2" /><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9" /></>,
     walk: <><circle cx="14" cy="4" r="2" /><path d="m8 21 3-7-2-4 4-3 3 5 4 1M4 12l4-3m3 5 5 3 1 4" /></>,
@@ -42,10 +43,10 @@ export function GameHeader({ title, subtitle, step, onBack, onHelp, actions }: {
       {onBack ? <button type="button" onClick={onBack} aria-label="戻る" className="grid size-11 shrink-0 place-items-center rounded-full bg-white"><GameIcon name="back" /></button> : <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary"><GameIcon name="route" /></span>}
       <div className="min-w-0 flex-1"><h1 className="font-display text-lg font-bold leading-snug"><Furigana text={title} /></h1>{subtitle ? <p className="truncate text-11 text-ink-muted" title={subtitle}><Furigana text={subtitle} /></p> : null}</div>
       {actions}
-      {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-white"><GameIcon name="settings" /></button> : null}
+      {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" className="flex min-h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-2 text-11 font-bold"><GameIcon name="info" className="size-4" />使い方</button> : null}
     </div>
     <ol aria-label="体験の進み具合" className="mt-2 flex items-center gap-2">
-      {(["準備", "体験", "ふりかえり"] as const).map((label, i) => <li key={label} aria-current={step === i + 1 ? "step" : undefined} className={`flex flex-1 items-center gap-1.5 text-[10px] font-bold ${step >= i + 1 ? "text-primary-ink" : "text-ink-soft"}`}><span className={`h-1 flex-1 rounded-full ${step >= i + 1 ? "bg-primary-mid" : "bg-border"}`} /><span>{label}</span></li>)}
+      {(["準備", "体験", "ふりかえり"] as const).map((label, i) => <li key={label} aria-current={step === i + 1 ? "step" : undefined} className={`flex flex-1 items-center gap-1.5 text-[10px] font-bold ${step >= i + 1 ? "text-blue-800" : "text-ink-soft"}`}><span className={`h-1 flex-1 rounded-full ${step >= i + 1 ? "bg-blue-600" : "bg-border"}`} /><span>{label}</span></li>)}
     </ol>
   </header>;
 }
