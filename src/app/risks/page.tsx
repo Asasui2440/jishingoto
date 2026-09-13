@@ -10,6 +10,7 @@ import { Furigana, plain } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
+import { viewForRisk, riskOnView, groupRisksByView } from "@/lib/room-views";
 import { focusDescription } from "@/lib/focus-description";
 import { SafetyProducts } from "@/components/SafetyProducts";
 import { RISK_KINDS } from "@/lib/content";
@@ -50,10 +51,17 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
 export default function RoomRecognitionPage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { risks, photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const { risks: sessionRisks, photoUrl, roomViews = [], analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const risks = groupRisksByView(sessionRisks, roomViews);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = risks.find((risk) => risk.id === selectedId) ?? risks[0];
   const selectedIndex = selected ? risks.indexOf(selected) : -1;
+  const viewIndex = viewForRisk(selected, roomViews);
+  const currentView = roomViews[viewIndex];
+  const shownPhoto = currentView?.url ?? photoUrl;
+  const shownRisk = selected && currentView ? riskOnView(selected, currentView) : selected;
+  const visibleRisks = risks.flatMap((risk, number) => !currentView || viewForRisk(risk, roomViews) === viewIndex
+    ? [{ risk: currentView ? riskOnView(risk, currentView) : risk, number }] : []);
   const selectedAdvice = selected ? roomAdvice(selected, audience) : null;
   const [editing, setEditing] = useState<string | null>(null);
   const [editNotice, setEditNotice] = useState("");
@@ -92,7 +100,7 @@ export default function RoomRecognitionPage() {
     // confirmed は既存の出題・結果の対象フラグ。危険性への同意は求めない。
     update((prev) => ({
       ...prev,
-      risks: prev.risks.map((risk) => ({ ...risk, confirmed: true })),
+      risks: groupRisksByView(prev.risks, prev.roomViews ?? []).map((risk) => ({ ...risk, confirmed: true })),
       questions: [],
       answers: [],
       finishedAt: null,
@@ -154,20 +162,21 @@ export default function RoomRecognitionPage() {
         </section>
         </DetailSheet>
         <div id="selected-room-photo" tabIndex={-1} className="scroll-mt-16 overflow-hidden rounded-panel bg-ink">
-        <div className="relative w-full">
-          {photoUrl ? (
+        <div className="relative">
+          {shownPhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt="体験に使う部屋" className="block h-auto w-full" />
-          ) : <Image src={roomRisk} alt="サンプルの部屋" className="block h-auto w-full" />}
-          {selected?.bounds && <div aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary" style={{ left: `${selected.bounds.x}%`, top: `${selected.bounds.y}%`, width: `${selected.bounds.w}%`, height: `${selected.bounds.h}%` }} />}
-          {risks.map((risk, index) => {
+            <img src={shownPhoto} alt={currentView ? `部屋の写真 ${viewIndex + 1} / ${roomViews.length}` : "体験に使う部屋"} className="block h-auto w-full" />
+          ) : <Image src={roomRisk} alt="サンプルの部屋" className="h-auto w-full" />}
+          {shownRisk?.bounds && <div aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary" style={{ left: `${shownRisk.bounds.x}%`, top: `${shownRisk.bounds.y}%`, width: `${shownRisk.bounds.w}%`, height: `${shownRisk.bounds.h}%` }} />}
+          {visibleRisks.map(({ risk, number }, index) => {
             const active = selected?.id === risk.id;
-            const nearby = risks.slice(0, index).filter((other) => Math.hypot(other.x - risk.x, other.y - risk.y) < 12).length;
+            const nearby = visibleRisks.slice(0, index).map(item => item.risk).filter((other) => Math.hypot(other.x - risk.x, other.y - risk.y) < 12).length;
             const offsets = [[0, 0], [24, -24], [-24, 24], [24, 24], [-24, -24]];
             const [dx, dy] = offsets[nearby % offsets.length];
-            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${index + 1}番・${plain(risk.name)}の説明を表示`} onClick={() => { setEditing(null); setSelectedId(risk.id); }} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{index + 1}</button>;
+            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${number + 1}番・${plain(risk.name)}の説明を表示`} onClick={() => { setEditing(null); setSelectedId(risk.id); }} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{number + 1}</button>;
           })}
         </div>
+        {roomViews.length > 1 && <p className="bg-ink px-3 pt-2 text-center text-sm text-white"><Furigana text={`写真 ${viewIndex + 1} / ${roomViews.length}`} /></p>}
         {selected && <div className="relative flex items-center gap-2 bg-ink p-3 text-white">
           <button type="button" aria-label="前の物体を表示" disabled={selectedIndex === 0} onClick={() => { setEditing(null); setSelectedId(risks[selectedIndex - 1].id); }} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">←</button>
           <p aria-live="polite" className="min-w-0 flex-1 text-center text-sm font-bold">{selectedIndex + 1} / {risks.length} · <Furigana text={selected.name} adult={selected.adultName} /></p>

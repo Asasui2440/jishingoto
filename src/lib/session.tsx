@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import type { RoomView } from "./room-views";
 import type { BlurRegion } from "./api";
 import { QUESTIONS, type Axis, type Question, type Risk } from "./content";
 import { createPersistentStore, useStore } from "./store";
@@ -25,6 +26,7 @@ export type Session = {
   resultStep: number;
   /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
+  roomViews: RoomView[];
   blurRegions: BlurRegion[];
   risks: Risk[];
   /** この部屋の危険に合わせて選んだ設問 */
@@ -44,6 +46,7 @@ const EMPTY: Session = {
   roomSetting: "home",
   resultStep: 0,
   photoUrl: null,
+  roomViews: [],
   blurRegions: [],
   risks: [],
   questions: [],
@@ -58,6 +61,7 @@ const EMPTY: Session = {
 // 写真は data URL でも永続化しない。端末に部屋の写真を残さないため。
 const store = createPersistentStore<Session>("jishingoto.session.v1", EMPTY, "session", [
   "photoUrl",
+  "roomViews",
 ]);
 
 /** 状態は外部ストアに持つので、Provider は木を素通りさせるだけ */
