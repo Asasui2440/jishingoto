@@ -70,16 +70,22 @@ export default function EvacWalkPage() {
             <span className="rounded-xl bg-black/70 px-3 py-2 text-11 font-bold text-white">残り {formatDistance(arrived ? 0 : step.remainingM)}<br />{formatDuration(arrived ? 0 : step.remainingS)}</span>
             <button type="button" onClick={() => showSheet("map")} className="pointer-events-auto inline-flex min-h-11 items-center gap-1 rounded-full bg-white px-3 text-11 font-bold text-ink"><GameIcon name="route" className="size-4" />地図</button>
           </div>
-          {announcingPoint ? <div role="status" data-testid="attention-toast" className={styles.attentionToast}><span aria-hidden>⚠</span><span>注意ポイントだよ</span></div> : null}
         </StreetStage>
       </div>
       {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
-      {decisionVisible ? <EventSheet key={step.pointId} event={pending} index={decisionIndex} total={events.length}
-        seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready} busy={busy}
-        onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
+      {pending ? <div className={styles.decisionSlot}>
+        <div aria-hidden={!decisionVisible} className={`${styles.decisionContent} ${decisionVisible ? "" : styles.decisionHidden}`}>
+          <EventSheet key={step.pointId} event={pending} index={decisionIndex} total={events.length}
+            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready || announcingPoint} busy={busy}
+            onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
+        </div>
+        {!decisionVisible ? <div role="status" data-testid="attention-toast" className={styles.attentionNotice}>
+          {announcingPoint ? <><span aria-hidden>⚠</span><span>注意ポイントだよ</span></> : <span>風景を読み込んでいます…</span>}
+        </div> : null}
+      </div>
         : <section className={styles.actions} aria-label="歩行の操作">
-          <p role="status" className="text-11 leading-relaxed text-ink-muted">{!ready ? "風景を読み込んでいます…" : announcingPoint ? "注意ポイントを確認しています…" : notice ?? (arrived ? "通った道と選んだ行動をふりかえろう。" : moving ? "歩いています。判断地点で止まります。" : "ドラッグで周りを見回せます。")}</p>
-          {pending ? null : arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
+          <p role="status" className="text-11 leading-relaxed text-ink-muted">{!ready ? "風景を読み込んでいます…" : notice ?? (arrived ? "通った道と選んだ行動をふりかえろう。" : moving ? "歩いています。判断地点で止まります。" : "ドラッグで周りを見回せます。")}</p>
+          {arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
             : <div className="flex gap-2">
               <Button size="md" disabled={!ready || busy} onClick={forward}><GameIcon name="walk" />{notice ? "先へ進む" : "進む"}</Button>
               <Button size="md" variant="outline" disabled={!ready || busy} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>

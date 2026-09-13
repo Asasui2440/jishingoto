@@ -75,10 +75,14 @@ async function walkTo(
 ) {
   const { computeHeading, computeDistanceBetween } = maps.geometry.spherical;
   const dest = new maps.LatLng(target.lat, target.lng);
+  const start = pano.getPosition();
+  let travelHeading = start && computeDistanceBetween(start, dest) > ARRIVE_M
+    ? computeHeading(start, dest)
+    : facing;
 
-  // ボタンを押した時点で、いったん経路の進行方向へ戻す。
+  // ボタンを押した時点で、現在地から移動先へ向かう方向へ戻す。
   // 利用者が直前に周囲を見回していても、次の移動方向を見失わないようにする。
-  pano.setPov({ heading: facing, pitch: 0 });
+  pano.setPov({ heading: travelHeading, pitch: 0 });
 
   for (let hop = 0; hop < MAX_HOPS; hop++) {
     if (!isCurrent()) return;
@@ -106,6 +110,7 @@ async function walkTo(
     if (!best?.pano || bestDiff > MAX_TURN_DEG) break;
     const nextHeading = best.heading;
     if (typeof nextHeading !== "number") break;
+    travelHeading = nextHeading;
 
     // Street View はパノラマ切り替え時に以前の視点を引き継ぐため、
     // 実際に辿るリンクの方向へ、移動の前後で明示的に向け直す。
@@ -134,10 +139,10 @@ async function walkTo(
     if (data.location?.latLng) pano.setPosition(data.location.latLng);
   }
 
-  pano.setPov({ heading: facing, pitch: 0 });
-  // パノラマ描画が同じフレーム内で視点を更新する場合にも、経路の向きを優先する。
+  pano.setPov({ heading: travelHeading, pitch: 0 });
+  // パノラマ描画が同じフレーム内で視点を更新する場合にも、実際に進んだ向きを優先する。
   requestAnimationFrame(() => {
-    if (isCurrent()) pano.setPov({ heading: facing, pitch: 0 });
+    if (isCurrent()) pano.setPov({ heading: travelHeading, pitch: 0 });
   });
 }
 

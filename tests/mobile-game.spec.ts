@@ -37,7 +37,7 @@ async function openMockRoute(page: Page, testInfo?: TestInfo) {
   await start.click();
 }
 
-async function jumpToNextDecision(page: Page, expectAttention = true) {
+async function jumpToNextDecision(page: Page, expectAttention = true, testInfo?: TestInfo) {
   await page.getByRole("button", { name: "遊び方・設定" }).click();
   const help = page.getByRole("dialog", { name: "歩き方・設定" });
   if (!expectAttention) {
@@ -50,7 +50,12 @@ async function jumpToNextDecision(page: Page, expectAttention = true) {
     toast.waitFor({ state: "visible", timeout: 2_000 }),
     help.getByRole("button", { name: "次の判断ポイントへ進む" }).click(),
   ]);
+  const scene = page.getByRole("region", { name: "Street Viewで進む体験" });
+  const heightDuringNotice = await scene.evaluate((element) => element.getBoundingClientRect().height);
+  if (testInfo) await capture(page, testInfo, "attention-notice");
   await expect(toast).not.toBeVisible({ timeout: 2_000 });
+  const heightAfterNotice = await scene.evaluate((element) => element.getBoundingClientRect().height);
+  expect(Math.abs(heightAfterNotice - heightDuringNotice)).toBeLessThan(1);
 }
 
 test("MainのStreet View体験をコンパクトな画面で最後まで進める", async ({ page }, testInfo) => {
@@ -76,7 +81,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   await map.getByRole("button", { name: "Street Viewに戻る" }).click();
 
   for (const number of [1, 2, 3]) {
-    await jumpToNextDecision(page);
+    await jumpToNextDecision(page, true, number === 1 ? testInfo : undefined);
     const decision = page.getByRole("region", { name: new RegExp(`^判断ポイント ${number} /`) });
     await expect(decision).toBeVisible();
     const choices = decision.getByRole("list").getByRole("button");
