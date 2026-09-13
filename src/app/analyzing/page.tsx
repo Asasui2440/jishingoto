@@ -18,6 +18,7 @@ import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { roomTimings } from "@/lib/room-test";
 import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
+import { groupRisksByView } from "@/lib/room-views";
 import { useSession } from "@/lib/session";
 
 export default function AnalysisLoadingPage() {
@@ -40,12 +41,13 @@ export default function AnalysisLoadingPage() {
     const timer = setInterval(() => setElapsed((performance.now() - started) / 1000), 250);
     void job.then((analysis) => {
       if (!alive) return;
-      update({
+      update(prev => ({
+        ...prev,
         ...(analysis.source === "demo" && !photoUrl ? { photoUrl: "/figma/img/room-risk.jpg" } : {}),
-        risks: analysis.risks,
+        risks: groupRisksByView(analysis.risks, prev.roomViews ?? []),
         analysisSource: analysis.source,
         analysisWarning: analysis.warning ?? null,
-      });
+      }));
       router.replace("/risks");
     }).catch(() => { if (alive) { clearInterval(timer); setFailed(true); } });
     return () => { alive = false; clearInterval(timer); };

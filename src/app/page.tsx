@@ -18,10 +18,10 @@ type InfoItem = { Icon: typeof CameraBlueIcon; bg: string; fg: string; title: st
 
 const INFO = {
   child: [
-    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋の写真から、地震[じしん]への備[そな]えを考えよう", body: "AIが見つけた気になる場所を確認[かくにん]し、行動をシミュレーション" },
+    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "部屋の写真や動画から、地震[じしん]への備[そな]えを考えよう", body: "AIが見つけた気になる場所を確認[かくにん]し、行動をシミュレーション" },
   ],
   adult: [
-    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "室内写真から地震時に気になる箇所を確認", body: "AIが家具の転倒やガラスの飛散などの可能性がある箇所を候補として示します" },
+    { Icon: CameraBlueIcon, bg: "var(--color-primary-soft)", fg: "var(--color-primary-ink)", title: "室内の写真や動画から地震時に気になる箇所を確認", body: "AIが家具の転倒やガラスの飛散などの可能性がある箇所を候補として示します" },
   ],
 } satisfies Record<Audience, InfoItem[]>;
 

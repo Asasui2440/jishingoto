@@ -128,13 +128,11 @@ export default function PrivacyBlurPage() {
             </button>
           ))}
 
-          <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-1.5">
-            <MousePointerIcon className="size-3.5 text-white" />
-            <span className="text-11 text-white">
-              <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
-            </span>
-          </div>
         </div>
+        <p className="mt-3 flex items-center justify-center gap-2 text-sm text-ink-muted">
+          <MousePointerIcon className="size-4 shrink-0" />
+          <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
+        </p>
       </div>
 
       <div className="mx-5 rounded-panel bg-primary-soft p-5">

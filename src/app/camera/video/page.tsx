@@ -1,5 +1,5 @@
 import RoomCapture from "@/components/RoomCapture";
 
-export default function CameraPage() {
+export default function VideoRoomPage() {
   return <RoomCapture />;
 }

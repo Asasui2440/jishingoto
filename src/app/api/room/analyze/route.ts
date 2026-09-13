@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "bad-image" }, { status: 400 });
   }
 
-  const prompt = `この部屋の写真を地震防災の観点で観察してください。実際に画像で確認できる危険候補だけを最大8件返してください。人物の特定や住所・文字の読み取りはしないでください。
+  const prompt = `この部屋の写真を地震防災の観点で観察してください。番号付きで複数の視点が並んでいる場合は、同じ部屋の別視点として全画像を確認し、同じ物体は重複させず最も見やすい視点で1件にまとめてください。囲みの座標は入力画像全体を基準にし、写真の区切りやラベルは物体として検出しないでください。実際に画像で確認できる危険候補だけを最大8件返してください。人物の特定や住所・文字の読み取りはしないでください。
 JSONのみ: {"risks":[{"name":"小学校高学年にも分かる短い名前（テレビ受像機ではなくテレビ、高層収納家具・背高収納家具ではなく背の高い収納家具など、日常の呼び方）","adultName":"同じ対象を示す漢字中心の標準的な名称","kind":"fall|break|block","objectType":"bookshelf|cupboard|elevated_objects|tall_furniture|tv|window|doorway|hanging_object|desk|bed|loose_objects|instrument|clothes_rack|pet_cage|washing_machine|other","confidence":0から1,"x":中心の横位置0から100,"y":中心の縦位置0から100}]}
 調理用コンロが実際に写っている場合はobjectType=other、名前に「コンロ」を含めて返す。食器棚やキッチンの雰囲気だけでコンロの存在を推測しない。
 楽器（ピアノ・ギターなど）はinstrument、衣類やバッグを掛けるハンガーラック・ポールハンガーはclothes_rack、ペットのケージはpet_cage、洗濯機はwashing_machine。壁掛け・壁内設置と画像から分かるテレビは、その設置方法を名前にも含める。判別できない設置方法は推測しない。食器棚はcupboard。棚の上・高い場所に置かれた物はelevated_objects（床置きのloose_objectsと区別する）。loose_objectsは床に置かれた物だけに使用する。対象が棚本体か棚上の物かを名前と枠で区別する。
