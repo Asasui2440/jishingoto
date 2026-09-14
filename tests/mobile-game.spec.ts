@@ -1,3 +1,4 @@
+import { WALK_SCENARIOS } from "../src/lib/walk-scenarios";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 async function capture(page: Page, testInfo: TestInfo, name: string) {
@@ -411,14 +412,14 @@ test("解析失敗時だけ固定問題を案内し洪水ケースのまま続�
   expect(session.walk.steps.filter((step:{event?:{id:string}})=>step.event).map((step:{event:{id:string}})=>step.event.id)).toEqual(["practice-flood"]);
 });
 
-test("共通問題をノードで出題し回答後は自動歩行を再開する", async ({page}) => {
+test("共通問題をノードで出題し回答後は自動歩行を再開する", async ({page}, testInfo) => {
   await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
   await page.route("**/api/evac/scenarios", async route => {
     const body = route.request().postDataJSON();
     expect(body.scenario).toBe("flood");
-    await route.fulfill({json:{source:"context",points:[{id:"fixture:common-28",t:.4,position:{lat:35.0003,lng:139.0001},heading:90,remainingM:40,remainingS:30,event:{id:"walk-case-28",kind:"terrain",title:"電池が減った想定",situation:"【想定問題】スマートフォンの電池が残りわずかです。",hint:"目印を確認します。",zone:{x:30,y:30,w:40,h:35},followUp:"目印を控える",reference:{label:"訓練",url:"https://www.bousai.go.jp/"},choices:[{id:"distance",label:"現在地と目印を控える",detail:"確認して進みます。",feedback:"目印を控えました。",pros:["画面なしでも確認できます。"],cons:["周囲も確認します。"],priority:3,extraSeconds:0,reroute:false}]}}]}});
+    await route.fulfill({json:{source:"context",points:[{id:"fixture:common-28",t:.4,position:{lat:35.0003,lng:139.0001},heading:90,remainingM:40,remainingS:30,event:{...WALK_SCENARIOS.find(c=>c.number===28)!.event,title:"電池が減った想定"}}]}});
   });
-  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&coordinateDrift=1");
+  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&coordinateDrift=1");
   await expect(page.getByRole("button",{name:"自動で歩く"})).toBeEnabled();
   const scene = page.getByRole("region",{name:"Street Viewで進む体験"});
   const sceneBefore = await scene.boundingBox();
@@ -426,16 +427,33 @@ test("共通問題をノードで出題し回答後は自動歩行を再開す�
   await expect(page.getByText("自動走行中",{exact:true})).toBeVisible();
   expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
   await expect(page.getByText(/選んだルートに沿って歩いています/)).toHaveCount(0);
-  await expect(page.getByText("電池が減った想定")).toBeVisible();
+  await expect(page.getByText("電池が減った想定")).toBeVisible({timeout:25000});
   const before = await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length);
+  expect(before).toBe(8);
+  const buttons = page.getByRole("region",{name:/判断ポイント/}).locator("li button");
+  for (const button of await buttons.all()) {
+    const bounds = await button.boundingBox();
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  }
+  const situation = page.getByRole("region",{name:/判断ポイント/}).getByText(/スマートフォンの電池は残りわずか/);
+  await expect(situation).toBeVisible();
+  const textBounds = await situation.boundingBox();
+  const firstChoiceBounds = await buttons.first().boundingBox();
+  expect(textBounds!.y + textBounds!.height).toBeLessThanOrEqual(firstChoiceBounds!.y);
+  const order = await buttons.allTextContents();
+  await page.getByRole("button",{name:"状況と行動の詳しい説明を見る"}).click();
+  await page.getByRole("button",{name:"行動を選ぶ",exact:true}).click();
+  expect(await buttons.allTextContents()).toEqual(order);
+  await page.screenshot({path:`/private/tmp/jishingoto-three-choice-${testInfo.project.name}.png`});
+  await expect(page.getByRole("region",{name:/判断ポイント/}).locator("li button")).toHaveCount(3);
   await page.waitForTimeout(1800);
   expect(await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length)).toBe(before);
   expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
-  await page.getByRole("button",{name:/現在地と目印を控える/}).click();
-  for (let i=0;i<2;i++) await page.getByRole("region",{name:/判断ポイント/}).locator("li button").last().click();
+  await page.getByRole("button",{name:/現在地・避難先・分岐の目印を紙に控える/}).click();
   await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
-  expect(state.decisions).toHaveLength(3);
+  expect(state.decisions).toHaveLength(1);
   expect(state.decisions[0].eventId).toBe("walk-case-28");
   expect(await page.evaluate(() => (window as unknown as {streetTest:{positionCommands:number}}).streetTest.positionCommands)).toBe(0);
 });
@@ -446,17 +464,16 @@ test("洪水の迂回は現在のノードから再計算し残り問題を引�
   await page.route("**/api/evac/assess",async route=>route.fulfill({status:503,json:{message:"test unavailable"}}));
   await page.route("**/api/evac/scenarios",async route=>{
     requests.push(route.request().postDataJSON());
-    await route.fulfill({json:{source:"context",points:requests.length>1?[]:[{id:"fixture:case-10",t:.4,position:{lat:35.0003,lng:139},heading:90,remainingM:40,remainingS:30,event:{id:"walk-case-10",kind:"terrain",title:"雨が強まった想定",situation:"【想定問題】雨が強くなりました。",hint:"経路を確認します。",zone:{x:30,y:30,w:40,h:35},followUp:"経路を確認する",reference:{label:"訓練",url:"https://www.bousai.go.jp/"},choices:[{id:"detour",label:"現在地から経路を見直す",detail:"経路を再計算します。",feedback:"経路を確認しました。",pros:["経路を見直せます。"],cons:["現地の状況も確認します。"],priority:3,extraSeconds:0,reroute:true}]}}]}});
+    await route.fulfill({json:{source:"context",points:requests.length>1?[]:[{id:"fixture:case-10",t:.4,position:{lat:35.0003,lng:139},heading:90,remainingM:40,remainingS:30,event:WALK_SCENARIOS.find(c=>c.number===10)!.event}]}});
   });
-  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&contextDetour=1");
+  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&contextDetour=1");
   await page.getByRole("button",{name:"自動で歩く"}).click();
-  await expect(page.getByRole("button",{name:/現在地から経路を見直す/})).toBeVisible();
+  await expect(page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/})).toBeVisible();
   const departure = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.street.position);
-  await page.getByRole("button",{name:/現在地から経路を見直す/}).click();
-  for (let i=0;i<2;i++) await page.getByRole("region",{name:/判断ポイント/}).locator("li button").last().click();
+  await page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/}).click();
   await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
   expect(requests).toHaveLength(2);
-  expect(requests[1].maxPoints).toBe(2);
+  expect(requests[1].maxPoints).toBeUndefined();
   expect(requests[1].excludedEventIds).toEqual(["walk-case-10"]);
   expect(requests[1].route.path[0]).toEqual(departure);
   const result=await page.evaluate(()=>({session:JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!),street:(window as unknown as {streetTest:{moves:string[];positionCommands:number}}).streetTest}));

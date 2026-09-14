@@ -38,12 +38,12 @@ export default function EvacWalkPage() {
     });
   }, [plan,route,update]);
   const arrivalNode = plan?.nodes.at(-1) ?? street?.arrivalNode;
-  const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 2) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 3) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
   const questionSteps = walk?.steps;
   const onNavigation = useCallback((snapshot: StreetSnapshot) => {
     setStreet(snapshot);
     const node = plan?.nodes.find(node => node.pano === snapshot.pano);
-    observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode }, node ? questionIdsAtNode(questionSteps ? {steps:questionSteps} : null, node.position) : undefined);
+    observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode }, node ? questionIdsAtNode(questionSteps ? {steps:questionSteps} : null, node.position) : plan ? [] : undefined);
   }, [observeStreet, plan, questionSteps]);
   const offRoute = !!plan && !!street && !plan.nodes.some(node => node.pano === street.pano);
   const returnPano = !arrived ? plannedReturnLink(street, plan)?.pano ?? null : null;

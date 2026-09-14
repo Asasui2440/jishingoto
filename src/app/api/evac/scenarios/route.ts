@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const parsed = parseGeoRequest(raw);
     const extra = raw as Record<string, unknown>;
     const commercial = Array.isArray(extra.commercial) ? extra.commercial.slice(0, 12).filter((p): p is {lat:number;lng:number} => p && typeof p === "object" && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 85 && Math.abs(p.lng) <= 180) : [];
-    const maxPoints = typeof extra.maxPoints === "number" && Number.isFinite(extra.maxPoints) ? Math.max(0, Math.min(3, Math.floor(extra.maxPoints))) : 3;
+    const maxPoints = typeof extra.maxPoints === "number" && Number.isFinite(extra.maxPoints) ? Math.max(0, Math.floor(extra.maxPoints)) : undefined;
     const result = await prepareWalkScenarios(parsed, commercial, maxPoints);
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

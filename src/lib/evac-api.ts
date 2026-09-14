@@ -608,7 +608,7 @@ export async function fetchDecisionPoints(route: RouteOption, options?: { source
     options.signal?.throwIfAborted();
     const response = await fetch("/api/evac/scenarios", {
       method:"POST",headers:{"Content-Type":"application/json"}, signal:options.signal ? AbortSignal.any([options.signal,AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
-      body:JSON.stringify({scenario:options.scenario ?? "earthquake",route:{id:route.id,path:route.path,durationS:route.durationS},excludedEventIds:options.excludedEventIds ?? [],maxPoints:options.maxPoints ?? 3,commercial}),
+      body:JSON.stringify({scenario:options.scenario ?? "earthquake",route:{id:route.id,path:route.path,durationS:route.durationS},excludedEventIds:options.excludedEventIds ?? [],maxPoints:options.maxPoints,commercial}),
     });
     const result = await response.json();
     if (!response.ok || result.source !== "context" || !Array.isArray(result.points)) throw new Error(result.message ?? "想定問題の準備に失敗しました。再試行してください。");

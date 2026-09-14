@@ -104,7 +104,7 @@ export type RouteOption = {
 /** 判断イベントの種類 */
 export type EventKind = "wall" | "fall" | "closed" | "terrain";
 
-export type ChoiceId = "go" | "distance" | "detour";
+export type ChoiceId = "go" | "distance" | "detour" | "consider";
 
 export type EvacChoice = {
   id: ChoiceId;

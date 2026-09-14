@@ -14,6 +14,14 @@
     nodes.B.links[0] = { pano: "A3", heading: 180 };
   }
   const params = new URLSearchParams(location.search);
+  if (params.has("eightNodes")) {
+    const chain = ["A",...Array.from({length:7},(_,i)=>`hop-${i+1}`),"B"];
+    chain.forEach((id,i) => {
+      if (i>0 && i<8) nodes[id] = {position:{lat:A.lat+(B.lat-A.lat)*i/8,lng:A.lng},links:[]};
+      if (i<8) nodes[id].links = [...(i ? [{pano:chain[i-1],heading:180}] : []),{pano:chain[i+1],heading:0}];
+    });
+    nodes.B.links[0] = {pano:chain[7],heading:180};
+  }
   const path = params.get("routeChoice") === "north" ? [A, B, nodes.D.position, C] : [A, B, C];
   if (params.has("farCenter")) nodes.C.position = { lat: C.lat, lng: C.lng + 0.0005 };
   if (params.has("nearEndpoint")) nodes.C.position = { lat: C.lat, lng: C.lng - 0.0002 };

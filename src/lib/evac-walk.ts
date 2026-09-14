@@ -2,7 +2,7 @@ import { buildWalkSteps, pathLengthM, distanceM, type DecisionPoint, type WalkSt
 import { WALK_SCENARIOS } from "./walk-scenarios";
 import type { RouteOption, LatLng } from "./evac-content";
 
-export type WalkProgress = { questionSpacingVersion?: 2; questionsAligned?: boolean; source?: "geo-ai" | "context" | "sample"; routeId: string; steps: WalkStep[]; index: number; street?: StreetProgress };
+export type WalkProgress = { questionSpacingVersion?: 2 | 3; questionsAligned?: boolean; source?: "geo-ai" | "context" | "sample"; routeId: string; steps: WalkStep[]; index: number; street?: StreetProgress };
 
 /** 早送りでも未回答の判断地点を越えない。 */
 export function nextWalkIndex(walk: WalkProgress, answeredIds: string[], jump = false) {
@@ -109,11 +109,11 @@ export function observeStreetPosition(walk: WalkProgress, position: LatLng, head
   const routeStart = Math.max(0, start - (start > 0 ? 1 : 0));
   const guide = streetRouteGuidance(walk.steps.slice(routeStart).map(step => step.position), position);
   let matchedIndex = guide && guide.distanceFromRoute <= MATCH_M ? routeStart + guide.segment : walk.index;
-  const nearby = walk.steps.map((step, i) => ({ step, i, distance: questionPointIds?.includes(step.pointId ?? "") ? 0 : distanceM(position, step.position) }))
+  const nearby = walk.steps.map((step, i) => ({ step, i, distance: questionPointIds?.includes(step.pointId ?? "") ? 0 : walk.questionsAligned && questionPointIds !== undefined ? Infinity : distanceM(position, step.position) }))
     .filter(({ step, i, distance }) => i >= routeStart && step.pointId && !answered.includes(step.pointId) && distance <= (walk.questionsAligned ? 2 : MATCH_M))
     .sort((a, b) => a.distance - b.distance)[0];
   if (nearby) matchedIndex = nearby.i;
-  const arrived = arrivalConfirmed && !(walk.questionSpacingVersion === 2 && nearby);
+  const arrived = arrivalConfirmed && !(walk.questionSpacingVersion === 3 && nearby);
   if (arrived) matchedIndex = walk.steps.length - 1;
   const end = walk.steps[walk.steps.length - 1];
   const remainingM = arrived ? 0 : Math.max(distanceM(position, end.position), guide?.remainingM ?? 0);
@@ -123,12 +123,14 @@ export function observeStreetPosition(walk: WalkProgress, position: LatLng, head
     remainingM, elapsedS: (prior?.elapsedS ?? 0) + (total > 0 ? moved / total * duration : 0), remainingS: total > 0 ? remainingM / total * duration : 0, questionPointIds, atArrivalNode:arrivalConfirmed, arrived } };
 }
 
-/** Schedule by actual node hops: at least three answers and no gap longer than 20 moves. */
+export const QUESTION_INTERVAL_NODES = 8;
+
+/** One question per eight confirmed route hops, including arrival when it is the eighth hop. */
 export function alignWalkQuestions(walk: WalkProgress, route: RouteOption, nodes: {position: LatLng}[], answeredEvents: string[], random: () => number = Math.random) {
-  if (walk.source !== "context" || walk.questionSpacingVersion === 2 || nodes.length === 0) return walk;
+  if (walk.source !== "context" || walk.questionSpacingVersion === 3 || nodes.length === 0) return walk;
   const path = nodes.map(n => n.position);
   const total = pathLengthM(path), hops = nodes.length - 1;
-  const count = Math.max(0, 3 - answeredEvents.length, Math.ceil(hops / 20));
+  const count = Math.floor(hops / QUESTION_INTERVAL_NODES);
   const candidates = walk.steps.filter(step => step.event && step.pointId && !answeredEvents.includes(step.event.id));
   const common = WALK_SCENARIOS.filter(c => c.area === "common").map(c => c.event);
   const used = new Set(answeredEvents);
@@ -139,14 +141,14 @@ export function alignWalkQuestions(walk: WalkProgress, route: RouteOption, nodes
   });
   const points: DecisionPoint[] = [];
   for (let i = 0; i < count; i++) {
-    // Never put a question at the arrival node. A very short walk can have several at one stop.
-    const node = positions[Math.max(0,Math.min(hops - 1, Math.floor((i + 1) * hops / (count + 1))))];
+    const node = positions[(i + 1) * QUESTION_INTERVAL_NODES];
     const nearby = candidates.filter(step => !used.has(step.event!.id) && distanceM(step.position,node.position) <= 100)
       .sort((a,b) => distanceM(a.position,node.position)-distanceM(b.position,node.position))[0];
     let event = nearby?.event;
     if (!event) {
       const fresh = common.filter(event => !used.has(event.id));
       // Long routes may exhaust the catalogue: repeat only after every common case was used.
+      if (!fresh.length) common.forEach(event => used.delete(event.id));
       const pool = fresh.length ? fresh : common;
       event = pool[Math.floor(random() * pool.length)];
     }
@@ -157,7 +159,7 @@ export function alignWalkQuestions(walk: WalkProgress, route: RouteOption, nodes
   const history = walk.steps.slice(0,walk.index+1).filter(step => !step.event || answeredEvents.includes(step.event.id));
   const next = buildWalkSteps({...route,path},points);
   if (!history.length) history.push(next[0]);
-  const aligned: WalkProgress = {...walk,steps:[...history,...next.slice(1)],index:history.length-1,questionsAligned:true,questionSpacingVersion:2};
+  const aligned: WalkProgress = {...walk,steps:[...history,...next.slice(1)],index:history.length-1,questionsAligned:true,questionSpacingVersion:3};
   return aligned.street ? observeStreetPosition(aligned,aligned.street.position,aligned.street.heading,
     history.flatMap(step => step.pointId ? [step.pointId] : []),aligned.street.arrived) : aligned;
 }

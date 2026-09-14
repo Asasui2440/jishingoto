@@ -725,3 +725,17 @@ test("land-use ZIP reader bounds and validates DBF and converts official mesh co
   const corrupt=Buffer.from(zip);corrupt.writeUInt32LE(99_000_000,local.length+name.length+dbf.length+24);
   assert.throws(()=>urban.decodeLanduseZip(corrupt,"5339"),/dbf size/);
 });
+
+
+test("the scenario catalogue supplies more than three candidates and every case has three distinct graded actions", () => {
+  const points=scenarioPlanner.selectWalkScenarios(request,contextsFor(["residential","industrial","highrise","commercial"]),undefined,()=>.4);
+  assert(points.length>3);
+  assert.equal(walkCases.WALK_SCENARIOS.length,30);
+  for(const {event} of walkCases.WALK_SCENARIOS) {
+    assert.equal(event.choices.length,3,event.id);
+    assert.equal(new Set(event.choices.map(c=>c.id)).size,3);
+    assert.equal(new Set(event.choices.map(c=>c.label)).size,3);
+    assert.deepEqual(event.choices.map(c=>c.priority).sort(),[1,2,3]);
+    assert(event.choices.every(c=>c.pros.length && c.cons.length && c.feedback.includes(c.cons[0])));
+  }
+});
