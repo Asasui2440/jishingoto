@@ -55,18 +55,13 @@ test('リザルトで道路地図を保存し、圏外で地名・現在地・�
   await offline.getByRole('button',{name:'全体',exact:true}).click();
   await offline.screenshot({path:'test-results/offline-road-map.png',fullPage:true});
   await offline.getByRole('button',{name:'地図を拡大',exact:true}).click();
-  await offline.getByRole('button',{name:'現在地から徒歩経路',exact:true}).click();await expect(offline.locator('#message')).toContainText('再検索');
-  await offline.getByRole('button',{name:'近くの避難所を探す',exact:true}).click();
-  await expect(offline.locator('#nearby-list')).toContainText('周辺の避難公園');
-  await expect(offline.locator('#nearby-list')).not.toContainText('洪水専用');
-  await offline.getByRole('button',{name:/周辺の避難公園/}).click();
-  await expect(offline.locator('#workspace-title')).toHaveText('周辺の避難公園');
-  await expect(offline.getByRole('img',{name:'避難先',exact:true})).toHaveAttribute('data-lat','35.722');
-  expect(Number(await offline.locator('#map').getAttribute('data-route-points'))).toBeGreaterThan(2);
+  await offline.getByRole('button',{name:'現在地からこの避難所へ',exact:true}).click();await expect(offline.locator('#message')).toContainText('再検索');
+  await expect(offline.locator('#nearby-search')).toHaveCount(0);
+  await expect(offline.getByRole('img',{name:'避難先',exact:true})).toHaveAttribute('data-lat','35.721');
   await offline.getByRole('button',{name:'位置の更新を止める'}).click();await expect(offline.locator('#location-status')).toContainText('停止');
   await offline.reload();await expect(offline.locator('#map')).toHaveAttribute('data-map-ready','true');
   expect(requests).toEqual([]);
-  await offline.getByRole('button',{name:'閉じる',exact:true}).click();
+  await offline.getByRole('button',{name:'マップ一覧へ',exact:true}).click();
   offline.once('dialog',d=>d.accept());await offline.getByRole('button',{name:'リザルト小学校を削除'}).click();await expect(offline.locator('#saved-list')).toContainText('まだ保存');
   await offline.reload();await expect(offline.locator('#saved-list')).toContainText('まだ保存');
 });
@@ -114,23 +109,22 @@ test('周辺の避難先を取得できない間は保存を完了せず、再�
   const frame=await resultPage(page);await expect(frame.locator('#report-status')).toContainText('避難先を取得できません');await expect(frame.locator('#report-download')).toBeDisabled();
   fail=false;await frame.locator('#report-retry').click();await expect(frame.locator('#report-download')).toBeEnabled();
 });
-test('現在地が保存範囲外なら近くの候補を案内しない',async({page,context})=>{
+test('現在地が保存範囲外なら経路を表示しない',async({page,context})=>{
   const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();
   const link=page.getByRole('link',{name:'保存したマップを開く'});await expect(link).toBeVisible();const url=(await link.getAttribute('href'))!;
   await context.grantPermissions(['geolocation']);await context.setGeolocation({latitude:35.68,longitude:139.76});await context.setOffline(true);
-  const offline=await context.newPage();await offline.goto(url);await offline.locator('#nearby-search').click();
-  await expect(offline.locator('#nearby-status')).toContainText('範囲外');await expect(offline.locator('#nearby-list button:enabled')).toHaveCount(0);
+  const offline=await context.newPage();await offline.goto(url);await offline.locator('#route-from-location').click();
+  await expect(offline.locator('#message')).toContainText('範囲外');await expect(offline.locator('#route-summary')).toContainText('経路が見つかりません');
 });
-test('以前の保存へ周辺の避難先を追加でき、測位拒否でも元の記録を失わない',async({page,context})=>{
+test('測位を拒否しても保存した避難先と経路を失わない',async({page,context})=>{
   const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();
   const link=page.getByRole('link',{name:'保存したマップを開く'});await expect(link).toBeVisible();const url=(await link.getAttribute('href'))!;
-  await page.evaluate(()=>new Promise<void>((resolve,reject)=>{const req=indexedDB.open('jishingoto-offline-evac-v1',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes'),get=store.get('report-123456789');get.onsuccess=()=>{const r=get.result;delete r.shelters;delete r.sheltersSavedAt;delete r.scenario;r.version=3;store.put(r);};tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};}));
   const offline=await context.newPage();await offline.goto(url);
   await offline.evaluate(()=>{navigator.geolocation.watchPosition=(_success,error)=>{queueMicrotask(()=>error?.({code:1,message:'denied'} as GeolocationPositionError));return 1;};});
-  await offline.locator('#nearby-search').click();await expect(offline.locator('#nearby-status')).toContainText('取得できません');
-  await expect(offline.locator('#save-nearby')).toBeVisible();await offline.locator('#save-nearby').click();await expect(offline.locator('#message')).toContainText('周辺の避難先も保存しました');
-  await context.grantPermissions(['geolocation']);await context.setGeolocation({latitude:35.718,longitude:139.731});await context.setOffline(true);await offline.reload();
-  await offline.locator('#nearby-search').click();await expect(offline.locator('#nearby-list')).toContainText('周辺の避難公園');await expect(offline.locator('#workspace-title')).toHaveText('リザルト小学校');
+  await offline.locator('#route-from-location').click();await expect(offline.locator('#location-status')).toContainText('許可されていません');
+  await expect(offline.locator('#workspace-title')).toHaveText('リザルト小学校');
+  await context.setOffline(true);await offline.reload();await expect(offline.locator('#map')).toHaveAttribute('data-map-ready','true');
+  expect(Number(await offline.locator('#map').getAttribute('data-route-points'))).toBeGreaterThan(2);
 });
 test('いつもの入口を圏外で開くと保存地図へ移り、復帰後は通常の画面を開く',async({page,context})=>{
   const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
@@ -157,25 +151,6 @@ test('ホームだけ訪問した端末も圏外時は空の保存画面を開�
   const cold=await context.newPage();await cold.goto('/home');await expect(cold.locator('#saved-list')).toContainText('まだ保存したマップはありません');
 });
 
-test('複数の保存から20件以上をまとめ、別マップの道路で候補への経路を表示する',async({page,context})=>{
-  const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();
-  const link=page.getByRole('link',{name:'保存したマップを開く'});await expect(link).toBeVisible();const url=(await link.getAttribute('href'))!;
-  await page.evaluate(()=>new Promise<void>((resolve,reject)=>{const req=indexedDB.open('jishingoto-offline-evac-v1',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes'),get=store.get('report-123456789');get.onsuccess=()=>{
-    const a=get.result,b={...a,id:'other-map',name:'別マップの避難先',shelter:{lat:35.722,lng:139.733},shelters:Array.from({length:25},(_,i)=>({name:`保存済み公園${i+1}`,kind:'指定緊急避難場所',position:{lat:35.718+i*.0001,lng:139.733}}))};
-    a.graph={...a.graph,bbox:{...a.graph.bbox,east:139.732}};a.shelters=[];store.put(a);store.put(b);
-  };tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};}));
-  await context.grantPermissions(['geolocation']);await context.setGeolocation({latitude:35.718,longitude:139.731});await context.setOffline(true);
-  const offline=await context.newPage();await offline.goto(url);await offline.locator('#nearby-search').click();
-  await expect(offline.locator('#nearby-list button')).toHaveCount(5);
-  await offline.getByRole('button',{name:'ほかの避難先も見る'}).click();
-  await expect(offline.locator('#nearby-list button')).toHaveCount(27);
-  await offline.getByRole('button',{name:/保存済み公園25 /}).click();
-  await expect(offline.locator('#workspace-title')).toHaveText('保存済み公園25');
-  await expect(offline.locator('#message')).toContainText('再検索');
-  await expect(offline.getByRole('img',{name:'避難先',exact:true})).toHaveAttribute('data-lng','139.733');
-  await expect(offline.locator('#map')).toHaveAttribute('data-map-ready','true');
-});
-
 test('場所登録は表示せず、選択した避難所のマップを一覧から開ける',async({page})=>{
   await page.goto('/evac?mode=mock');
   await expect(page.getByRole('heading',{name:'避難先を選ぼう'})).toBeVisible();
@@ -200,4 +175,23 @@ test('ホームから保存一覧を選び、戻るボタンで直前の画面�
   await page.goto('/home');await page.getByRole('link',{name:'保存したマップを見る'}).click();await expect(page.locator('#saved-list')).toContainText('リザルト小学校');
   await page.getByRole('link',{name:'避難先を選ぶ',exact:true}).click();await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/offline-evac\/index.html$/);
   await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/home$/);
+});
+test('重複を最新の1件にまとめ、5件保存済みでも同じマップは更新し古いリンクで開ける',async({page})=>{
+  const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
+  await page.evaluate(()=>new Promise<void>((resolve,reject)=>{const req=indexedDB.open('jishingoto-offline-evac-v1',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes'),get=store.get('report-123456789');get.onsuccess=()=>{const r=get.result;store.put({...r,id:'report-111',savedAt:r.savedAt+1});for(let i=1;i<=4;i++)store.put({...r,id:`other-${i}`,start:{...r.start,lat:r.start.lat+i*.001},name:`別のマップ${i}`});};tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};}));
+  await page.addInitScript(()=>{const key='jishingoto.evac.v2',s=JSON.parse(sessionStorage.getItem(key)!);s.finishedAt=222;sessionStorage.setItem(key,JSON.stringify(s));});
+  await page.goto('/evac/report');await page.getByRole('button',{name:'このマップと避難所を保存する',exact:true}).click();
+  await expect(frame.locator('#report-download')).toBeEnabled();await expect(frame.locator('#report-status')).toContainText('更新します');await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toHaveAttribute('href','/offline-evac/index.html?route=report-222');
+  await page.goto('/offline-evac/index.html');await expect(page.locator('#saved-list .saved-card')).toHaveCount(5);await expect(page.locator('#saved-list h3').filter({hasText:'リザルト小学校'})).toHaveCount(1);
+  // Exercise actual IndexedDB transactions, including simultaneous saves and the cap.
+  const result=await page.evaluate(async()=>{
+    // @ts-expect-error Static browser module is loaded from the running app.
+    const {allRoutes,putRoute}=await import('/offline-evac/storage.mjs');
+    const before=await allRoutes(),r=before.find((x:{id:string})=>x.id==='report-222');
+    await Promise.all([putRoute({...r,id:'report-333',savedAt:Date.now()}),putRoute({...r,id:'report-444',savedAt:Date.now()+1})]);
+    let error='';try{await putRoute({...r,id:'sixth',start:{lat:35.68,lng:139.76}});}catch(e){error=(e as Error).message;}
+    return {count:(await allRoutes()).length,error};
+  });expect(result.count).toBe(5);expect(result.error).toContain('5件まで');
+  await page.goto('/offline-evac/index.html?route=report-123456789');await expect(page.locator('#workspace-title')).toHaveText('リザルト小学校');
+  await page.getByRole('button',{name:'マップ一覧へ',exact:true}).click();await page.reload();await expect(page.locator('#workspace')).toBeHidden();await expect(page.locator('#saved-list .saved-card')).toHaveCount(5);
 });

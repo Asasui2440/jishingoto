@@ -124,7 +124,7 @@ export default function EvacReportPage() {
           <button type="button" disabled={!home || !shelter || !evac.finishedAt} onClick={() => setSheet("offline")} aria-describedby="offline-save-description" className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-13 font-bold text-ink disabled:opacity-40">
             <GameIcon name="map" className="size-5" />このマップと避難所を保存する
           </button>
-          <p id="offline-save-description" className="text-13 leading-relaxed text-primary-ink"><strong className="block text-15">災害時も、オフラインで使える。</strong>保存した地図で近くの避難先を探し、現在地からの経路を確認できます。</p>
+          <p id="offline-save-description" className="text-13 leading-relaxed text-primary-ink"><strong className="block text-15">災害時も、オフラインで使える。</strong>保存した地図で現在地を確認し、選んだ避難先までの経路を表示できます。</p>
         </div>
 
         <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>

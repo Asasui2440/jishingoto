@@ -10,3 +10,9 @@ test('地図投影の往復・道路の取得範囲が経路と周囲を含む',
 test('無効な位置や広すぎる地域では道路を一括取得しない',async()=>{
   const {tilePlan,validPoint}=await core;assert.throws(()=>tilePlan([a,{lat:NaN,lng:139}]));assert.throws(()=>tilePlan([a,{lat:45,lng:140}]));assert(!validPoint({lat:0,lng:0}));
 });
+test('保存マップの重複は出発地点・避難先・災害種別で判定する',async()=>{
+ const {sameRoute}=await import('../public/offline-evac/storage.mjs');const r={id:'a',start:a,shelter:b,scenario:'earthquake',demo:false};
+ assert(sameRoute(r,{...r,id:'b',name:'名称変更',savedAt:999}));
+ assert(!sameRoute(r,{...r,start:{...a,lat:a.lat+.001}}));assert(!sameRoute(r,{...r,scenario:'flood'}));assert(!sameRoute(r,{...r,demo:true}));
+ assert(!sameRoute({id:'old'},{id:'other'}));
+});

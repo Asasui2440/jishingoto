@@ -1,4 +1,4 @@
-import { MAX_ROUTES } from './core.mjs';
+import { MAX_ROUTES, validPoint } from './core.mjs';
 const DB = 'jishingoto-offline-evac-v1';
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -9,31 +9,52 @@ export function openDB() {
     req.onsuccess = () => resolve(req.result);
   });
 }
+// Result timestamps are record IDs, not the identity of a saved journey.
+export function routeKey(route) {
+  if(!validPoint(route.start)||!validPoint(route.shelter))return `id:${route.id}`;
+  const point=p=>`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
+  return [route.purpose||'evacuation',route.scenario||(route.kind?.includes('洪水')?'flood':'earthquake'),!!route.demo,point(route.start),point(route.shelter)].join('|');
+}
+export function sameRoute(a,b){return routeKey(a)===routeKey(b);}
+function aliases(records,id){return [...new Set(records.flatMap(r=>[r.id,...(r.aliases||[])]))].filter(value=>value!==id);}
+function consolidate(records,store){
+  const groups=new Map();
+  for(const record of [...records].sort((a,b)=>b.savedAt-a.savedAt)){
+    const key=routeKey(record),group=groups.get(key)||[];group.push(record);groups.set(key,group);
+  }
+  return [...groups.values()].map(group=>{
+    const newest=group[0];
+    if(group.length===1)return newest;
+    const merged={...newest,aliases:aliases(group,newest.id)};
+    for(const old of group.slice(1))store.delete(old.id);
+    store.put(merged);return merged;
+  });
+}
 export async function allRoutes() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('routes');
-    const req = tx.objectStore('routes').getAll();
-    tx.oncomplete = () => { db.close(); resolve(req.result.sort((a,b) => b.savedAt-a.savedAt)); };
-    tx.onabort = tx.onerror = () => { db.close(); reject(new Error('保存した経路を読み込めませんでした。')); };
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes'),req=store.getAll();let result=[];
+    req.onsuccess=()=>{try{result=consolidate(req.result,store);}catch{tx.abort();}};
+    tx.oncomplete=()=>{db.close();resolve(result);};
+    tx.onabort=tx.onerror=()=>{db.close();reject(new Error('保存した経路を読み込めませんでした。'));};
   });
 }
 export async function putRoute(route) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('routes', 'readwrite'), store = tx.objectStore('routes');
-    let limit = false;
-    const count = store.count();
-    count.onsuccess = () => {
-      const existing = store.get(route.id);
-      existing.onsuccess = () => {
-        if (count.result >= MAX_ROUTES && !existing.result) { limit = true; tx.abort(); }
-        else { try { store.put(route); } catch { tx.abort(); } }
-      };
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes');let limit=false;
+    const req=store.getAll();
+    req.onsuccess=()=>{
+      try {
+      const records=consolidate(req.result,store),matches=records.filter(r=>r.id===route.id||sameRoute(r,route));
+      if(records.length-matches.length>=MAX_ROUTES){limit=true;tx.abort();return;}
+      // Replacements and cleanup commit together; quota failure keeps the old maps.
+      for(const old of matches)if(old.id!==route.id)store.delete(old.id);
+      store.put({...route,aliases:aliases([...matches,route],route.id)});
+      }catch{tx.abort();}
     };
-    // Metadata and every tile are one record in one atomic transaction.
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onabort = tx.onerror = () => { db.close(); reject(new Error(limit ? '保存は5件までです。不要な経路を削除してください。' : '端末に保存できませんでした。空き容量を確認してください。以前の保存は残っています。')); };
+    tx.oncomplete=()=>{db.close();resolve();};
+    tx.onabort=tx.onerror=()=>{db.close();reject(new Error(limit?'保存は5件までです。不要な経路を削除してください。':'端末に保存できませんでした。空き容量を確認してください。以前の保存は残っています。'));};
   });
 }
 export async function deleteRoute(id) {

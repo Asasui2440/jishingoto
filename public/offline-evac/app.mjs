@@ -1,13 +1,11 @@
 import { prepareOfflineEntry } from './registration.mjs';
 import { validPoint } from './core.mjs';
-import { allRoutes, deleteRoute, putRoute } from './storage.mjs';
+import { allRoutes, deleteRoute } from './storage.mjs';
 import { RouteMap } from './map.mjs';
 import { findRoute, inside } from './routing.mjs';
 import { initReport } from './report.mjs';
-import { fetchShelters, nearbyShelters } from './shelters.mjs';
 const $=id=>document.getElementById(id);
 let routes=[],selected=null,destination=null,networkAvailable=navigator.onLine;
-let nearbyLimit=5;
 let locationUpdatedAt=0,pendingLocationAction=null;
 const map=new RouteMap($('map'),()=>{});
 function message(text,error=false){$('message').hidden=false;$('message').textContent=text;$('message').classList.toggle('error',error);}
@@ -23,7 +21,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)void check
 connection();void checkConnection();
 $('new-route').onclick=event=>{if(!networkAvailable){event.preventDefault();message('避難先の検索には通信が必要です。保存したマップはこのまま開けます。');}};
 $('zoom-in').onclick=()=>map.zoom(1.6);$('zoom-out').onclick=()=>map.zoom(1/1.6);$('fit-route').onclick=()=>map.fit(map.path);
-$('close-workspace').onclick=()=>{document.body.classList.remove('route-open');$('workspace').hidden=true;stopLocation();map.setPack(null);selected=null;};
+$('close-workspace').onclick=()=>{const url=new URL(location.href);url.searchParams.delete('route');url.searchParams.delete('entry');history.replaceState(null,'',url);document.body.classList.remove('route-open');$('workspace').hidden=true;stopLocation();map.setPack(null);selected=null;};
 function describeRoute(result){return `徒歩 約${Math.ceil(result.meters/70)}分 / 約${Math.round(result.meters)}m`;}
 function renderRouteSummary(result){$('route-summary').textContent=describeRoute(result);}
 function recalculate(start,target=destination){
@@ -39,56 +37,6 @@ function withLocation(action){
   else $('location-status').textContent='現在地の更新を待っています…';
 }
 $('route-from-location').onclick=()=>withLocation(p=>recalculate(p));
-function showNearby(position){
-  if(!selected?.graph)return;
-  $('nearby-list').replaceChildren();
-  const candidates=nearbyShelters(selected,position,routes);
-  const anyCoverage=candidates.some(s=>s.mapIds.length);
-  $('nearby-status').textContent=`保存した避難先 ${candidates.length}件 · 現在地から近い順（直線距離）${!anyCoverage?'。現在地が保存範囲外、または避難先までの道路を保存していないため、ルートを表示できません。':''}`;
-  $('save-nearby').hidden=!!selected.sheltersSavedAt;
-  $('more-nearby').hidden=candidates.length<=nearbyLimit;
-  for(const candidate of candidates.slice(0,nearbyLimit)){
-    const button=element('button','');button.append(element('strong',candidate.name),element('span',`${candidate.kind||'保存した避難先'} · 約${Math.round(candidate.meters)}m`),element('span',candidate.mapIds.length?'現在地からのルートを表示':'現在地からの道路が未保存'));
-    button.setAttribute('aria-pressed',String(destination?.name===candidate.name&&destination?.position.lat===candidate.position.lat&&destination?.position.lng===candidate.position.lng));
-    button.disabled=!candidate.mapIds.length;
-    button.onclick=()=>withLocation(p=>{routeToSavedShelter(p,candidate);showNearby(p);});$('nearby-list').append(button);
-  }
-  if(!candidates.length)$('nearby-list').append(element('p','保存した地域内に候補がありません。','small'));
-}
-function routeToSavedShelter(position,candidate){
-  // Recheck coverage with the latest GPS fix, which may have moved since listing.
-  const current=nearbyShelters(selected,position,routes).find(s=>s.name===candidate.name&&s.position.lat===candidate.position.lat&&s.position.lng===candidate.position.lng);
-  let failure='現在地から避難先までの道路を保存していません。';
-  for(const id of current?.mapIds??[]){
-    const record=id===selected.id?selected:routes.find(r=>r.id===id);if(!record)continue;
-    try{
-      findRoute(record.graph,position,candidate.position);
-      if(selected.id!==record.id)show(record);
-      recalculate(position,candidate);$('nearby-panel').hidden=false;return;
-    }catch(error){failure=error.message;}
-  }
-  message(failure,true);
-}
-$('more-nearby').onclick=()=>{nearbyLimit=Infinity;withLocation(showNearby);};
-$('nearby-search').onclick=async()=>{
-  nearbyLimit=5;
-  $('nearby-panel').hidden=false;$('nearby-status').textContent='現在地を確認しています…';
-  $('nearby-list').replaceChildren();$('save-nearby').hidden=!!selected?.sheltersSavedAt;
-  $('nearby-panel').scrollIntoView({behavior:'smooth',block:'start'});
-  try{await list();withLocation(showNearby);}catch(error){message(error.message,true);}
-};
-$('save-nearby').onclick=async()=>{
-  if(!selected?.graph)return;
-  if(!navigator.onLine)return message('周辺の避難先を追加するには、一度オンラインで保存してください。',true);
-  const route=selected;$('save-nearby').disabled=true;
-  try{
-    const scenario=route.scenario??(route.kind?.includes('洪水')?'flood':'earthquake');
-    const nearby=await fetchShelters(route.graph.bbox,scenario);
-    const latest=(await allRoutes()).find(r=>r.id===route.id);if(!latest)return;
-    const updated={...latest,...nearby,version:4};await putRoute(updated);await list();
-    if(selected?.id===route.id){selected=updated;message('周辺の避難先も保存しました。オフラインで検索できます。');withLocation(showNearby);}
-  }catch(e){message(e.message,true);}finally{$('save-nearby').disabled=false;}
-};
 let watchId=null;
 function stopLocation() {
   if(watchId!==null)navigator.geolocation.clearWatch(watchId);
@@ -111,7 +59,7 @@ function startLocation(){
     if(selected?.mapPack && !inside(p,selected.mapPack.bbox))message('現在地は保存した地図の範囲外です。「全体」で保存経路に戻れます。');
   },error=>{
     map.location=null;locationUpdatedAt=0;pendingLocationAction=null;map.render();
-    if(!$('nearby-panel').hidden)$('nearby-status').textContent='現在地を取得できませんでした。位置情報を確認して、もう一度検索してください。';$('locate').disabled=false;
+    $('locate').disabled=false;
     if(error.code===1){stopLocation();$('location-status').textContent='位置情報が許可されていません。端末の設定を確認してください。';}
     else{$('locate').textContent='位置の更新を止める';$('location-status').textContent='現在地を確認できません。位置情報の更新を待っています…';}
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
@@ -130,7 +78,7 @@ async function list(){
 }
 function show(route){
   if(!route.mapPack){message('以前の形式で保存したマップです。新しい道路地図を使うには、リザルトから保存し直してください。',true);return;}
-  pendingLocationAction=null;selected=route;destination={name:route.purpose==='home'?'保存時の自宅':route.name,position:route.shelter};$('nearby-panel').hidden=true;$('map-loading').hidden=true;document.body.classList.add('route-open');$('workspace').hidden=false;$('route-details').hidden=false;$('saved-info').hidden=false;$('report-actions').hidden=true;
+  pendingLocationAction=null;selected=route;destination={name:route.purpose==='home'?'保存時の自宅':route.name,position:route.shelter};$('map-loading').hidden=true;document.body.classList.add('route-open');$('workspace').hidden=false;$('route-details').hidden=false;$('saved-info').hidden=false;$('report-actions').hidden=true;
   map.destinationLabel=route.purpose==='home'?'保存時の自宅':'避難先';
   $('workspace-title').textContent=route.routeLabel||route.name;
   $('saved-info').textContent=`${route.demo?'練習データ · ':''}${new Date(route.savedAt).toLocaleString('ja-JP')} 保存`;
@@ -146,4 +94,4 @@ async function prepareShell() {
 const shellPreparation=prepareShell().then(()=>true).catch(e=>{$('shell-status').textContent=e.message;connection();return false;});
 const params=new URLSearchParams(location.search);
 if(params.get('from')==='report'&&parent!==window)initReport(map,shellPreparation);
-else void list().then(()=>{const id=params.get('route');if(id){const route=routes.find(r=>r.id===id);if(route)show(route);else message('この端末には指定されたマップがありません。',true);}else if(params.get('entry')==='offline'&&routes.length===1)show(routes[0]);}).catch(e=>message(e.message,true));
+else void list().then(()=>{const id=params.get('route');if(id){const route=routes.find(r=>r.id===id||r.aliases?.includes(id));if(route)show(route);else message('この端末には指定されたマップがありません。',true);}else if(params.get('entry')==='offline'&&routes.length===1)show(routes[0]);}).catch(e=>message(e.message,true));

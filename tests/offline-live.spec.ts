@@ -16,7 +16,6 @@ test('実際の道路地図を保存して、通信断後に現在地と経路�
   const offline=await context.newPage();await offline.goto(url);await expect(offline.locator('#connection')).toHaveText('オフライン');
   await offline.getByRole('button',{name:'◎ 現在地を表示'}).click();await expect(offline.getByRole('img',{name:'現在地',exact:true})).toBeVisible();
   await offline.getByRole('button',{name:'全体',exact:true}).click();await expect(offline.locator('#map')).toHaveAttribute('data-map-ready','true');await expect(offline.locator('#map')).not.toHaveAttribute('data-map-error',/.+/);
-  await offline.locator('#nearby-search').click();await expect(offline.locator('#nearby-list button').first()).toBeVisible();
-  await offline.locator('#nearby-list button').first().click();await expect(offline.locator('#route-summary')).toContainText('徒歩');
+  await offline.locator('#route-from-location').click();await expect(offline.locator('#message')).toContainText('再検索');await expect(offline.locator('#workspace-title')).toHaveText('護国寺一帯');
   await offline.screenshot({path:'test-results/offline-live-road-map.png',fullPage:true});expect(requests).toEqual([]);
 });

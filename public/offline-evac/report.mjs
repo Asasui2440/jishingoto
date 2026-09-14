@@ -1,7 +1,7 @@
 import { downloadVector } from './vector.mjs';
 import { validPoint, MAX_ROUTES, tilePlan } from './core.mjs';
 import { fetchGraph, findRoute, downloadBounds } from './routing.mjs';
-import { allRoutes, putRoute } from './storage.mjs';
+import { allRoutes, putRoute, sameRoute } from './storage.mjs';
 import { fetchShelters } from './shelters.mjs';
 
 // Same-origin, parent-frame handoff. Route geometry from Google is never received.
@@ -27,9 +27,9 @@ export function initReport(map, shellPreparation) {
     $('map-loading').hidden=false;
     try {
       const existing=await allRoutes();
-      if(existing.length>=MAX_ROUTES&&!existing.some(r=>r.id===input.id))throw new Error('保存は5件までです。保存したマップから不要なものを削除してください。');
+      if(existing.length>=MAX_ROUTES&&!existing.some(r=>r.id===input.id||sameRoute(r,input)))throw new Error('保存は5件までです。保存したマップから不要なものを削除してください。');
       const samePoint=(a,b)=>a?.lat===b.lat&&a?.lng===b.lng;
-      const cached=existing.find(r=>r.id===input.id&&r.mapPack&&r.graph&&samePoint(r.start,input.start)&&samePoint(r.shelter,input.shelter));
+      const cached=existing.find(r=>sameRoute(r,input)&&r.mapPack&&r.graph&&samePoint(r.start,input.start)&&samePoint(r.shelter,input.shelter));
       const plan=tilePlan([input.start,input.shelter]),bbox=cached?.graph.bbox??downloadBounds(plan);
       const mapTask=(cached?Promise.resolve(cached.mapPack):downloadVector(bbox,(done,total)=>{$('map-loading').textContent=`地図を読み込み中 ${done} / ${total}`;})).then(pack=>{
         map.setPack(pack);map.fit(map.path.length?map.path:[input.start,input.shelter]);$('map-loading').textContent='地図を表示しています…';return pack;
@@ -45,7 +45,7 @@ export function initReport(map, shellPreparation) {
       const [mapPack,{graph,result},nearby,shellReady]=results.map(r=>r.value);
       if(!shellReady)throw new Error('オフライン画面を準備できませんでした。通信を確認して開き直してください。');
       record={...input,...nearby,version:4,mapPack,tiles:mapPack.tiles,origin:input.purpose==='home'?'home':'report',graph,result,path:result.path,sourceCheckedAt:null};
-      $('report-status').textContent=`${input.demo?'練習データ · ':''}周辺の避難先 ${nearby.shelters.length}件も一緒に保存します。`;
+      $('report-status').textContent=`${input.demo?'練習データ · ':''}${existing.some(r=>sameRoute(r,input))?'保存済みのマップを更新します。':'この避難所までの経路と周辺地図を保存します。'}`;
       $('report-download').disabled=false;
     }catch(e){$('report-status').textContent=e.message;$('report-retry').hidden=false;if(!map.pack)$('map-loading').textContent='地図を読み込めませんでした';}
     finally{busy=false;}
