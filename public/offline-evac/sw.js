@@ -1,5 +1,5 @@
 /* global self, caches */
-const CACHE = 'jishingoto-offline-shell-v22';
+const CACHE = 'jishingoto-offline-shell-v23';
 const SHELL = ['index.html','style.css','app.mjs','map.mjs','core.mjs','routing.mjs','report.mjs','vector.mjs','vendor/maplibre-gl.mjs','vendor/maplibre-gl-shared.mjs','vendor/maplibre-gl-worker.mjs','vendor/maplibre-gl.css','storage.mjs','shelters.mjs','places.mjs','registration.mjs','entry.mjs','manifest.webmanifest','icon.svg'].map(p => new URL(p, self.registration.scope).href);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
