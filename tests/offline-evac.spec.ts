@@ -81,10 +81,11 @@ test('保存領域の不足を成功扱いにせず、再試行できる',async(
   await expect(page.getByRole('link',{name:'保存したマップを開く'})).toHaveCount(0);
   await frame.getByRole('button',{name:'もう一度保存する'}).click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
 });
-test('新しい避難先の登録はGoogleマップの候補選択へ進み、地図への手動登録を出さない',async({page})=>{
+test('保存マップはゲームへの導線を出さず、オフラインの地図と現在地を強調する',async({page})=>{
   await page.goto('/offline-evac/index.html');await expect(page.locator('#shell-status')).toContainText('準備ができています');
   await expect(page.locator('#editor')).toHaveCount(0);
-  await expect(page.getByRole('link',{name:'避難先を選ぶ'})).toHaveAttribute('href','/evac?mode=api&from=offline');
+  await expect(page.getByRole('link',{name:'避難先を選ぶ'})).toHaveCount(0);
+  await expect(page.locator('.offline-benefit')).toContainText('地図と現在地を確認');
   await page.setViewportSize({width:320,height:700});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
@@ -173,7 +174,6 @@ test('ホームから保存一覧を選び、戻るボタンで直前の画面�
   await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/evac\/report$/);
   await expect(page.getByRole('heading',{name:'ふりかえり',exact:true})).toBeVisible();
   await page.goto('/home');await page.getByRole('link',{name:'保存したマップを見る'}).click();await expect(page.locator('#saved-list')).toContainText('リザルト小学校');
-  await page.getByRole('link',{name:'避難先を選ぶ',exact:true}).click();await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/offline-evac\/index.html$/);
   await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/home$/);
 });
 test('重複を最新の1件にまとめ、5件保存済みでも同じマップは更新し古いリンクで開ける',async({page})=>{

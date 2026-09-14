@@ -12,14 +12,13 @@ function message(text,error=false){$('message').hidden=false;$('message').textCo
 // Standalone offline HTML has no Next.js router.
 // eslint-disable-next-line @next/next/no-location-assign-relative-destination
 $('go-back').onclick=()=>{if(history.length>1)history.back();else location.href='/home';};
-function connection(){ $('connection').textContent=networkAvailable?'オンライン':'オフライン';$('connection').classList.toggle('offline',!networkAvailable);$('new-route').setAttribute('aria-disabled',String(!networkAvailable)); }
+function connection(){ $('connection').textContent=networkAvailable?'オンライン':'オフライン';$('connection').classList.toggle('offline',!networkAvailable); }
 async function checkConnection(){
   try{if(!navigator.onLine)throw new Error();const r=await fetch('./ping.txt',{cache:'no-store',signal:AbortSignal.timeout(3000)});networkAvailable=r.ok&&(await r.text()).trim()==='offline-evac-online';}catch{networkAvailable=false;}connection();
 }
 window.addEventListener('online',checkConnection);window.addEventListener('offline',()=>{networkAvailable=false;connection();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkConnection();});
 connection();void checkConnection();
-$('new-route').onclick=event=>{if(!networkAvailable){event.preventDefault();message('避難先の検索には通信が必要です。保存したマップはこのまま開けます。');}};
 $('zoom-in').onclick=()=>map.zoom(1.6);$('zoom-out').onclick=()=>map.zoom(1/1.6);$('fit-route').onclick=()=>map.fit(map.path);
 $('close-workspace').onclick=()=>{const url=new URL(location.href);url.searchParams.delete('route');url.searchParams.delete('entry');history.replaceState(null,'',url);document.body.classList.remove('route-open');$('workspace').hidden=true;stopLocation();map.setPack(null);selected=null;};
 function describeRoute(result){return `徒歩 約${Math.ceil(result.meters/70)}分 / 約${Math.round(result.meters)}m`;}
@@ -69,7 +68,7 @@ $('locate').onclick=()=>{if(watchId!==null){stopLocation();$('location-status').
 function element(tag,text,className=''){const el=document.createElement(tag);el.textContent=text;el.className=className;return el;}
 async function list(){
   routes=await allRoutes();$('saved-list').replaceChildren();
-  if(!routes.length)$('saved-list').append(element('p','まだ保存したマップはありません。「避難先を選ぶ」から体験を始め、リザルトで保存できます。','empty'));
+  if(!routes.length)$('saved-list').append(element('p','まだ保存したマップはありません。オンラインのときに、避難シミュレーションのリザルトから地図を保存してください。','empty'));
   for(const route of routes){const card=element('article','','saved-card'),body=element('div','');body.append(element('h3',route.routeLabel||route.name),element('p',`${route.demo?'練習データ · ':''}${new Date(route.savedAt).toLocaleString('ja-JP')} 保存`,'small'));
     const actions=element('div','','actions'),open=element('button','地図を見る'),remove=element('button','削除','danger');open.onclick=()=>show(route);remove.setAttribute('aria-label',`${route.name}を削除`);
     remove.onclick=async()=>{if(!confirm(`「${route.name}」の保存を削除しますか？`))return;try{await deleteRoute(route.id);if(selected?.id===route.id){document.body.classList.remove('route-open');$('workspace').hidden=true;map.setPack(null);selected=null;stopLocation();}await list();}catch(e){message(e.message,true);}};
