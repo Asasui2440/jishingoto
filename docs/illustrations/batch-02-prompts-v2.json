@@ -1,0 +1,134 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 2,
+  "assets": [
+    {
+      "number": 8,
+      "variant": "situation",
+      "prompt": "Use case illustration-story. Match reference STYLE ONLY, no pole/wire. Mobile training illustration, very thick navy outlines, simple large faceless blue-shirt yellow-backpack adult, pale blue background and gray road, muted green ground. 3:2 landscape. NEW SCENE: person stands left on flat ground BEFORE a road slopes downward to RIGHT. Clearly show gentle continuous descending roadway, not cliff or stairs. Road bends behind a rounded grassy shoulder on right so bottom cannot be seen. Dry alternative branch turns lower-left from flat entrance. A few thick rain strokes in sky, NO puddles, water, cracks or hidden damage. Person full body 60% height. Sparse large shapes. No text, numbers, arrows, symbols, extra people, decorative detail. Communicate 'downhill ahead cannot be seen' without inventing what is there.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-334ff2ca-6824-4979-86a8-7eac9d992ff3.png",
+      "asset": "public/illustrations/evac/walk-case-8/situation-v2.webp",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ],
+      "revision": {
+        "prompt": "Edit image: keep exact road slopes and hidden bend, flat branch, rain and palette. ENLARGE THE PERSON substantially, to 65% of canvas height (roughly 650px tall on 1024px canvas), feet still standing on flat left entrance. Top of head near top 10% of canvas, feet near y=750. Person blue shirt yellow backpack, same very thick navy outlines. Reduce empty sky and remove grass tufts. Need large readable human at 94px thumbnail, not distant tiny figure. No new objects. One 3:2 image.",
+        "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-65f41975-1501-46bf-a4fd-2dd812545274.png"
+      }
+    },
+    {
+      "number": 8,
+      "variant": "distance",
+      "prompt": "Edit reference, preserve exact large person size, simple thick navy outlines, descending road right, flat fork left, rain, colors. Person remains at FLAT entrance, now holds a dark phone at chest height with a single thick route line on screen and uses other hand to indicate the dry branch lower-left. Head angled toward phone, full body visible. Do not enter slope. No words, floating symbols, arrows, tiny interface, new people or hazards. ONE 3:2 image.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-eb9853b1-7ea6-477b-9bd3-7961b2e8bf49.png",
+      "asset": "public/illustrations/evac/walk-case-8/distance-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-334ff2ca-6824-4979-86a8-7eac9d992ff3.png"
+      ]
+    },
+    {
+      "number": 8,
+      "variant": "go",
+      "prompt": "Edit reference: same LARGE protagonist now at center-right partway DOWN the descending road, bending at waist to peer toward hidden low section behind grass shoulder. Feet clearly planted on sloping pavement, head leans right, no phone, arms low. Keep exact road bend, dry fork, sparse rain, same very thick navy outlines and blue shirt/yellow backpack. Person remains large about 60% canvas height, fully visible. No puddles or hidden damage, no arrows or text. One 3:2 image. Distinguish entering slope from waiting at flat entrance.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-70ae2c0a-dcc7-4f76-9ae2-ca2dcc4267cd.png",
+      "asset": "public/illustrations/evac/walk-case-8/go-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-334ff2ca-6824-4979-86a8-7eac9d992ff3.png"
+      ]
+    },
+    {
+      "number": 8,
+      "variant": "consider",
+      "prompt": "Edit reference: same person remains at flat LEFT entrance, both feet together, standing still waiting for rain. Person looks upward and extends one empty hand palm-up to feel rain. Other arm rests down, NO phone or tools. Preserve exact descending road and unseen bend right, dry branch, rain intensity, thick navy outlines and LARGE character. No umbrella, text, clocks, arrows, new people or damage. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3eaa1403-9836-4798-9f1a-624f7299d25c.png",
+      "asset": "public/illustrations/evac/walk-case-8/consider-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-334ff2ca-6824-4979-86a8-7eac9d992ff3.png"
+      ]
+    },
+    {
+      "number": 10,
+      "variant": "situation",
+      "prompt": "Use reference STYLE ONLY: very thick dark navy outlines, pale blue background, gray ground, LARGE simple faceless blue-shirt yellow-backpack protagonist. No pole/wire. NEW SCENE rain impairs view of road: right side broad gray road fading into pale rain veil, no confirmed flooding. Left side simple covered waiting shelter on slightly raised dry platform reached by short broad ramp; orange-vested navy-cap guide stands under shelter. Protagonist stands center foreground before choosing, FULL BODY about 65% image height. Shelter roof and platform clearly separate, just two posts, large shapes. Guide visible facing protagonist, not tiny. Several thick rain strokes OUTSIDE shelter only. 3:2 landscape, minimal background, no signs, text, arrows, icons, cars or floodwater.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-905c3921-9552-41ef-841f-c5fea54ff615.png",
+      "asset": "public/illustrations/evac/walk-case-10/situation-v2.webp",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ]
+    },
+    {
+      "number": 10,
+      "variant": "detour",
+      "prompt": "Edit scene: protagonist has moved onto raised dry platform UNDER shelter, facing orange-vest navy-cap guide in conversation. Both LARGE waist-up or knees-up in foreground under roof, protagonist gestures open hand and guide indicates road. Keep shelter posts/roof visibly framing them, rainy poorly visible road on right, same thick navy outlines/colors. No rain under roof, no phones, text, arrows, symbols, new people or flooding. Tight crop for readable conversation at 94px. ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b32d1808-a276-4d74-8509-7a39a4a83bc1.png",
+      "asset": "public/illustrations/evac/walk-case-10/detour-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-905c3921-9552-41ef-841f-c5fea54ff615.png"
+      ]
+    },
+    {
+      "number": 10,
+      "variant": "go",
+      "prompt": "Edit reference: large blue-shirt yellow-backpack protagonist WALKS onward to RIGHT in rain, leaving shelter and guide behind on left. Both feet on pedestrian pavement, NOT on car roadway. Full body with clear forward stride, 65% image height, body faces right. Guide remains under shelter. Preserve roof, raised platform/ramp, rain-obscured road, thick navy outline style and colors. No umbrella, phone, extra people, words, arrows, floodwater or new damage. ONE 3:2 image.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-51dc7794-11ed-4e5d-b9d8-231d878415d4.png",
+      "asset": "public/illustrations/evac/walk-case-10/go-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-905c3921-9552-41ef-841f-c5fea54ff615.png"
+      ]
+    },
+    {
+      "number": 10,
+      "variant": "consider",
+      "prompt": "Edit reference: protagonist now seated ON the dry raised shelter platform under its roof, knees bent and hands resting on knees, facing RIGHT watching rain, not interacting with guide. Orange-vest navy-cap guide stands behind-left, arms relaxed. Crop closer so seated protagonist is LARGE at least 55% image height; keep roof and platform edge clear, feet on platform, no separate chair required. Rain only outside on right. Preserve thick navy outlines, palette, shelter design and obscured road. No text, clock, arrows, phone, extra people or floodwater. ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-1b74112f-32de-4910-b7a2-64c6276de728.png",
+      "asset": "public/illustrations/evac/walk-case-10/consider-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-905c3921-9552-41ef-841f-c5fea54ff615.png"
+      ]
+    },
+    {
+      "number": 16,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY: very thick navy rounded outlines, large simple faceless blue-shirt yellow-backpack person, gray roadway/pale blue background. NEW SCENE ground after earthquake: right half of roadway has a shallow irregular depression with opaque muted blue water and tan sand deposits around it. One tiny low water seep visible, NO tall fountain, giant hole, rubble or cracks. A NARROW DRY GRAY STRIP remains at outer edge of affected road. Left behind person a broad unbroken dry road with side branch. Person stands left looking toward water/sand, full body at least 65% canvas height. Oblique side view, all surfaces large and distinct. Few broad shapes, no grass detail. No utility poles, wires, rain, text, arrows, signs, hidden underground cross section or extra people. ONE 3:2 image.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f8d44469-c7da-41c8-8a6d-12b78a9a2e61.png",
+      "asset": "public/illustrations/evac/walk-case-16/situation-v2.webp",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ],
+      "revision": {
+        "prompt": "Edit only water seep depiction: REMOVE the bent pipe-like water spout attached to right curb, leave that dry gray edge continuous and unbroken. Instead show a very SMALL simple low bubbling seep emerging from the ROAD surface within tan sand near center of puddle, two rounded water bumps at most, no pipe, no fountain jet. Preserve protagonist, sand shape, opaque water, dry strip, road, branch, large thick outlines and framing. Keep shallow depression, no deep pit. ONE 3:2.",
+        "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-561e1f21-c69f-49e1-a39e-8b1ebffa7fbf.png"
+      }
+    },
+    {
+      "number": 16,
+      "variant": "distance",
+      "prompt": "Edit reference action: same LARGE protagonist turns and WALKS LEFT back toward dry branch, away from water and sand. Clear full-body leftward stride, feet on intact dry road. Preserve exact sand/water/depression and outer dry strip geometry, small bubbles, road and colors, very thick navy outlines. Do not add hazards, phone, people, text, arrows or symbols. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ab9b8f4a-4b78-4de6-bd5d-adff992b35ee.png",
+      "asset": "public/illustrations/evac/walk-case-16/distance-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f8d44469-c7da-41c8-8a6d-12b78a9a2e61.png"
+      ]
+    },
+    {
+      "number": 16,
+      "variant": "go",
+      "prompt": "Edit reference action: same large blue-shirt yellow-backpack person cautiously walks along the NARROW DRY GRAY STRIP on RIGHT outer edge of water-and-sand section. Both feet on that gray strip, not sand, water or grass. Head looking at foot placement, one foot in front of other. Person full body LARGE, around 65% image height, placed right side; water and tan sand to their left, green ground beyond strip to right. Preserve scene geography and very thick outlines; crop closer if needed but do not turn dry strip into wide road. No arrows, text, tools, extra people, additional damage or successful arrival. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-daf47d9f-49eb-4cab-81cf-f6e9171c47cb.png",
+      "asset": "public/illustrations/evac/walk-case-16/go-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f8d44469-c7da-41c8-8a6d-12b78a9a2e61.png"
+      ]
+    },
+    {
+      "number": 16,
+      "variant": "consider",
+      "prompt": "Edit reference: same protagonist remains on dry road BEFORE water-and-sand section, feet together stationary, leans head and upper body slightly toward ground to watch seep. Hands resting behind back to make waiting posture distinct; NO phone. Move modestly closer to near sand boundary but both feet remain clearly on dry gray pavement with visible gap. Keep person large, original background shape, dry strip, sand, water, bubbles, thick navy outlines. No crouching, walking, text, clock, arrows, new objects or damage. One 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a10a7989-bcc2-4da6-bd58-48c48456ea31.png",
+      "asset": "public/illustrations/evac/walk-case-16/consider-v2.webp",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f8d44469-c7da-41c8-8a6d-12b78a9a2e61.png"
+      ]
+    }
+  ]
+}

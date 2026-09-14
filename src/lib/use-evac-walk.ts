@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildWalkSteps, distanceM, fetchDecisionPoints, fetchDetourFrom } from "./evac-api";
 import { getEvac, useEvac } from "./evac";
-import { nextWalkIndex, nextStreetIndex, rerouteWalk, observeStreetPosition } from "./evac-walk";
+import { nextWalkIndex, nextStreetIndex, rerouteWalk, observeStreetPosition, streetRouteGuidance } from "./evac-walk";
 import { reachedStreetArrival, type StreetSnapshot } from "./street-navigation";
 import type { EvacChoice } from "./evac-content";
 
@@ -17,7 +17,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   const [timerOverride, setTimerOverride] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const scenario = evac.scenario ?? "earthquake";
-  const source = evac.mode === "api" ? evac.analysisMode ?? "geo-ai" : "sample";
+  const source = evac.mode === "api" && evac.analysisMode !== "sample" ? "context" : "sample";
   const choosing = useRef(false);
   const mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -42,7 +42,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
 
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
-  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && distanceM(walk.street.position, step.position) <= 20) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
+  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.questionsAligned ? walk.street.questionPointIds?.includes(step.pointId ?? "") : distanceM(walk.street.position, step.position) <= 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
   const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending;
 
   const advance = useCallback((jump = false) => {
@@ -70,7 +70,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     return () => clearTimeout(timer);
   }, [walking, notice, pending, busy, paused]);
 
-  const observeStreet = useCallback((state: StreetSnapshot) => {
+  const observeStreet = useCallback((state: StreetSnapshot, questionPointIds?: string[]) => {
     if (!state.ready || state.busy || !state.position) return;
     const position = state.position;
     const current = getEvac();
@@ -83,8 +83,8 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     update(prev => {
       if (prev.mode !== "api" || !prev.walk) return prev;
       const last = prev.walk.street?.position;
-      if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state)) return prev;
-      return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state)) };
+      if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state) && JSON.stringify(prev.walk.street?.questionPointIds) === JSON.stringify(questionPointIds)) return prev;
+      return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state), questionPointIds) };
     });
   }, [update]);
 
@@ -95,13 +95,15 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     setError(null);
     try {
       const current = getEvac();
+      const from = walk.street?.position ?? step.position;
+      const guide = route ? streetRouteGuidance(route.path, from) : null;
+      const remainingPath = route && guide ? [from, ...route.path.slice(guide.segment + 1)] : undefined;
       const detour = choice.reroute && current.shelter
-        ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode, scenario)
+        ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode, scenario, walk.source === "context" ? remainingPath : undefined)
         : null;
       if (choice.reroute && !detour) throw new Error("迂回路を取得できませんでした。もう一度試すか、別の行動を選んでください。");
-      const excluded = [...current.decisions.map((d) => d.eventId), step.event.id];
-      const remaining = Math.max(0, 3 - current.decisions.length - 1);
-      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded, maxPoints: remaining }) : [];
+      const excluded = [...new Set([...current.decisions.map((d) => d.eventId), step.event.id])];
+      const points = detour ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded }) : [];
       if (!mounted.current || getEvac().walk !== walk) return;
       const nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
       // 迂回の移動時間は新しい経路に含まれる。追加時間を二重に加算しない。
@@ -112,7 +114,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
         routes: detour ? [...prev.routes, { ...detour, eventCount: points.length }] : prev.routes,
         takenRouteIds: detour ? [...prev.takenRouteIds, detour.id] : prev.takenRouteIds,
         walk: current.mode === "api" && nextWalk.street
-          ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], false)
+          ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], detour ? false : nextWalk.street.atArrivalNode ?? false, detour ? undefined : nextWalk.street.questionPointIds)
           : nextWalk,
       }));
       setNotice(detour ? "ここから先の経路を更新しました。" : "選んだ行動を記録しました。");

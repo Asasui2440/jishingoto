@@ -1,4 +1,100 @@
+import { readFile } from "node:fs/promises";
+import { WALK_SCENARIOS } from "../src/lib/walk-scenarios";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+
+async function openIllustratedQuestion(page: Page, number = 28, seconds = 3) {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.addInitScript(({event,seconds}) => {
+    const saved = JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!);
+    saved.timerSeconds = seconds;
+    saved.walk.steps[1].event = event;
+    saved.walk.steps[1].pointId = "illustrated-question";
+    sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify(saved));
+  }, {event:WALK_SCENARIOS.find(c=>c.number===number)!.event,seconds});
+  await page.goto("/evac/walk?decision=1", {waitUntil:"domcontentloaded"});
+  await page.getByRole("button",{name:"自動で歩く",exact:true}).click();
+  await expect(page.getByRole("region",{name:/判断ポイント/}).locator("li button").first()).toBeEnabled();
+}
+
+for (const number of [9, 18, 28, 38]) {
+test(`問題${number}に対応するV2画像４枚を表示する`, async ({page}, testInfo) => {
+  await openIllustratedQuestion(page, number);
+  const images = page.getByRole("region",{name:/判断ポイント/}).locator("img");
+  await expect(images).toHaveCount(4);
+  for (const img of await images.all()) {
+    await expect(img).toHaveAttribute("src", new RegExp(`walk-case-${number}/.*-v2\\.webp$`));
+    await expect.poll(()=>img.evaluate((el: HTMLImageElement)=>el.naturalWidth)).toBe(960);
+  }
+  for (const choice of await page.getByRole("region",{name:/判断ポイント/}).locator("li button").all()) {
+    await expect(choice).toBeInViewport({ratio: 0.95});
+  }
+  const event = WALK_SCENARIOS.find(c=>c.number===number)!.event;
+  for (const choice of event.choices) {
+    await expect(page.getByRole("img",{name:`行動のイラスト：${choice.label}`,exact:true}))
+      .toHaveAttribute("src", `/illustrations/evac/${event.id}/${choice.id}-v2.webp`);
+  }
+  await page.screenshot({path:testInfo.outputPath(`v2-${number}.png`)});
+});
+}
+
+test("問題はすぐ回答でき、Street View確認中は時計と地点を保持する", async ({page},testInfo) => {
+  await openIllustratedQuestion(page);
+  const card = page.getByRole("region",{name:/判断ポイント/});
+  const timer = card.getByTestId("decision-timer");
+  await expect(page.getByRole("button",{name:"判断を始める",exact:true})).toHaveCount(0);
+  await expect(card.locator("li button").first()).toBeEnabled();
+  await expect(timer).toHaveText("2秒");
+  const scene = page.getByRole("region",{name:"Street Viewで進む体験"});
+  const pano = await scene.getAttribute("data-pano-id");
+  await scene.evaluate(el=>el.setAttribute("data-preserved-scene","yes"));
+  await card.getByRole("button",{name:"Street Viewで周りを見る"}).click();
+  await expect(card).not.toBeVisible();
+  const frozen = await page.getByTestId("decision-timer").textContent();
+  await page.waitForTimeout(2100);
+  expect(await page.getByTestId("decision-timer").textContent()).toBe(frozen);
+  await expect(scene).toHaveAttribute("data-pano-id",pano!);
+  await expect(scene).toHaveAttribute("data-preserved-scene","yes");
+  await page.screenshot({path:testInfo.outputPath("quiz-street-view.png")});
+  await page.getByRole("button",{name:"クイズに戻る",exact:true}).click();
+  await expect(card.locator("li button").first()).toBeEnabled();
+  for(const choice of await card.locator("li button").all()) {
+    await expect(choice).toBeInViewport({ratio:0.95});
+  }
+  await page.screenshot({path:testInfo.outputPath("quiz-number-tabs.png")});
+  await card.locator("li button").first().click();
+  await expect(card).toHaveCount(0);
+});
+
+test("画像の読み込み中も問題文と回答操作を表示する", async ({page}) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve=>{release=resolve;});
+  await page.route("**/illustrations/evac/**/*.webp", async route => {
+    await held;
+    await route.continue();
+  });
+  try {
+    await openIllustratedQuestion(page,38);
+    const card = page.getByRole("region",{name:/判断ポイント/});
+    await expect(card).toContainText("この条件なら、まずどうする？");
+    await expect(card.locator("li button").first()).toBeEnabled();
+    expect(await card.locator("img").first().evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(0);
+    release();
+    await expect.poll(()=>card.locator("img").first().evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(960);
+    await card.locator("li button").first().click();
+    await expect(card).toHaveCount(0);
+  } finally { release(); }
+});
+
+test("イラスト確認後に時間切れになっても自分で回答できる", async ({page}) => {
+  await openIllustratedQuestion(page);
+  const card = page.getByRole("region",{name:/判断ポイント/});
+  await expect(card.getByTestId("decision-timer")).toHaveText("0秒");
+  for (const choice of await card.locator("li button").all()) await expect(choice).toBeInViewport({ratio: 0.95});
+  await card.locator("li button").last().click();
+  await expect(card).toHaveCount(0);
+  const saved = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(saved.decisions[0].timedOut).toBe(true);
+});
 
 async function capture(page: Page, testInfo: TestInfo, name: string) {
   if (testInfo.project.name !== "mobile-390") return;
@@ -52,6 +148,11 @@ async function jumpToNextDecision(page: Page, expectAttention = true, testInfo?:
     help.getByRole("button", { name: "次の判断ポイントへ進む" }).click(),
   ]);
   const scene = page.getByRole("region", { name: "Street Viewで進む体験" });
+  await expect(toast).toContainText("注意ポイント");
+  const center = await toast.boundingBox();
+  const main = await page.getByRole("main",{name:"避難ルートの体験"}).boundingBox();
+  expect(Math.abs(center!.y+center!.height/2-(main!.y+main!.height/2))).toBeLessThan(2);
+  await expect(scene.locator(".animate-zone-flash")).toHaveCount(0);
   const heightDuringNotice = await scene.evaluate((element) => element.getBoundingClientRect().height);
   if (testInfo) await capture(page, testInfo, "attention-notice");
   await expect(toast).not.toBeVisible({ timeout: 2_000 });
@@ -88,6 +189,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
     await expect(decision).toBeVisible();
     const choices = decision.getByRole("list").getByRole("button");
     await expect(choices).toHaveCount(3);
+    await choices.last().scrollIntoViewIfNeeded();
     await noPageOverflow(page, choices.last());
     if (number === 1) await capture(page, testInfo, "street-view-decision");
     await choices.first().click();
@@ -95,13 +197,61 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   }
 
   await jumpToNextDecision(page, false);
-  const reflect = page.getByRole("button", { name: "ふりかえる" });
+  const reflect = scene.getByRole("button", { name: "ふりかえる" });
   await noPageOverflow(page, reflect);
+  await expect(scene.getByTestId("arrival-overlay")).toBeVisible();
+  await expect(scene.getByTestId("arrival-overlay")).toHaveCSS("background-color", /(?:, |\/ )0\.9\)$/);
+  await page.screenshot({path:testInfo.outputPath("arrival-white.png")});
   await reflect.click();
   await expect(page).toHaveURL(/\/evac\/report$/);
   await expect(page.getByRole("heading", { name: "ふりかえり" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^判断\d+：/ })).toHaveCount(3);
   await capture(page, testInfo, "route-report");
+  await expect(page.getByRole("heading",{name:"次に確かめること",exact:true})).toHaveCount(0);
+  await page.getByRole("button",{name:"判断のスコアを見る"}).click();
+  await expect(page).toHaveURL(/\/evac\/summary$/);
+  await expect(page.getByRole("region",{name:"判断スコア"})).toContainText("/ 100");
+  await expect(page.getByRole("heading",{name:"判断の振り返り"})).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await capture(page,testInfo,"judgment-score");
+  const finish = page.getByRole("button",{name:"振り返りを終わる"});
+  await noPageOverflow(page, finish);
+  await finish.click();
+  const followDialog = page.getByRole("dialog",{name:"次に確かめること"});
+  const follow = followDialog.locator("button[aria-pressed]").first();
+  await follow.click();
+  await expect(follow).toHaveAttribute("aria-pressed","true");
+  const selected = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).followUp);
+  expect(selected).toBeTruthy();
+  await capture(page,testInfo,"judgment-summary");
+  await page.reload();
+  await page.getByRole("button",{name:"振り返りを終わる"}).click();
+  await expect(followDialog.getByRole("button",{pressed:true})).toHaveCount(1);
+  await noPageOverflow(page, followDialog.getByRole("button",{name:"次へ",exact:true}));
+  await followDialog.getByRole("button",{name:"次へ",exact:true}).click();
+  await expect(page).toHaveURL(/\/evac\/complete$/);
+  const downloadReady = page.waitForEvent("download");
+  await page.getByRole("button",{name:"ルートをこの端末に保存",exact:true}).click();
+  const download = await downloadReady;
+  expect(download.suggestedFilename()).toMatch(/\.geojson$/);
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.type).toBe("FeatureCollection");
+  expect(exported.features[0].geometry.type).toBe("LineString");
+  expect(exported.features[0].geometry.coordinates.length).toBeGreaterThan(1);
+  expect(exported.features[0].properties.followUp).toBe(selected);
+  await expect(page.getByRole("status")).toContainText("ダウンロードしました");
+  await noPageOverflow(page, page.getByRole("button",{name:"トップに戻る",exact:true}));
+  await noPageOverflow(page, page.getByRole("button",{name:"別のルートで試す",exact:true}));
+  await page.screenshot({path:testInfo.outputPath("complete-options.png")});
+  await page.getByRole("button",{name:"トップに戻る",exact:true}).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await page.goto("/evac/complete");
+  await page.getByRole("button",{name:"別のルートで試す",exact:true}).click();
+  await expect(page).toHaveURL(/\/evac\/routes$/);
+  const restarted = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(restarted.finishedAt).toBeNull();
+  expect(restarted.decisions).toHaveLength(0);
+  expect(restarted.shelter).toBeTruthy();
 });
 
 test("一歩進んだ位置を再読込後も保持する", async ({ page }) => {
@@ -280,7 +430,7 @@ test("到着ノードを取得できない場合は自動歩行で進み続け�
 
 test("判断中は自動歩行を保持し回答後に再開する", async ({ page }) => {
   await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
-  await page.goto("/evac/walk?decision=1");
+  await page.goto("/evac/walk?decision=1", {waitUntil:"domcontentloaded"});
   await page.getByRole("button", { name: "自動で歩く" }).click();
   const decision = page.getByRole("region", { name: "判断ポイント 1 / 1" });
   await expect(decision.getByRole("button", { name: /周囲を確認して進む/ })).toBeEnabled();
@@ -359,7 +509,11 @@ test("現在地で場所を選びルート比較でケースを切り替える",
   await expect(page.getByRole("button",{name:"この道でスタート"})).toBeEnabled();
   expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).scenario)).toBe("flood");
   await noPageOverflow(page,page.getByRole("button",{name:"この道でスタート"}));
+  await expect(page.locator("summary",{hasText:"洪水浸水想定（想定最大規模）"})).toBeVisible();
+  await expect(page.getByText("ハザード比較：未取得区間あり")).toBeVisible();
   await capture(page,testInfo,"scenario-routes");
+  await page.getByRole("combobox",{name:"災害ケース"}).selectOption("earthquake");
+  await expect(page.locator("summary",{hasText:"洪水浸水想定（想定最大規模）"})).toHaveCount(0);
 });
 
 test("現在地の許可がない場合も住所検索を案内する", async ({ page }) => {
@@ -377,7 +531,7 @@ test("現在地の許可がない場合も住所検索を案内する", async ({
 test("解析失敗時だけ固定問題を案内し洪水ケースのまま続ける", async ({ page }) => {
   await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
   const requests: Record<string,unknown>[]=[];
-  await page.route("**/api/evac/analyze", async route => {
+  await page.route("**/api/evac/scenarios", async route => {
     requests.push(route.request().postDataJSON());
     await route.fulfill({status:502,json:{message:"地形データを取得できませんでした。"}});
   });
@@ -390,4 +544,250 @@ test("解析失敗時だけ固定問題を案内し洪水ケースのまま続�
   expect(session.scenario).toBe("flood");
   expect(session.walk.source).toBe("sample");
   expect(session.walk.steps.filter((step:{event?:{id:string}})=>step.event).map((step:{event:{id:string}})=>step.event.id)).toEqual(["practice-flood"]);
+});
+
+test("共通問題をノードで出題し回答後は自動歩行を再開する", async ({page}, testInfo) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.route("**/api/evac/scenarios", async route => {
+    const body = route.request().postDataJSON();
+    expect(body.scenario).toBe("flood");
+    await route.fulfill({json:{source:"context",points:[{id:"fixture:common-28",t:.4,position:{lat:35.0003,lng:139.0001},heading:90,remainingM:40,remainingS:30,event:{...WALK_SCENARIOS.find(c=>c.number===28)!.event,title:"電池が減った想定"}}]}});
+  });
+  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&coordinateDrift=1");
+  await expect(page.getByRole("button",{name:"自動で歩く"})).toBeEnabled();
+  const scene = page.getByRole("region",{name:"Street Viewで進む体験"});
+  const sceneBefore = await scene.boundingBox();
+  await page.getByRole("button",{name:"自動で歩く"}).click();
+  await expect(page.getByText("自動走行中",{exact:true})).toBeVisible();
+  expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
+  await expect(page.getByText(/選んだルートに沿って歩いています/)).toHaveCount(0);
+  await expect(page.getByText("電池が減った想定")).toBeVisible({timeout:25000});
+  const before = await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length);
+  expect(before).toBe(3);
+  const buttons = page.getByRole("region",{name:/判断ポイント/}).locator("li button");
+  for (const button of await buttons.all()) {
+    await button.scrollIntoViewIfNeeded();
+    const bounds = await button.boundingBox();
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  }
+  const situation = page.getByRole("region",{name:/判断ポイント/}).getByText(/スマートフォンの電池は残りわずか/);
+  await situation.scrollIntoViewIfNeeded();
+  await expect(situation).toBeVisible();
+  const textBounds = await situation.boundingBox();
+  const firstChoiceBounds = await buttons.first().boundingBox();
+  expect(textBounds!.y + textBounds!.height).toBeLessThanOrEqual(firstChoiceBounds!.y);
+  const order = await buttons.allTextContents();
+  await page.getByRole("button",{name:"状況と行動の詳しい説明を見る"}).click();
+  await page.getByRole("button",{name:"行動を選ぶ",exact:true}).click();
+  expect(await buttons.allTextContents()).toEqual(order);
+  await page.screenshot({path:`/private/tmp/jishingoto-three-choice-${testInfo.project.name}.png`});
+  await expect(page.getByRole("region",{name:/判断ポイント/}).locator("li button")).toHaveCount(3);
+  await page.waitForTimeout(1800);
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length)).toBe(before);
+  expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
+  await page.getByRole("button",{name:/現在地・避難先・分岐の目印を紙に控える/}).click();
+  for (const index of [2,3]) {
+    const card = page.getByRole("region",{name:new RegExp(`^判断ポイント ${index} /`)});
+    const proceed = card.locator('li button').filter({has:page.locator('img[src$="/go-v2.webp"]')});
+    await expect(proceed).toBeEnabled({timeout:25000});
+    await proceed.click();
+  }
+  await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
+  const state = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(state.decisions).toHaveLength(3);
+  expect(state.decisions[0].eventId).toBe("walk-case-28");
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{positionCommands:number}}).streetTest.positionCommands)).toBe(0);
+});
+
+test("洪水の迂回は現在のノードから再計算し残り問題を引き継ぐ", async ({page}) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  const requests: {maxPoints:number; excludedEventIds:string[];route:{path:{lat:number;lng:number}[]}}[]=[];
+  await page.route("**/api/evac/assess",async route=>route.fulfill({status:503,json:{message:"test unavailable"}}));
+  await page.route("**/api/evac/scenarios",async route=>{
+    requests.push(route.request().postDataJSON());
+    await route.fulfill({json:{source:"context",points:requests.length>1?[]:[{id:"fixture:case-10",t:.4,position:{lat:35.0003,lng:139},heading:90,remainingM:40,remainingS:30,event:WALK_SCENARIOS.find(c=>c.number===10)!.event}]}});
+  });
+  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&contextDetour=1");
+  await page.getByRole("button",{name:"自動で歩く"}).click();
+  await expect(page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/})).toBeVisible();
+  const departure = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.street.position);
+  await page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/}).click();
+  for (const index of [2,3]) {
+    const card = page.getByRole("region",{name:new RegExp(`^判断ポイント ${index} /`)});
+    const proceed = card.locator('li button').filter({has:page.locator('img[src$="/go-v2.webp"]')});
+    await expect(proceed).toBeEnabled({timeout:25000});
+    await proceed.click();
+  }
+  await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
+  expect(requests).toHaveLength(2);
+  expect(requests[1].maxPoints).toBeUndefined();
+  expect(requests[1].excludedEventIds).toEqual(["walk-case-10"]);
+  expect(requests[1].route.path[0]).toEqual(departure);
+  const result=await page.evaluate(()=>({session:JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!),street:(window as unknown as {streetTest:{moves:string[];positionCommands:number}}).streetTest}));
+  expect(result.session.decisions[0].rerouted).toBe(true);
+  expect(result.street.moves).toContain("D");
+  expect(result.street.positionCommands).toBe(0);
+});
+
+test("Street Viewの初期取得失敗を再試行して同じ体験を続ける", async ({page}) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.goto("/evac/walk?initialLoadError=UNKNOWN_ERROR");
+  const scene=page.getByRole("region",{name:"Street Viewで進む体験"});
+  await expect(scene.getByRole("alert")).toContainText("この地点のStreet Viewを取得できませんでした");
+  const before=await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  await page.evaluate(()=>{(window as unknown as {streetTest:{initialLoadError:string|null}}).streetTest.initialLoadError=null;});
+  await page.getByRole("button",{name:"同じ地点で再試行",exact:true}).click();
+  await expect(scene).toHaveAttribute("data-scene-state","pano");
+  await expect(page.getByRole("button",{name:"自動で歩く",exact:true})).toBeEnabled();
+  const after=await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(after.startRouteId).toBe(before.startRouteId);
+  expect(after.decisions).toEqual(before.decisions);
+});
+
+test("Street Viewがない地点を通信エラーと区別して案内する", async ({page}) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.goto("/evac/walk?initialLoadError=ZERO_RESULTS");
+  await expect(page.getByRole("region",{name:"Street Viewで進む体験"}).getByRole("alert")).toContainText("屋外のStreet Viewが見つかりませんでした");
+  await expect(page.getByRole("button",{name:"自動で歩く",exact:true})).toBeDisabled();
+  await expect(page.getByRole("button",{name:"地図",exact:true})).toBeEnabled();
+  await page.getByRole("button",{name:"出発地点を少しずらす",exact:true}).click();
+  await expect(page).toHaveURL(/\/evac$/);
+  await expect(page.getByRole("textbox",{name:"住所・駅名で出発地点を検索"})).toBeVisible();
+  expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).home)).toEqual({lat:35,lng:139});
+});
+
+for (const perfect of [true, false]) {
+  test(`振り返りは${perfect ? "全問満点でも" : "改善点があっても"}全判断をイラストで表示する`, async ({page}, testInfo) => {
+    await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+    await page.addInitScript(({events,perfect})=>{
+      const saved = JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!);
+      saved.mode = "mock";
+      saved.finishedAt = 1000;
+      saved.decisions = events.map((event,i)=>({
+        pointId:`review-${i}`, eventId:event.id,
+        choiceId: perfect || i===0 ? event.choices.reduce((a,b)=>a.priority>b.priority?a:b).id : "go",
+        position:saved.home, extraSeconds:0, rerouted:false, timedOut:false,
+      }));
+      sessionStorage.setItem("jishingoto.evac.v2",JSON.stringify(saved));
+    },{events:[WALK_SCENARIOS.find(s=>s.number===18)!.event,WALK_SCENARIOS.find(s=>s.number===38)!.event],perfect});
+    await page.goto("/evac/report");
+    await expect(page.getByText("番号のボタンを押すと、その場面と選んだ行動を見返せます。")).toBeVisible();
+    const buttons = page.getByRole("button",{name:/^判断\d+：/});
+    await expect(buttons).toHaveCount(2);
+    await buttons.first().click();
+    const dialog = page.getByRole("dialog",{name:"判断 1 / 2"});
+    await expect(dialog.locator('img[src$="walk-case-18/situation-v2.webp"]')).toBeVisible();
+    await dialog.getByRole("button",{name:"次の判断"}).click();
+    await expect(page.getByRole("dialog").locator('img[src$="walk-case-38/situation-v2.webp"]')).toBeVisible();
+    if (!perfect) await expect(page.getByRole("dialog").getByRole("figure",{name:"次に意識したい行動",exact:true}).locator('img[src$="distance-v2.webp"]')).toBeVisible();
+    const closeReport = page.getByRole("dialog").getByRole("button",{name:"判断を閉じる"});
+    await noPageOverflow(page, closeReport);
+    await page.screenshot({path:testInfo.outputPath(`report-${perfect}.png`)});
+    await closeReport.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(buttons.first()).toBeFocused();
+    await page.goto("/evac/summary");
+    await expect(page.getByRole("region",{name:"判断スコア"})).toContainText(perfect ? "100" : "50");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("dialog",{name:"次に確かめること"})).toHaveCount(0);
+    await expect(page.getByTestId("score-ring")).toHaveAttribute("stroke-dasharray", perfect ? "100 100" : "50 100");
+    await expect(page.getByRole("region",{name:"判断の振り返り"}).getByRole("img",{name:/状況のイラスト/})).toHaveCount(2);
+    await page.screenshot({path:testInfo.outputPath(`score-overview-${perfect}.png`)});
+    const trigger = page.getByRole("button",{name:/^判断1：/});
+    await trigger.click();
+    const review = page.getByRole("region",{name:"判断の詳細"});
+    await expect(review.getByLabel("良い判断",{exact:true})).toContainText("○");
+    await expect(review.getByRole("img",{name:/状況のイラスト/})).toHaveCount(1);
+    const next = page.getByRole("button",{name:"次の判断",exact:true});
+    await noPageOverflow(page, next);
+    await next.click();
+    await expect(page.getByRole("dialog",{name:"判断 2 / 2"})).toBeVisible();
+    await expect(review.getByLabel(perfect ? "良い判断" : "見直したい判断",{exact:true})).toContainText(perfect ? "○" : "×");
+    await expect(review.locator("img")).toHaveCount(perfect ? 2 : 3);
+    if (!perfect) {
+      await expect(review.locator('img[src$="walk-case-38/go-v2.webp"]')).toHaveCount(1);
+      await expect(review.locator('img[src$="walk-case-38/distance-v2.webp"]')).toHaveCount(1);
+    }
+    await noPageOverflow(page, page.getByRole("button",{name:"判断を閉じる"}));
+    const condition = review.getByRole("figure",{name:"問題の条件",exact:true});
+    await expect(condition).toContainText(WALK_SCENARIOS.find(item=>item.number===38)!.event.situation.replace("【想定問題】", "").split("\n")[0]);
+    if (!perfect) {
+      const selectedCard = review.getByRole("figure",{name:"選んだ行動",exact:true});
+      const recommendedCard = review.getByRole("figure",{name:"次に意識したい行動",exact:true});
+      const left = await selectedCard.locator("img").boundingBox();
+      const right = await recommendedCard.locator("img").boundingBox();
+      expect(Math.abs(left!.y - right!.y)).toBeLessThan(1);
+      expect(Math.abs(left!.height - right!.height)).toBeLessThan(1);
+      await expect(recommendedCard.getByLabel("良い判断",{exact:true})).toBeVisible();
+    }
+    await page.screenshot({path:testInfo.outputPath(`summary-${perfect}.png`)});
+    const tradeoffs = review.getByRole("region",{name:"この行動のポイント"});
+    const initialTab = tradeoffs.getByRole("tab",{name:perfect ? "利点" : "気をつけたい点",exact:true});
+    const nextTab = tradeoffs.getByRole("tab",{name:perfect ? "気をつけたい点" : "利点",exact:true});
+    await expect(initialTab).toHaveAttribute("aria-selected","true");
+    await expect(tradeoffs).toHaveCSS("padding-top","12px");
+    await expect(tradeoffs.getByRole("heading",{name:perfect ? "この選択の利点" : "気をつけたい点"})).toBeVisible();
+    await nextTab.click();
+    await expect(nextTab).toHaveAttribute("aria-selected","true");
+    await expect(tradeoffs).toHaveAttribute("data-transition","idle");
+    await expect(tradeoffs.getByRole("heading",{name:perfect ? "気をつけたい点" : "この選択の利点"})).toBeVisible();
+    await nextTab.press("ArrowLeft");
+    await expect(initialTab).toHaveAttribute("aria-selected","true");
+    await expect(tradeoffs).toHaveAttribute("data-transition","idle");
+    await page.emulateMedia({reducedMotion:"reduce"});
+    await nextTab.click();
+    await expect(nextTab).toHaveAttribute("aria-selected","true");
+    await expect(tradeoffs).toHaveAttribute("data-transition","idle");
+    await expect(tradeoffs.getByRole("tabpanel")).toHaveCSS("animation-name","none");
+    await page.screenshot({path:testInfo.outputPath(`tradeoff-${perfect}.png`)});
+    await page.getByRole("button",{name:"判断を閉じる"}).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await page.getByRole("button",{name:/^判断2：/}).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+}
+
+test("残り5秒で強調し3秒で赤くなり、風景確認中は演出も止まる",async ({page},testInfo)=>{
+  await openIllustratedQuestion(page,28,7);
+  const timer=page.locator('button[aria-label="制限時間の設定"]');
+  await expect(timer).toHaveAttribute("data-urgency","normal");
+  await expect(page.getByTestId("decision-timer")).toHaveText("5秒");
+  await expect(timer).toHaveAttribute("data-urgency","warning");
+  await page.screenshot({path:testInfo.outputPath("timer-5.png")});
+  await expect(page.getByTestId("decision-timer")).toHaveText("3秒");
+  await expect(timer).toHaveAttribute("data-urgency","critical");
+  await page.screenshot({path:testInfo.outputPath("timer-3.png")});
+  await page.getByRole("button",{name:"Street Viewで周りを見る"}).click();
+  await expect(timer).toHaveAttribute("data-urgency","normal");
+  await expect(page.getByText("地点を確認しています…",{exact:true})).toHaveCount(0);
+  await page.getByRole("button",{name:"クイズに戻る"}).click();
+  await expect(timer).toHaveAttribute("data-urgency","critical");
+});
+
+ test("地点確認の進捗バーは処理段階と取得済み地点数を表示する", async ({page}, testInfo) => {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.goto("/evac/walk?slowPlan=1&eightNodes=1", {waitUntil:"domcontentloaded"});
+  const bar = page.getByRole("progressbar",{name:"地点確認の進捗"});
+  await expect(bar).toBeVisible();
+  await expect(bar).toHaveAttribute("max","3");
+  await expect(bar).toHaveAttribute("value","1");
+  await expect(bar).toHaveAttribute("aria-valuetext", /道の接続を確認中、[1-9]\d*地点取得済み/);
+  await page.screenshot({path:testInfo.outputPath("preparation-progress.png")});
+  await expect(page.getByRole("button",{name:"自動で歩く",exact:true})).toBeEnabled();
+  await expect(bar).toHaveCount(0);
+});
+
+test("mainの対象選択と避難体験のトップ導線を両立する", async ({page}) => {
+  await page.goto("/");
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(0);
+  await page.getByRole("button",{name:/子供/}).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
+  await page.goto("/evac?mode=mock&from=standalone");
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
+  await page.getByRole("link",{name:"トップページへ戻る",exact:true}).click();
+  await expect(page).toHaveURL(/\/home$/);
 });

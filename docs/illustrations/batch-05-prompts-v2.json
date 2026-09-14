@@ -1,0 +1,112 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 5,
+  "assets": [
+    {
+      "number": 19,
+      "variant": "situation",
+      "prompt": "STYLE ONLY reference no wires. Simple VERY THICK navy rounded outline illustration blue-shirt yellow-backpack faceless adult LARGE60%height, pale blue sky gray paving muted colors. One3:2 mobile scene. 消灯した信号と停止車を大きく。停止車の陰に隣車線への視界が隠れる。人物は横断前の歩道。 Oblique side view show clear lightgray sidewalk foreground, dark road and zebra crossing starts at curb. One stopped grayblue car on road RIGHT before crossing obscuring adjacent lane. Traffic signal all lenses DARK unlit. BOTH person feet on sidewalk BEFOREcurb. No hidden cars, transparent cars, text arrows icons, damage.",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a24e8e76-669a-4ff1-8d8a-75b0aa3eefe5.png",
+      "asset": "public/illustrations/evac/walk-case-19/situation-v2.webp"
+    },
+    {
+      "number": 19,
+      "variant": "distance",
+      "prompt": "Edit reference action: person remains with BOTH FEET fully on lightgray sidewalk, head and upper body twisted to look LEFT away from stoppedcar toward other direction of intersection checkingtraffic. Armsdown. Keep full largeperson, same curb road crossing car unlitlight. No extra cars people arrows words icons. Thick navy V2 simple3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a24e8e76-669a-4ff1-8d8a-75b0aa3eefe5.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-43bdc6b6-634b-4d56-8609-ef93447c2687.png",
+      "asset": "public/illustrations/evac/walk-case-19/distance-v2.webp"
+    },
+    {
+      "number": 19,
+      "variant": "go",
+      "prompt": "Edit action: person raises one hand toward stoppedcar driver, stepping from sidewalk onto zebra crossing RIGHT. Front foot on firstwhite crossingstripe, backfoot on sidewalk. Same largeperson car geometry unlitlight thick navy V2. Clear curb feet relation. No extra cars people text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a24e8e76-669a-4ff1-8d8a-75b0aa3eefe5.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-07604301-2588-40db-a058-3580dce14171.png",
+      "asset": "public/illustrations/evac/walk-case-19/go-v2.webp"
+    },
+    {
+      "number": 19,
+      "variant": "consider",
+      "prompt": "Edit action: ONE purple-shirt pedestrian already walking RIGHT across zebra, protagonist follows with visible oneperson gap, takes firststep from sidewalk onto crossing armsDOWN. Keep same graycar right, unlitlight, clearcurb. Large figures, separate silhouettes, no othercars or people, words arrows icons. Verythicknavy V2 one3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a24e8e76-669a-4ff1-8d8a-75b0aa3eefe5.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-54daa319-193e-473c-a0de-5a79aebf982a.png",
+      "asset": "public/illustrations/evac/walk-case-19/consider-v2.webp"
+    },
+    {
+      "number": 32,
+      "variant": "situation",
+      "prompt": "Correct spatiallayout: protagonist must stand on SAME sidewalk as guide and factorygate, to LEFT ofguide. Move roadway downwardforeground so BOTH protagonist andguide feet on continuous LIGHTGRAY upper sidewalk. Opposite sidewalk narrowbandbottomedge separatedby darkroad. Person remains large50-60%height using obliqueperspective. Guide besidegate points diagonally toward foregroundLEFT oppositewalkway, keep this final pose. Gate emergencyvan right. Thick navy minimal V2 no text arrows.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ed28370d-c4a8-4de6-94fe-ac361ae9218b.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7b925e71-ed6b-4484-b659-1c55006fda8f.png",
+      "asset": "public/illustrations/evac/walk-case-32/situation-v2.webp"
+    },
+    {
+      "number": 32,
+      "variant": "distance",
+      "prompt": "Edit action: blue protagonist now walking toward foregroundLEFT opposite sidewalk following guide's direction, head turned back toguide. Show LARGE fullperson on foregroundlightgray oppositewalkway, gate across darkroadRIGHT. Guide stays leftofgate same downwardleftpoint. Zoom protagonist60%height, reduce blankroad. Same emergencyvan gate. Thick navy simple V2 no text arrows icons.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7b925e71-ed6b-4484-b659-1c55006fda8f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-59c7f808-159a-49a6-88d1-61a4acec8ebb.png",
+      "asset": "public/illustrations/evac/walk-case-32/distance-v2.webp"
+    },
+    {
+      "number": 32,
+      "variant": "go",
+      "prompt": "Edit action: emergencyvan has driven OUT and is now foregroundRIGHT on darkroad, rear visible. Blueprotagonist steps RIGHT across driveway directly in front of factorygate BEHIND departedvan. Feet on gate driveway, not oppositewalkway. Guide unchanged leftofgate pointingdownleft. Crop closer gateandperson LARGE toreadmobile. Keep simplethicknavy style no arrows words icons additionalvehicle.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7b925e71-ed6b-4484-b659-1c55006fda8f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-2e9f2046-849f-4c5c-9260-59bdf51e3920.png",
+      "asset": "public/illustrations/evac/walk-case-32/go-v2.webp"
+    },
+    {
+      "number": 32,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist has stepped further LEFT awayfromgate and now stands STILL on SAME gate-side sidewalk, armsdown feetparallel watching van. Clearlargepavementgap between person andguide. Cropvertical blankroad/sky reduce so person55%height. Guide stays atgateleft pointingdownleft, van atgate. Thick navy V2 no newpeople objects text arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7b925e71-ed6b-4484-b659-1c55006fda8f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f9917c48-73eb-47a7-8baf-314e9b1c4382.png",
+      "asset": "public/illustrations/evac/walk-case-32/consider-v2.webp"
+    },
+    {
+      "number": 36,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY. One3:2 simple thick navy rounded flatcolor illustration for94px mobile. Large blue-shirt yellow-backpack adult LEFT on sidewalk before parkingdriveway. Large stopped grayblue car RIGHT side/front3quarter view atdriveway, driver visible through OPEN sidewindow extends hand beckoning. Car body obscures parkingexit behind. Lightgray sidewalk vs darkgray driveway clearboundary. Small storebackgroundcrop. NO poles wires text arrows icons hiddencars transparency or damage. Person60%height. 停止車を透かさず、隠れた車を追加して危険を確定させない。確認案で勝手に横断済みにしない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-0101bc8a-c89f-4d6d-b99c-130eed4d438c.png",
+      "asset": "public/illustrations/evac/walk-case-36/situation-v2.webp"
+    },
+    {
+      "number": 36,
+      "variant": "distance",
+      "prompt": "Edit action: protagonist moves along sidewalk toward foreground to see beyond stoppedcar, stays BOTH feet entirely LIGHTGRAY sidewalk BEFOREdriveway, body angledback head looking into parking entrance beyondcar rather than atdriver. Car andbeckoningdriver same, no hidden cars added. Enlargeperson65%height foreground, clearcurb. Simple thick navyV2 no wordsiconsarrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-0101bc8a-c89f-4d6d-b99c-130eed4d438c.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-cd762ce8-0d91-40e2-bf4e-28fa2a10e705.png",
+      "asset": "public/illustrations/evac/walk-case-36/distance-v2.webp"
+    },
+    {
+      "number": 36,
+      "variant": "go",
+      "prompt": "Edit action: blueperson steps RIGHT across driveway IN FRONT of car bumper, shallow bow headtoward beckoningdriver. Onefoot departing sidewalk otherfoot darkdriveway. Shift car slightlyback in depth so clear frontcrossingstrip visible and person not intersectcar. Large figure60%height. Same storefront/driver/car, thick navyV2. No arrows icons text additionalcars people.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-0101bc8a-c89f-4d6d-b99c-130eed4d438c.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-2b397f76-f07f-4213-a0e5-fb5fc4f49a7e.png",
+      "asset": "public/illustrations/evac/walk-case-36/go-v2.webp"
+    },
+    {
+      "number": 36,
+      "variant": "consider",
+      "prompt": "Edit action: add ONE purple-shirt pedestrian ahead RIGHT crossing IN FRONT of stoppedcar, blueprotagonist follows withclear oneperson gap across driveway, armsdown headforward notbowingdriver. Keep carfartherback asreference, feetvisible foreground. Driverhand normalpeachcolor REMOVE smallredmark. SimplethicknavyV2 largefigures no text arrows icons othercars.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-2b397f76-f07f-4213-a0e5-fb5fc4f49a7e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a993a5d4-b036-4009-bf11-2ebbf11c6a16.png",
+      "asset": "public/illustrations/evac/walk-case-36/consider-v2.webp"
+    }
+  ],
+  "revisions": [
+    {
+      "number": 32,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY no wires. One3:2 very thick navy flat simple illustration. LARGE blue-shirt yellow-backpack person foregroundLEFT. Factory gate RIGHT with one white-red emergencyvan comingout onto driveway. Orangevest navycap guide besidegate pointing LEFT toward opposite sidewalk foreground across road. Clear darkgray roadway and lightgray sidewalks. Gate entrance vehicle path is RIGHT; alternative sidewalk direction LEFT. Minimalfactory cropped. No text arrows floatingicons othercars damage. 係員の位置と手の向きは全画像で固定。門を渡る案と反対歩道へ移る案の進行方向を混同させない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ed28370d-c4a8-4de6-94fe-ac361ae9218b.png",
+      "asset": "public/illustrations/evac/walk-case-32/situation-v2.webp"
+    }
+  ]
+}

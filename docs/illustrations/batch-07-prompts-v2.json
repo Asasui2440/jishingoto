@@ -1,0 +1,103 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 7,
+  "assets": [
+    {
+      "number": 24,
+      "variant": "situation",
+      "prompt": "Correct ONLY protagonist pose to neutral situation: lower pointingarm to side, both armsdown standing beside stroller facingstairs RIGHT. Keep same otherperson stroller stairs3people flatpathleft, no newobjects. ThicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa888c90-5217-4577-a64f-b6bb70a8336e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-775450df-c5ea-42ba-b14b-d9e9c36afeda.png",
+      "asset": "public/illustrations/evac/walk-case-24/situation-v2.webp"
+    },
+    {
+      "number": 24,
+      "variant": "distance",
+      "prompt": "Reference STYLE ONLY no poleswires. ONE3:2 VERYTHICK navy flatcolor mobile illustration. LARGE blue-shirt yellowbackpack protagonist and purple-shirt adultcompanion with simple stroller inforegound LEFT. Stairs RIGHT have only3plainbackgroundpeople, separate silhouettes. FLAT alternativepath goesLEFT. Stroller darkframe tealcanopy largeseparatewheels, no visiblebaby required. Showfulladults55-60%height. 混雑した階段の手前に二人とベビーカー。横に段差のない道。階段の群衆は少数の重なる人影。 No text arrows icons damage distress. 会話と待機は指差し・対面で区別。階段上で無事に運び終えた結果は描かない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa888c90-5217-4577-a64f-b6bb70a8336e.png",
+      "asset": "public/illustrations/evac/walk-case-24/distance-v2.webp",
+      "selectionNote": "初回の状況図は平らな道を指して相談する姿勢になったため、distance選択肢へ採用。"
+    },
+    {
+      "number": 24,
+      "variant": "go",
+      "prompt": "Edit action: twoadults carry SAME tealstroller up FIRST stair, blueadult on higherfirststep holds FRONTlowerframe bothhands, purpleadult atbottom holds REARhandle bothhands. Strollerwheels justlifted abovebottomstep, no floating unsupportedframe no triumphantarrival. Sideview close largeadults/stroller, threebackgroundpeople sparse top. StairRIGHT flatpathLEFT unchanged. Thicknavy simpleV2 no words arrows injury.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-775450df-c5ea-42ba-b14b-d9e9c36afeda.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b0c79bfc-fed2-4dd8-9825-af1996ea4426.png",
+      "asset": "public/illustrations/evac/walk-case-24/go-v2.webp"
+    },
+    {
+      "number": 24,
+      "variant": "consider",
+      "prompt": "Edit action: bothadults wait immediately before FIRST stair with tealstroller ALL wheels on flatground, faces towardcrowdedstairs, no consultation pointing or carrying. Purpleholdsrearhandle blue beside. Tightcrop largefigures keepstairsRIGHT threepeople. Verythicknavy V2 no icons words arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-775450df-c5ea-42ba-b14b-d9e9c36afeda.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d9e34f40-6147-4589-9cfe-2b11308f8a8a.png",
+      "asset": "public/illustrations/evac/walk-case-24/consider-v2.webp"
+    },
+    {
+      "number": 25,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference. One3:2 verythicknavy flat simple illustration LARGE blueyellowbackpack person andpurplecompanion60%height foreground. Busygraywalkingpassage RIGHT with2simple passersby, offpathrecess LEFT with lowbench. Purplecompanion slightly slumped shoulders head lowered tired butstanding, blue beside. Distinctpath/recess pavementedge. No injurycollapse medicalsigns text arrows icons wires. 歩行者が通る通路、疲れた同行者と主人公、すぐ脇の待機スペース。同行者は肩を落とす程度。 倒れた人物や重症を追加しない。休憩二案は通路内外が必ず見える構図に。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15158057-dc91-4b33-acb0-191123aacd4d.png",
+      "asset": "public/illustrations/evac/walk-case-25/situation-v2.webp"
+    },
+    {
+      "number": 25,
+      "variant": "distance",
+      "prompt": "Edit action: purplecompanion sits on bench LEFT inoffpath beige recess resting, blueprotagonist crouches/facespurple consulting with openhand. Theirbodiesfeet entirely aside fromGRAYmainpassage RIGHT, same3passersby onmainpath. Closeview largefigures60%height no bottle needed no medicaldiagnosis. ThicknavyV2 no text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15158057-dc91-4b33-acb0-191123aacd4d.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5470dcf4-bfb8-4453-8bdc-82e8805e1cf0.png",
+      "asset": "public/illustrations/evac/walk-case-25/distance-v2.webp"
+    },
+    {
+      "number": 25,
+      "variant": "go",
+      "prompt": "Edit action: bothmainpeople walking slowly onGRAYmainpassage RIGHT, blue offers visible waterbottle to purplecompanion while taking shortsteps. Purple stillslumped butwalking. BenchLEFT remainsunused. Threepassersby fewer overlaps. Largefigures60%height same thicknavyV2. No healingicons text arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15158057-dc91-4b33-acb0-191123aacd4d.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-18deec3f-bc59-426e-ba51-107800410f33.png",
+      "asset": "public/illustrations/evac/walk-case-25/go-v2.webp"
+    },
+    {
+      "number": 25,
+      "variant": "consider",
+      "prompt": "Edit action: bothmainpeople stop IN MIDDLE ofGRAYmainpassage RIGHT, purple sits/crouches torest with purplebackpackseton ground besidefeet, blue stands close, threepassersby aroundbehind. Emptybench unused BEIGErecessLEFT clearlyseparate. Largefigures55-65%height, no collapse injury bottle. Thicknavy simpleV2 no text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15158057-dc91-4b33-acb0-191123aacd4d.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-049dc9a5-af2a-434d-98f1-3313b01ac3a8.png",
+      "asset": "public/illustrations/evac/walk-case-25/consider-v2.webp"
+    },
+    {
+      "number": 30,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference. ONE3:2 verythicknavy flat simple mobile illustration. Blueyellowbackpackprotagonist andpurplecompanion foregroundLEFT, orangevest navycap guideRIGHT gesturing toward distant otherbuilding farRIGHT. All3 LARGE55-65%height feetclear neutralstanding listening. Plainpavedplaza, no visibleroute behind. No cane wheelchair stairs added impairment text arrows icons wires. 係員・主人公・同行者が手前に集まり、別棟は背景に小さく。行き方はまだ見えない。 杖や車椅子を追加して条件を変えない。体の状態や相談内容は本文で補う。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa811b11-60f9-480c-8745-62ba648954d6.png",
+      "asset": "public/illustrations/evac/walk-case-30/situation-v2.webp"
+    },
+    {
+      "number": 30,
+      "variant": "distance",
+      "prompt": "Edit action: protagonistandpurplecompanion faceguide in smallcircle consulting, blueholdsphone with simpleboldrouteline towardguide, guidepoints phone ratherthan building, purpleincludedlookingphone. All3large separatehands bodies. Same distantbuildingRIGHT no definedroute no newstairswheelchair. VerythicknavyV2 no words bubbles arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa811b11-60f9-480c-8745-62ba648954d6.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3bd9e80c-84d4-4dbd-aa05-2dd336363d19.png",
+      "asset": "public/illustrations/evac/walk-case-30/distance-v2.webp"
+    },
+    {
+      "number": 30,
+      "variant": "go",
+      "prompt": "Edit action: blue and purplecompanions walk RIGHT together following ONE graygreen passerby toward distantbuilding, guide remains behindLEFT. Clearseparation allsilhouettes, main2large55%height, graypersonahead gap. No phone/consultation. Sameplainplaza no defineddetailedroute stairscanes. ThicknavyV2 no text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa811b11-60f9-480c-8745-62ba648954d6.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-1ff79d5f-65bd-4e0a-90a0-f3ed0ffe0829.png",
+      "asset": "public/illustrations/evac/walk-case-30/go-v2.webp"
+    },
+    {
+      "number": 30,
+      "variant": "consider",
+      "prompt": "Edit action: blueprotagonist walks alone RIGHT towardbuilding, purplecompanion staysSTILL originalLEFT location armsdown besideguide. Widecleargap between blue andpurple. Largeblue foreground60%height, purpleguide50%height. Sameplaza no extrapeople phones waitingbench staircase icons arrows words. ThicknavyV2 one3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fa811b11-60f9-480c-8745-62ba648954d6.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-388710b8-5461-4dce-89d9-2593c6bad54f.png",
+      "asset": "public/illustrations/evac/walk-case-30/consider-v2.webp"
+    }
+  ]
+}

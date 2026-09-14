@@ -1,7 +1,11 @@
 "use client";
 
 import { EVAC_SCENARIOS, SHELTER_DISASTERS, type EvacScenario } from "./evac-scenario";
+import { compareFloodRoutes } from "./flood-hazard";
+import { groupSchoolShelters } from "./shelter-groups";
 import { floodPracticeEvent } from "./geo-events";
+import { hasRouteBacktracking, similarRoutePaths } from "./route-backtracking";
+import { findRouteBranches, followsRouteBranch } from "./route-branches";
 
 /**
  * フェーズ2の取得境界。フェーズ1のfixture/liveと同様、モードを明示する。
@@ -96,7 +100,7 @@ export async function fetchShelters(near: LatLng, mode: EvacMode, scenario: Evac
   if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
 
   try {
-    return nearby(await fetchGsiShelters(near, scenario));
+    return nearby(groupSchoolShelters(await fetchGsiShelters(near, scenario), near));
   } catch {
     throw new Error(`${EVAC_SCENARIOS[scenario].label}に対応する指定緊急避難場所を取得できませんでした。通信を確認して再試行してください。`);
   }
@@ -195,7 +199,7 @@ async function fetchGsiShelters(near: LatLng, scenario: EvacScenario): Promise<S
     if (String(props[EVAC_SCENARIOS[scenario].flag]) !== "1") return [];
     const name = pick(props, ["name", "名称", "施設・場所名"]);
     if (!name) return [];
-    const id = `gsi-${c[0].toFixed(5)}-${c[1].toFixed(5)}`;
+    const id = `gsi-${c[0].toFixed(5)}-${c[1].toFixed(5)}-${encodeURIComponent(name)}`;
     if (seen.has(id)) return [];
     seen.add(id);
     return [
@@ -207,7 +211,7 @@ async function fetchGsiShelters(near: LatLng, scenario: EvacScenario): Promise<S
         address: pick(props, ["address", "住所", "所在地"]),
         position: { lat: c[1], lng: c[0] },
         source: `国土地理院「指定緊急避難場所データ」（${EVAC_SCENARIOS[scenario].label}）`,
-        note: "対応[たいおう]する災害[さいがい]の種別[しゅべつ]は、自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。",
+        note: [pick(props, ["remarks"]), "対応[たいおう]する災害[さいがい]の種別[しゅべつ]は、自治体[じちたい]の一覧[いちらん]でも確[たし]かめてください。"].filter(Boolean).join(" "),
       },
     ];
   });
@@ -290,15 +294,15 @@ const WALK_SPEED = 1.2;
 /**
  * 候補経路を返す。実APIから1本だけ取得できた場合もそのまま採用する。
  *
- * 1本目 = 距離と時間を優先した経路、2本目 = 迂回しやすさを優先した経路。
- * **どちらが安全かは断定しない**。画面には距離・時間・イベント数と、
+ * 実在する分岐の別の道も探索し、距離順に最大3本を返す。
+ * **どの道が安全かは断定しない**。画面には距離・時間・イベント数と、
  * 経路データから言える事実（曲がる回数など）だけを出す。
  */
 export async function fetchRoutes(home: LatLng, shelter: Shelter, mode: EvacMode, scenario: EvacScenario = "earthquake"): Promise<RouteOption[]> {
   if (mode === "mock") return demoRoutes(home, shelter);
   if (!hasMapsKey()) throw new Error("地図のAPIキーが未設定です。入口で設定を確認してください。");
   const routes = await fetchRoutesFromGoogle(home, shelter, scenario);
-  if (!routes.length) throw new Error("この場所への徒歩ルートが見つかりませんでした。場所を選び直してください。");
+  if (!routes.length) throw new Error("同じ道を引き返さずに進める徒歩ルートが見つかりませんでした。避難先を選び直してください。");
   return routes;
 }
 
@@ -316,7 +320,7 @@ function detourVia(home: LatLng, to: LatLng): LatLng {
   const east = (to.lng - home.lng) * lngM;
   const north = (to.lat - home.lat) * latM;
   const len = Math.hypot(east, north) || 1;
-  // ずらす量。近すぎても遠すぎても遠回りしすぎるので幅を決める。
+  // 歩行中の迂回用。最初のルート候補には、実在する分岐を使う。
   const off = Math.min(500, Math.max(150, len * 0.4));
   // 垂直方向は (-north, east)
   return {
@@ -327,36 +331,78 @@ function detourVia(home: LatLng, to: LatLng): LatLng {
 
 async function fetchRoutesFromGoogle(home: LatLng, shelter: Shelter, scenario: EvacScenario): Promise<RouteOption[]> {
   const found = await requestWalkingRoutes(home, shelter.position);
-  const sorted = [...found].sort((a, b) => a.distanceM - b.distanceM);
-  if (!sorted.length) return [];
-  const fingerprint = (route: WalkingRoute) => JSON.stringify(route.path);
-  const primaryPath = fingerprint(sorted[0]);
-  let alternative = sorted.findLast((route) => fingerprint(route) !== primaryPath);
-  if (!alternative) {
-    try {
-      const extra = await requestWalkingRoutes(home, shelter.position, detourVia(home, shelter.position));
-      alternative = extra.find((route) => fingerprint(route) !== primaryPath);
-    } catch {
-      // 代替ルートがなくても、取得できた実経路1本で進める。
+  const unique = new Map<string, WalkingRoute>();
+  const collect = (routes: WalkingRoute[]) => {
+    for (const route of routes) {
+      const key = [...unique.entries()].find(([, prior]) => similarRoutePaths(prior.path, route.path))?.[0] ?? JSON.stringify(route.path);
+      const previous = unique.get(key);
+      if (!previous || route.distanceM < previous.distanceM) unique.set(key, route);
     }
+  };
+  collect(found);
+  // 機械的に遠方へ経由点を置かず、実在する分岐の別の道を比較する。
+  // 通常候補が3本あっても、分かれ道の直進などを探索対象にする。
+  const branches = await findRouteBranches(found.length ? found.map(route => route.path) : [[home, shelter.position]])
+    .catch(() => []);
+  for (let i = 0; i < branches.length; i += 2) {
+    const results = await Promise.allSettled(branches.slice(i, i + 2).map(async branch => {
+      const routes = await requestWalkingRoutes(home, shelter.position, branch.via);
+      return routes.filter(route => followsRouteBranch(route.path, branch));
+    }));
+    for (const result of results) {
+      if (result.status === "fulfilled") collect(result.value);
+    }
+    if (unique.size >= 3) break;
   }
-  // 経由地点付きのルートが短くなるケースも含め、表示する候補を距離順にする。
-  const candidates = alternative ? [sorted[0], alternative].sort((a, b) => a.distanceM - b.distanceM) : [sorted[0]];
-  const options = candidates.map((route, i): RouteOption => {
+  const candidates = [...unique.values()].sort((a, b) => a.distanceM - b.distanceM).slice(0, 3);
+  if (!candidates.length) return [];
+  const toOption = (route: WalkingRoute, i: number): RouteOption => {
     const kind = i === 0 ? "short" : "safe";
     const eventCount = i === 0 ? 3 : 2;
     return {
       id: `${kind}-${Math.round(route.distanceM)}-${i}`,
       kind,
-      label: i === 0 ? "距離[きょり]が短[みじか]いルート" : "もうひとつのルート",
+      label: i === 0 ? "距離[きょり]が短[みじか]いルート" : `別[べつ]のルート ${String.fromCharCode(65 + i)}`,
       notes: routeNotes(kind, route.distanceM, route.segments, eventCount),
       distanceM: route.distanceM,
       durationS: route.durationS,
       path: route.path,
       eventCount,
     };
-  });
-  return assessRouteOptions(options, scenario);
+  };
+  const assessed = await assessRouteOptions(candidates.map(toOption), scenario);
+  if (scenario !== "flood") return assessed;
+  const vias: LatLng[] = [];
+  for (const route of assessed) for (const via of route.assessment?.flood?.suggestedVias ?? []) {
+    if (vias.every(prior => distanceM(prior, via) > 80)) vias.push(via);
+  }
+  // ハザード上でより浅い地点を経由する実経路を取得し、道全体を再評価する。
+  const extra: RouteOption[] = [];
+  const known = candidates.map(route => route.path);
+  for (let i = 0; i < Math.min(vias.length, 4); i += 2) {
+    const results = await Promise.allSettled(vias.slice(i, Math.min(i + 2, 4)).map(via => requestWalkingRoutes(home, shelter.position, via)));
+    for (const result of results) if (result.status === "fulfilled") for (const route of result.value) {
+      if (known.some(path => similarRoutePaths(path, route.path))) continue;
+      known.push(route.path);
+      extra.push(toOption(route, extra.length + 10));
+    }
+  }
+  const added: RouteOption[] = [];
+  for (let i = 0; i < extra.length; i += 4) added.push(...await assessRouteOptions(extra.slice(i, i + 4), scenario));
+  const all = [...assessed, ...added];
+  const shortest = Math.min(...all.map(route => route.distanceM));
+  const allColored = all.every(route => (route.assessment?.flood?.coloredM ?? 0) > 0);
+  return all.sort(compareFloodRoutes).slice(0, 3).map((route, i) => ({
+    ...route,
+    assessment: route.assessment ? { ...route.assessment, rank: route.assessment.flood?.status === "available" ? i + 1 : null, comparisonScore: null } : undefined,
+    kind: route.distanceM === shortest ? "short" : "safe",
+    label: route.assessment?.flood?.status === "available" && i === 0 ? "浸水想定を考慮したルート" : "比較するルート",
+    notes: [
+      ...(allColored ? ["今回取得できた候補には、浸水想定の着色区間を完全に避けるルートはありません。"] : []),
+      ...route.notes.filter(note => !note.startsWith("候補[こうほ]の中") && !note.startsWith("収録地形[しゅうろくちけい]・距離")),
+      ...(route.assessment?.flood?.status === "available" ? ["浸水想定の深さの区分と着色区間の長さを優先して比較しています。無着色は未指定・未収録を含みます。"] : []),
+    ],
+  }));
 }
 
 type AssessmentResponse = {
@@ -403,7 +449,7 @@ async function assessRouteOptions(routes: RouteOption[], scenario: EvacScenario 
       ...route,
       notes: [
         ...route.notes,
-        "地形[ちけい]データとの比較[ひかく]は取得[しゅとく]できませんでした。距離[きょり]・時間[じかん]だけを確認[かくにん]してください",
+        scenario === "flood" ? "洪水ハザード・地形データの比較を取得できませんでした。距離・時間だけを表示しています。" : "地形[ちけい]データとの比較[ひかく]は取得[しゅとく]できませんでした。距離[きょり]・時間[じかん]だけを確認[かくにん]してください",
       ],
     }));
   }
@@ -469,6 +515,7 @@ export async function fetchDetourFrom(
   shelter: Shelter,
   mode: EvacMode,
   scenario: EvacScenario = "earthquake",
+  previousPath?: LatLng[],
 ): Promise<RouteOption | null> {
   if (mode === "mock") {
     const route = demoRoutes(from, shelter)[1];
@@ -476,6 +523,15 @@ export async function fetchDetourFrom(
   }
   if (!hasMapsKey()) return null;
   try {
+    if (previousPath) {
+      const candidates = await fetchRoutes(from, shelter, mode, scenario);
+      for (const candidate of candidates) {
+        const connection = distanceM(from, candidate.path[0]);
+        const path = connection < .01 ? candidate.path : [from,...candidate.path];
+        if (connection > 50 || hasRouteBacktracking(path) || similarRoutePaths(path,previousPath)) continue;
+        return {...candidate,path,distanceM:candidate.distanceM+connection,durationS:candidate.durationS+connection/WALK_SPEED,id:`detour-${Date.now()}-${candidate.id}`,label:"見直した道[みち]"};
+      }
+    }
     const [found] = await requestWalkingRoutes(
       from,
       shelter.position,
@@ -488,6 +544,7 @@ export async function fetchDetourFrom(
     // 大きく離れた道路へ補正された場合は、移動を捏造せず再選択を案内する。
     if (connectionM > 50) return null;
     const connectedPath = connectionM < 0.01 ? path : [from, ...path];
+    if (hasRouteBacktracking(connectedPath) || (previousPath && similarRoutePaths(connectedPath, previousPath))) return null;
     const meters = found.distanceM + connectionM;
     const seconds = found.durationS + connectionM / WALK_SPEED;
     const turns = found.segments;
@@ -531,7 +588,32 @@ export type DecisionPoint = {
  * geo-aiは別途取り込んだ地形データをAIで分析する。sampleは固定の練習用配置。
  * Googleの地図画像やStreet ViewはAIへ送らない。
  */
-export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; scenario?: EvacScenario; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "context" | "sample"; scenario?: EvacScenario; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+  if (options?.source === "context") {
+    const commercial: LatLng[] = [];
+    try {
+      const searches = (async () => {
+        const maps = await loadMaps();
+        const { Place } = await maps.importLibrary("places") as google.maps.PlacesLibrary;
+        options.signal?.throwIfAborted();
+        return Promise.all([.2,.5,.8].map(async t => {
+        const result = await Place.searchNearby({fields:["location"], locationRestriction:{center:pointAt(route.path,t),radius:150},includedPrimaryTypes:["shopping_mall","department_store","supermarket"],maxResultCount:4});
+        return result.places.flatMap(p => p.location ? [p.location.toJSON()] : []);
+        }));
+      })();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try { commercial.push(...await Promise.race([searches,new Promise<LatLng[]>(resolve => {timer=setTimeout(() => resolve([]),4000);})]).then(results => results.flat())); }
+      finally { if (timer) clearTimeout(timer); }
+    } catch { /* Places is optional: unconfirmed commercial areas are not inferred. */ }
+    options.signal?.throwIfAborted();
+    const response = await fetch("/api/evac/scenarios", {
+      method:"POST",headers:{"Content-Type":"application/json"}, signal:options.signal ? AbortSignal.any([options.signal,AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+      body:JSON.stringify({scenario:options.scenario ?? "earthquake",route:{id:route.id,path:route.path,durationS:route.durationS},excludedEventIds:options.excludedEventIds ?? [],maxPoints:options.maxPoints,commercial}),
+    });
+    const result = await response.json();
+    if (!response.ok || result.source !== "context" || !Array.isArray(result.points)) throw new Error(result.message ?? "想定問題の準備に失敗しました。再試行してください。");
+    return result.points as DecisionPoint[];
+  }
   if (options?.source === "geo-ai") {
     const response = await fetch("/api/evac/analyze", {
       method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(55000)]) : AbortSignal.timeout(55000),
@@ -622,18 +704,20 @@ export function buildWalkSteps(route: RouteOption, points: DecisionPoint[]): Wal
   for (let i = 0; i <= count; i++) ts.add(i / count);
   for (const p of points) ts.add(p.t);
   const sorted = [...ts].sort((a, b) => a - b);
-  return sorted.map((t, i): WalkStep => {
-    const point = points.find((p) => p.t === t);
-    return {
+  return sorted.flatMap((t, i): WalkStep[] => {
+    const matches = points.filter((p) => p.t === t);
+    const base: WalkStep = {
       id: `${route.id}:${t}`,
       t,
-      position: point?.position ?? positions.get(t) ?? pointAt(route.path, t),
-      heading: point?.heading ?? headingAt(route.path, t),
+      position: positions.get(t) ?? pointAt(route.path, t),
+      heading: headingAt(route.path, t),
       remainingM: Math.round(total * (1 - t)),
       remainingS: Math.round(route.durationS * (1 - t)),
       travelSeconds: (t - (sorted[i - 1] ?? 0)) * route.durationS,
-      event: point?.event,
-      pointId: point?.id,
     };
+    if (!matches.length) return [base];
+    const events = matches.map((point,j) => ({...base,id:`${route.id}:${t}:${j}`,position:point.position,heading:point.heading,event:point.event,pointId:point.id,travelSeconds:j === 0 ? base.travelSeconds : 0}));
+    // Keep the origin record even when several exercises are queued before the first move.
+    return t === 0 ? [base,...events] : events;
   });
 }
