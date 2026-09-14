@@ -54,7 +54,7 @@ export function GameHeader({ title, subtitle, step, onBack, onHelp, actions, lea
 }
 
 /** Native modal provides focus trapping, Escape dismissal and focus restoration. */
-export function BottomSheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+export function BottomSheet({ open, title, onClose, children, footer }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -67,6 +67,7 @@ export function BottomSheet({ open, title, onClose, children }: { open: boolean;
   return <dialog ref={ref} className={styles.sheet} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientY < r.top || event.clientX < r.left || event.clientX > r.right || event.clientY > r.bottom) onClose(); } }}>
     <div className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3"><h2 id={titleId} className="flex-1 text-base font-bold"><Furigana text={title} /></h2><button type="button" onClick={onClose} aria-label="閉じる" className="grid size-11 shrink-0 place-items-center rounded-full bg-canvas"><GameIcon name="close" /></button></div>
     <div data-sheet-body className={styles.sheetBody}>{open ? children : null}</div>
+    {open && footer ? <div className="shrink-0 border-t border-border bg-surface px-4 py-2">{footer}</div> : null}
   </dialog>;
 }
 

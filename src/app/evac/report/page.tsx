@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/GameUI";
+import { eventTitle } from "@/lib/evac-display";
+import { DecisionRating } from "@/components/evac/DecisionRating";
+import { ChoiceTradeoffs } from "@/components/evac/ChoiceTradeoffs";
+import { ReviewIllustrations } from "@/components/evac/ReviewIllustrations";
 import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
 import { RouteLegend } from "@/components/evac/RouteLegend";
 import { EvacModeBadge } from "@/components/evac/EvacMode";
@@ -101,16 +105,18 @@ export default function EvacReportPage() {
         <div className="shrink-0"><RouteLegend /></div>
 
         <section className="shrink-0" aria-label="それぞれの判断">
-          {rows.length ? <div className="flex items-center gap-3">
+          {rows.length ? <div>
+            <p className="mb-1 text-13 font-bold text-ink"><Furigana text="番号のボタンを押すと、その場面と選んだ行動を見返せます。" /></p>
+            <div className="flex items-center gap-3">
             <h2 className="shrink-0 text-11 font-bold text-ink"><Furigana text="判断[はんだん]の記録[きろく]" /></h2>
             <div className="flex gap-2 overflow-x-auto p-1" aria-label="番号から判断の記録を開く">
-              {rows.map(({ d, choice }, index) => (
-                <button type="button" key={d.pointId} onClick={() => selectDecision(d.pointId)} aria-label={`判断${index + 1}：${choice.label.replace(/\[[^\]]*\]/g, "")}の記録を見る`} className={`grid size-11 shrink-0 place-items-center rounded-full border font-display text-15 font-bold text-primary-ink ${selectedId === d.pointId ? "border-primary-mid bg-primary" : "border-border bg-primary-soft"}`}>
-                  {index + 1}
+              {rows.map(({ d, choice, event }, index) => (
+                <button type="button" key={d.pointId} onClick={() => selectDecision(d.pointId)} aria-label={`判断${index + 1}：${choice.label.replace(/\[[^\]]*\]/g, "")}の記録を見る`} className={`flex min-h-11 shrink-0 items-center gap-1 px-2 rounded-full border font-display text-15 font-bold text-primary-ink ${selectedId === d.pointId ? "border-primary-mid bg-primary" : "border-border bg-primary-soft"}`}>
+                  <span className="text-11">{index + 1}</span><DecisionRating event={event} choice={choice} compact />
                 </button>
               ))}
             </div>
-          </div> : <button type="button" onClick={() => setSheet("help")} className="flex min-h-11 w-full items-center gap-2 rounded-field bg-primary-soft px-3 py-2 text-left text-11 text-primary-ink"><GameIcon name="info" className="size-4 shrink-0" /><span>今回は出題なし。経路の安全を示すものではありません。</span></button>}
+          </div></div> : <button type="button" onClick={() => setSheet("help")} className="flex min-h-11 w-full items-center gap-2 rounded-field bg-primary-soft px-3 py-2 text-left text-11 text-primary-ink"><GameIcon name="info" className="size-4 shrink-0" /><span>今回は出題なし。経路の安全を示すものではありません。</span></button>}
         </section>
 
         <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>
@@ -119,27 +125,19 @@ export default function EvacReportPage() {
       <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)}>
         {sheet === "decision" && selected ? <div className="space-y-4">
           <div>
-            <p className="text-11 text-ink-muted"><Furigana text={selected.event.title} /></p>
-            <h3 className="mt-1 font-display text-lg font-bold"><Furigana text={selected.choice.label} /></h3>
+            <p className="text-15 font-bold text-ink"><Furigana text={eventTitle(selected.event.title)} /></p>
             <div className="mt-2 flex flex-wrap gap-2 text-11 text-ink-muted">
               {selected.d.rerouted ? <span className="rounded-full bg-primary-soft px-2 py-1 text-primary-ink">経路を変更</span> : null}
               {selected.d.timedOut ? <span className="rounded-full bg-canvas px-2 py-1">時間をかけて選択</span> : null}
-              {selected.d.extraSeconds > 0 ? <span className="rounded-full bg-canvas px-2 py-1">想定 +{selected.d.extraSeconds}秒</span> : null}
             </div>
           </div>
+          <ReviewIllustrations event={selected.event} choice={selected.choice} />
           {rows.length > 1 ? <div className="flex gap-2">
             <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}><GameIcon name="back" className="size-4" />前の判断</Button>
             <Button size="md" variant="quiet" disabled={selectedIndex === rows.length - 1} onClick={() => setSelectedId(rows[selectedIndex + 1].d.pointId)}>次の判断<GameIcon name="chevron" className="size-4" /></Button>
           </div> : null}
-          <section className="rounded-tile bg-amber-50 p-3">
-            <h4 className="mb-1 text-11 font-bold text-amber-900">この選択の利点</h4>
-            <ul className="list-disc space-y-1 pl-4 text-13 text-ink-muted">{selected.choice.pros.map((text) => <li key={text}><Furigana text={text} /></li>)}</ul>
-          </section>
-          <section className="rounded-tile bg-blue-50 p-3">
-            <h4 className="mb-1 text-11 font-bold text-blue-900">気をつけたい点</h4>
-            <ul className="list-disc space-y-1 pl-4 text-13 text-ink-muted">{selected.choice.cons.map((text) => <li key={text}><Furigana text={text} /></li>)}</ul>
-          </section>
-          <details key={selected.d.pointId} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">
+          <ChoiceTradeoffs key={selected.d.pointId} event={selected.event} choice={selected.choice} />
+          <details key={`sources-${selected.d.pointId}`} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">
             <summary className="cursor-pointer font-bold text-primary-ink">場面・判断のヒント・出典</summary>
             <p className="mt-3 text-13"><Furigana text={selected.event.situation} /></p>
             <p className="mt-3 rounded-field bg-canvas p-3 text-13"><Furigana text={selected.event.hint} /></p>
@@ -157,7 +155,7 @@ export default function EvacReportPage() {
           <div><p className="text-11">選んだ避難場所</p><p className="mt-1 font-bold text-ink"><Furigana text={shelter?.name ?? "—"} /></p><p className="mt-1">{shelter?.address}</p></div>
           <div><p className="text-11">はじめの経路</p><p className="mt-1 font-bold text-ink"><Furigana text={startRoute?.label ?? "—"} /> · {startRoute ? formatDistance(startRoute.distanceM) : "—"}</p></div>
           <div><p className="mb-2 text-11">体験中の経路</p><ol className="space-y-2">{(takenRouteIds.length ? takenRouteIds : startRouteId ? [startRouteId] : []).map((id, index) => <li className="flex items-center gap-2" key={`${id}-${index}`}><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-11 font-bold text-primary-ink">{index + 1}</span><Furigana text={routes.find((route) => route.id === id)?.label ?? "途中からの迂回路"} /></li>)}</ol><p className="mt-2 text-11">{changed ? "途中で別の経路に変更しました。" : "最初の経路のまま体験しました。"}</p></div>
-          <p>到着までの想定時間：<strong className="text-ink">{formatDuration(totalSeconds(evac))}</strong><span className="mt-1 block text-11">判断でかかった時間を含みます。</span></p>
+          <p>到着までの想定時間：<strong className="text-ink">{formatDuration(totalSeconds(evac))}</strong><span className="mt-1 block text-11">選択肢ごとに設定した仮の所要時間を含みます。実測時間や減点ではありません。</span></p>
           {startRoute?.demo ? <p className="rounded-field bg-primary-soft p-3 text-11 text-primary-ink">練習用に合成した経路です。実際の道路とは異なります。</p> : null}
         </div> : null}
 

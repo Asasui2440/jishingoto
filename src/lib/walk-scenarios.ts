@@ -66,7 +66,7 @@ const definitions: Definition[] = [
     ["水と砂の出方が落ち着くまで手前で待つ", "変化のある路面へすぐ入ることを避けています。", "沈下が続く可能性があります。観察のために近くに残らず、離れることを優先します。"]
   ],
   [
-    17, "residential", "earthquake", "斜面の下を通る近道", "斜面から小石が落ちてきたという想定です。斜面の下を通れば近道ですが、来た道へ戻ると斜面から離れられます。",
+    17, "residential", "earthquake", "斜面の下を通る近道", "斜面から小石が落ちてきました。斜面の下を通れば近道ですが、来た道へ戻ると斜面から離れられます。",
     ["来た道へ戻り、斜面から離れる経路を探す", "落石のある斜面の下を避けられます。", "戻る際も落下物と足元を確認します。"],
     ["頭を守り、斜面の区間だけ速足で抜ける", "危険な場所にいる時間を減らそうとしています。", "小石に続いて大きな落石などが起こる可能性があり、速足で防げるとは限りません。"],
     ["斜面を見ながら、落石が止まるまで待つ", "落石の変化に注意しています。", "いったん止まっても再び落ちる可能性があります。斜面の下を待機場所にしない判断が必要です。"]
@@ -198,7 +198,7 @@ export const WALK_SCENARIOS: WalkScenario[] = definitions.map(([number, area, di
   event: {
     id: `walk-case-${number}`,
     kind: number === 11 || number === 12 ? "wall" : [13,14,34,38].includes(number) ? "fall" : number === 21 ? "closed" : "terrain",
-    title: `${title}（想定）`,
+    title,
     situation: `【想定問題】${situation}\nこの条件では、まずどうしますか？`,
     hint: recommended[2],
     choices: [recommended, risky, partial].map(([label, benefit, limitation], i) => ({

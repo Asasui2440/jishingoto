@@ -22,7 +22,12 @@ export default function EvacWalkPage() {
   const navigation = useRef<StreetControls>(null);
   const [street, setStreet] = useState<StreetSnapshot | null>(null);
   const [sheet, setSheet] = useState<"map" | "help" | null>(null);
+  const [initialReady, setInitialReady] = useState(() => {
+    const saved = getEvac();
+    return saved.decisions.length > 0 || (saved.walk?.street?.path.length ?? 0) > 1;
+  });
   const [readyStepId, setReadyStepId] = useState<string | null>(null);
+  const [streetPointId, setStreetPointId] = useState<string | null>(null);
   const [announcedPointId, setAnnouncedPointId] = useState<string | null>(null);
   const game = useEvacWalk({ readyStepId, paused: sheet !== null });
   const { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry } = game;
@@ -38,7 +43,8 @@ export default function EvacWalkPage() {
     });
   }, [plan,route,update]);
   const arrivalNode = plan?.nodes.at(-1) ?? street?.arrivalNode;
-  const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 3) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 4) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  if (ready && !initialReady) setInitialReady(true);
   const questionSteps = walk?.steps;
   const onNavigation = useCallback((snapshot: StreetSnapshot) => {
     setStreet(snapshot);
@@ -57,7 +63,8 @@ export default function EvacWalkPage() {
     return () => clearTimeout(timer);
   }, [mode, walking, ready, pending, notice, arrived, busy, sheet, automaticPano, street?.pano, setWalking]);
   const announcingPoint = !!pending && ready && announcedPointId !== step?.pointId;
-  const decisionVisible = !!pending && ready && !announcingPoint;
+  const viewingStreet = !!pending && streetPointId === (step?.pointId ?? step?.id);
+  const decisionVisible = !!pending && ready && !announcingPoint && !viewingStreet;
   useEffect(() => {
     const state = getEvac();
     if (!state.startRouteId || !state.shelter) router.replace("/evac");
@@ -105,7 +112,6 @@ export default function EvacWalkPage() {
       onBack={() => { setWalking(false); router.push("/evac/routes"); }} onHelp={() => showSheet("help")} />
     <main className={styles.main} aria-label="避難ルートの体験">
       <div className={styles.status}>
-        <span className="rounded-md bg-blue-50 px-2 py-1 text-11 font-bold text-blue-800">想定シナリオ</span>
         {mode === "api" && walk.source === "sample" ? <span className="text-11 text-ink-muted">固定の練習問題</span> : null}
         <span className="text-11 text-ink-muted">判断 {decisions.length} / {events.length}</span>
       </div>
@@ -127,15 +133,24 @@ export default function EvacWalkPage() {
       </div>
       {mode === "api" && (preparation?.status === "error" || connectionChanged || street?.error) ? <p role="alert" className={styles.navigationAlert}>{street?.error ?? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"}</p> : null}
       {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
-      {decisionBlocking ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot}`}>
-        <div aria-hidden={!decisionVisible} className={`${styles.decisionContent} ${decisionVisible ? "" : styles.decisionHidden}`}>
+      {decisionBlocking ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot} ${decisionVisible ? "" : styles.decisionHidden}`}>
+        <div aria-hidden={!decisionVisible} inert={!decisionVisible} className={styles.decisionContent}>
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
-            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready || announcingPoint} busy={busy}
+            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !decisionVisible} busy={busy}
+            onViewStreet={() => setStreetPointId(step.pointId ?? step.id)}
             onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
         </div>
-        {!decisionVisible ? <div role="status" data-testid="attention-toast" className={styles.attentionNotice}>
-          {announcingPoint ? <><span aria-hidden>⚠</span><span>注意ポイントだよ</span></> : <span>風景を読み込んでいます…</span>}
-        </div> : null}
+      </div> : null}
+      {(!initialReady && !ready && !error && !street?.error && preparation?.status !== "error") || announcingPoint ? <div role="status" data-testid="attention-toast" className={announcingPoint ? styles.attentionNotice : styles.loadingNotice}>
+        {announcingPoint ? <><span aria-hidden>⚠</span><span>注意ポイント</span></> : <>
+          <span>地点を確認しています…</span>
+          <progress className={styles.preparationProgress} aria-label="地点確認の進捗" max={3} value={preparation?.status === "ready" ? 2 : street?.ready ? 1 : 0} aria-valuetext={preparation?.status === "ready" ? "3段階中3：出題を準備中" : street?.ready ? `3段階中2：道の接続を確認中、${preparation?.count ?? 0}地点取得済み` : "3段階中1：風景を取得中"} />
+          <span className="text-11">{preparation?.status === "ready" ? "3 / 3　出題を準備中" : street?.ready ? `2 / 3　道の接続を確認中（${preparation?.count ?? 0}地点）` : "1 / 3　風景を取得中"}</span>
+        </>}
+      </div> : null}
+      {viewingStreet && ready && !announcingPoint ? <div className={styles.streetReturn}>
+        <p>その場で周りを見回せます。制限時間は停止中です。</p>
+        <button type="button" autoFocus onClick={() => setStreetPointId(null)}>クイズに戻る</button>
       </div> : null}
         <section className={styles.actions} aria-label="歩行の操作" inert={decisionBlocking} style={{ visibility: decisionBlocking ? "hidden" : "visible" }}>
 

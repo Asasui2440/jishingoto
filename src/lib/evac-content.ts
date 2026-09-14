@@ -131,7 +131,7 @@ export type HazardEvent = {
   evidence?: import("./geo-types").GeoEvidence;
   id: string;
   kind: EventKind;
-  /** 見出し。必ず「〜した想定」で書く */
+  /** 場面の見出し。訓練の前提は共通の説明にまとめる */
   title: string;
   /** 状況説明 */
   situation: string;
