@@ -246,4 +246,4 @@ export async function fetchDecisionPoints(route: RouteOption): Promise<DecisionP
 
 電線の問題（walk-case-18）は、内蔵画像生成で事前作成した太線・人物拡大版WebP４枚を使用する試作。保存先は `public/illustrations/evac/walk-case-18/*-v2.webp`、生成指示は `docs/wire-illustration-prompts-v2.json`。他の問題はSVGを使用する。実行時の画像生成は行わない。SVG一覧のモックページは削除した。
 
-画像素材は問題8・9・10・11・12・14・15・16・18・27の10問40枚を作成済み。電線以外は未組み込みで、残り20問80枚は未生成。全30問の構図と選択肢ID対応、スマホ相当の縮小比較、生成指示は `docs/illustrations/` に保存している。
+画像素材は通常問題の全30問120枚をV2方針で作成済み。電線の1問4枚のみ組み込み済みで、他29問116枚は素材保存済み・未組み込み。固定練習用の4問は対象外。全30問の構図と選択肢ID対応、スマホ相当の縮小比較、生成指示は `docs/illustrations/` に保存している。[残り20問の制作結果](illustrations/remaining-review-v2.md)に確認結果と組み込み時の注意点を記録した。

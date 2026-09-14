@@ -79,4 +79,4 @@ npm start  # ビルド済みアプリを起動
 
 歩行問題のイラストはSVGを使用し、電線の問題のみ事前生成したWebP４枚（太線・人物拡大版）を試用しています。画像は `public/illustrations/evac/walk-case-18/`、生成指示は `docs/wire-illustration-prompts-v2.json` に保存しています。実行時の画像生成API呼び出しはありません。
 
-V2方針の画像素材は10問40枚を作成済みです。電線以外の9問36枚は素材として保存した段階で、ゲームへの差し替えは未実施です。[制作計画と進捗](docs/illustrations/walk-composition-plan.md)に全30問の構図、各組の比較シート・生成指示・確認結果をまとめています。残り20問80枚は未生成です。
+V2方針の画像素材は通常問題の全30問120枚を作成済みです。電線以外の29問116枚は素材として保存した段階で、ゲームへの差し替えは未実施です。[制作計画と進捗](docs/illustrations/walk-composition-plan.md)に全30問の構図を、[残り20問の制作結果](docs/illustrations/remaining-review-v2.md)に比較シート・生成指示・縮小確認とファイル検証の結果をまとめています。固定練習用の4問は今回の制作対象外です。
