@@ -123,18 +123,16 @@ export default function PrivacyBlurPage() {
             >
               <span className="flex flex-col items-center gap-0.5">
                 <EyeOffIcon className="size-4 text-ink" />
-                <span className="font-display text-11 font-bold text-ink">ぼかし済</span>
+                <span className="font-display text-11 font-bold text-ink"><Furigana text={"ぼかし済"} /></span>
               </span>
             </button>
           ))}
 
-          <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-[20px] bg-black/70 px-3 py-1.5">
-            <MousePointerIcon className="size-3.5 text-white" />
-            <span className="text-11 text-white">
-              <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
-            </span>
-          </div>
         </div>
+        <p className="mt-3 flex items-center justify-center gap-2 text-sm text-ink-muted">
+          <MousePointerIcon className="size-4 shrink-0" />
+          <Furigana text="顔[かお]や住所[じゅうしょ]をタップして隠[かく]す" />
+        </p>
       </div>
 
       <div className="mx-5 rounded-panel bg-secondary-soft p-5">
@@ -153,7 +151,7 @@ export default function PrivacyBlurPage() {
         <p className="text-sm leading-relaxed text-ink-muted">
           <Furigana text="「OK」を押すと、隠[かく]した部分を除いた画像をOpenAIに送り、部屋の確認と予想図づくりに使います。" />
         </p>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="text-sm text-danger"><Furigana text={error} /></p>}
         <Button disabled={busy} onClick={() => void continueWithMaskedPhoto()}>
           <CheckCircleWhiteIcon className="size-5 text-ink" /><Furigana text="OK、このまますすむ" /></Button>
         <Button variant="outline" onClick={() => router.push("/camera")}>

@@ -83,7 +83,7 @@ function QuestionView({
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
-      {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold">この部屋で地震が発生</p><p className="mt-3 text-3xl font-black">揺れが始まりました！</p></div></div>}
+      {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold"><Furigana text={"この部屋で地震が発生"} /></p><p className="mt-3 text-3xl font-black"><Furigana text={"揺れが始まりました！"} /></p></div></div>}
       <div>
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
@@ -95,7 +95,7 @@ function QuestionView({
           </div>
           <span className="flex items-center gap-1 text-xs text-ink-muted">
             <Volume2Icon className="size-4" />
-            音・振動: {sound ? "ON" : "OFF"}
+            <Furigana text={"音・振動:"} /><Furigana text={sound ? "ON" : "OFF"} />
           </span>
         </div>
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
@@ -167,8 +167,7 @@ function QuestionView({
                 ].join(" ")}
               />
               <span className="font-display text-13 font-bold tabular-nums text-white">
-                {remaining}秒
-              </span>
+                {remaining}<Furigana text={"秒"} /></span>
             </div>
           ) : null}
         </div></div>
@@ -276,7 +275,7 @@ export default function QuizPage() {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
         <StatusBar />
-        <p className="px-6 text-center text-13 text-ink-muted">問題を用意しています...</p>
+        <p className="px-6 text-center text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p>
         <DisclaimerFooter />
       </div>
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 import { reviewNotes } from "@/lib/review-copy";
 import Image from "next/image";
@@ -10,16 +11,26 @@ import { Furigana } from "@/components/ui/Furigana";
 
 export function ActionReview({ question, choice, timedOut, number }: { question: Question; choice: Choice; timedOut: boolean; number: number }) {
   const { audience } = useSettings();
+  const { photoUrl } = useSession();
   const scene = reviewIllustration(question);
   const best = question.choices.reduce((best, next) => next.safety > best.safety ? next : best, choice);
   const safe = !timedOut && choice.safety >= 0.7;
+  const informationFeedback: Record<string, string> = {
+    share: "確かめずに広めると、不安や混乱を広げるおそれがあります",
+    verify: "情報の発信元を確かめる行動を選べました",
+    panic: "投稿だけで判断せず、情報の発信元を確かめましょう",
+  };
   const feedback = timedOut
-    ? "時間内に選べませんでした。次に備えて、行動を確認しましょう。"
-    : safe
-      ? "安全につながる行動を選べました"
-      : choice.safety >= 0.4
-        ? "気をつけたい点がある行動です"
-        : "この場面では、けがにつながるおそれがある行動です";
+    ? question.id === "q5"
+      ? "時間内に選べませんでした。情報の確かめ方を確認しましょう。"
+      : "時間内に選べませんでした。次に備えて、行動を確認しましょう。"
+    : (question.id === "q5" ? informationFeedback[choice.id] : undefined) ?? (
+      safe
+        ? "安全につながる行動を選べました"
+        : choice.safety >= 0.4
+          ? "気をつけたい点がある行動です"
+          : "この場面では、けがにつながるおそれがある行動です"
+    );
   return <article className="overflow-hidden rounded-panel bg-surface">
     <div className="flex items-center justify-between gap-2 px-4 py-3 text-13 font-bold text-primary-ink">
       <p>Q{number} · <Furigana text={question.category} /></p>
@@ -45,6 +56,14 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
           <h3 className="text-sm font-bold text-ink-muted">この問題の場面</h3>
           {scene && <p className="mt-1 text-xs text-ink-muted">{scene.timing}</p>}
           <p className="mt-2 text-base leading-relaxed"><Furigana text={question.situation} adult={question.adultSituation} /></p>
+      {photoUrl && question.sourceRiskId && question.highlight && <figure className="mt-3 overflow-hidden rounded-field border border-border">
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoUrl} alt="問題で確認した家具が写っている部屋の写真" className="block h-auto w-full" />
+          <div aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary shadow-[0_0_0_1px_white]" style={{ left: `${question.highlight.x}%`, top: `${question.highlight.y}%`, width: `${question.highlight.w}%`, height: `${question.highlight.h}%` }} />
+        </div>
+        <figcaption className="bg-primary-soft p-3 text-base font-bold text-primary-ink"><Furigana text={question.highlight.label} adult={question.adultPlace} /></figcaption>
+      </figure>}
         </section>
         <section>
           <h3 className="text-base font-bold"><Furigana text="ここを覚[おぼ]えよう" adult="理由・注意点" /></h3>

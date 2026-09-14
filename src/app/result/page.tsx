@@ -82,7 +82,7 @@ export default function ResultPage() {
           <p className="font-display text-sm font-bold text-ink">
             <Furigana text="あなたの防災[ぼうさい]4つのチカラ" />
           </p>
-          <p className="mt-1 text-13 text-ink-muted">今回の判断を振り返り、次の備えにつなげましょう。</p>
+          <p className="mt-1 text-13 text-ink-muted"><Furigana text={"今回の判断を振り返り、次の備えにつなげましょう。"} /></p>
           <div className="mt-3 flex flex-col gap-2">
             {AXES.map((axis) => {
               const score = scores[axis];
@@ -97,7 +97,7 @@ export default function ResultPage() {
                   <span className="shrink-0 text-right">
                     {score === null ? (
                       // 出題されなかった軸。点をつけずに、そう書く。
-                      <span className="text-11 text-ink-faint">{adult ? "対象なし" : "今回はなし"}</span>
+                      <span className="text-11 text-ink-faint"><Furigana text={adult ? "対象なし" : "今回はなし"} /></span>
                     ) : (
                       <>
                         <span className="font-display text-xs font-bold text-primary-ink">

@@ -5,9 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 function load(file) {
+  if (file.endsWith('.json')) return JSON.parse(fs.readFileSync(file, 'utf8'));
   const mod = {exports:{}};
   const code = ts.transpileModule(fs.readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  new Function('require','module','exports',code)(p => p.startsWith('@/') ? load(path.resolve('src',p.slice(2)+'.ts')) : p.startsWith('.') ? load(path.resolve(path.dirname(file),p+'.ts')) : require(p),mod,mod.exports);
+  new Function('require','module','exports',code)(p => p.startsWith('@/') ? load(path.resolve('src',p.slice(2)+(p.endsWith('.json') ? '' : '.ts'))) : p.startsWith('.') ? load(path.resolve(path.dirname(file),p+'.ts')) : require(p),mod,mod.exports);
   return mod.exports;
 }
 const { POST } = load('src/app/api/room/analyze/route.ts');

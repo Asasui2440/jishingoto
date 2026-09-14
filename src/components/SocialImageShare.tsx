@@ -1,5 +1,7 @@
 "use client";
 
+import { Furigana } from "@/components/ui/Furigana";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { shareImages } from "@/lib/share-images";
@@ -21,7 +23,7 @@ export function SocialImageShare({ platform, room, result, text, url }: { platfo
     } finally { setBusy(false); }
   };
   return <section className="space-y-3" aria-label={`画像付きで${platform}に共有`}>
-    <Button size="md" variant={platform === "X" ? "x" : "line"} onClick={() => void share()} disabled={!ready || busy}>{busy ? "準備中…" : `${platform}で共有`}</Button>
-    {status && <p role="status" className="text-sm">{status}</p>}
+    <Button size="md" variant={platform === "X" ? "x" : "line"} onClick={() => void share()} disabled={!ready || busy}><Furigana text={busy ? "準備中…" : `${platform}で共有`} /></Button>
+    {status && <p role="status" className="text-sm"><Furigana text={status} /></p>}
   </section>;
 }
