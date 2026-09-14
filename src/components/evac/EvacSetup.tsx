@@ -193,7 +193,7 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
   if (shelter && shelters?.some(s => s.id === shelter.id) && !visibleShelters.some(s => s.id === shelter.id)) visibleShelters[1] = shelter;
 
   return <>
-    <GameHeader title={stage === "routes" ? "どの道で行こう？" : "ひなんルート"} subtitle={stage === "routes" ? `${scenarioInfo.label}の避難先までの経路` : "住所・現在地・地図から場所を選ぶ"} step={1} onBack={stage === "routes" ? () => { routeRequest.current++; setBusy(false); changeStage("place"); } : undefined} onHelp={() => setSettingsOpen(true)} />
+    <GameHeader title={stage === "routes" ? "どの道で行こう？" : "ひなんルート"} subtitle={stage === "routes" ? `${scenarioInfo.label}の避難先までの経路` : "住所・現在地・地図から場所を選ぶ"} step={1} onBack={() => { if (window.history.length > 1) router.back(); else router.replace("/home"); }} onHelp={() => setSettingsOpen(true)} />
     <main className="flex min-h-0 flex-1 flex-col">
       {stage === "routes" ? <div className="mx-4 mb-2 shrink-0"><label className="flex shrink-0 items-center gap-3 rounded-xl bg-primary px-2 py-1 text-[0.625rem] font-bold">災害ケース<select aria-label="災害ケース" value={scenario} onChange={e => { if (isEvacScenario(e.target.value)) changeScenario(e.target.value); }} className="min-h-11 w-24 bg-transparent text-13">{Object.entries(EVAC_SCENARIOS).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}</select></label></div> : null}
       {stage === "place" ? <div className="shrink-0 px-4 pb-2">

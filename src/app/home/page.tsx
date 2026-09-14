@@ -76,6 +76,12 @@ export default function OnboardingPage() {
           <Furigana text="避難経路をためす（フェーズ2）" adult="避難経路をシミュレーション（フェーズ2）" />
         </Button>
 
+        <a href="/offline-evac/index.html" className="rounded-panel border border-ink/10 bg-white p-4 text-center font-bold text-ink">
+          保存したマップを見る
+          <span className="mt-1 block text-xs font-normal text-ink-muted">リザルトで保存した経路と現在地を確認</span>
+        </a>
+
+
         <DetailSheet title="この体験でわかること"><Card className="flex flex-col gap-3 p-[18px]">
           {INFO[audience].map(({ Icon, bg, fg, title, body }) => (
             <div key={title} className="flex items-center gap-3">
