@@ -4,10 +4,10 @@ import type { DecisionPoint } from "../evac-api";
 import type { LatLng } from "../evac-content";
 import { meters, sampleRoute, type GeoRequest } from "./geo-analysis";
 import { classifyLanduse, LANDUSE_SOURCE, type Area } from "./urban-landuse";
-export function selectWalkScenarios(request: GeoRequest, contexts: {areas: Area[]; year?: string | null}[], maxPoints = 3, random: () => number = () => randomInt(0x1000000)/0x1000000): DecisionPoint[] {
+export function selectWalkScenarios(request: GeoRequest, contexts: {areas: Area[]; year?: string | null}[], maxPoints = WALK_SCENARIOS.length, random: () => number = () => randomInt(0x1000000)/0x1000000): DecisionPoint[] {
   const samples = sampleRoute(request.route.path);
   const total = request.route.path.slice(1).reduce((sum,p,i) => sum + meters(request.route.path[i],p),0);
-  const budget = Math.max(0,Math.min(3,Math.floor(maxPoints)));
+  const budget = Math.max(0,Math.min(WALK_SCENARIOS.length,Math.floor(maxPoints)));
   const selected: DecisionPoint[] = [];
   const used = new Set(request.excludedEventIds);
   const shuffle = <T,>(values: T[]) => {
@@ -33,7 +33,7 @@ export function selectWalkScenarios(request: GeoRequest, contexts: {areas: Area[
   }
   return selected.sort((a,b) => a.t-b.t);
 }
-export async function prepareWalkScenarios(request: GeoRequest, commercial: LatLng[] = [], maxPoints = 3) {
+export async function prepareWalkScenarios(request: GeoRequest, commercial: LatLng[] = [], maxPoints = WALK_SCENARIOS.length) {
   const samples = sampleRoute(request.route.path);
   const contexts = await classifyLanduse(samples.map(s => s.position));
   for (let i = 0;i < samples.length;i++) if (commercial.some(p => meters(p,samples[i].position) <= 120)) contexts[i].areas.push("commercial");

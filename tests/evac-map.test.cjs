@@ -680,7 +680,7 @@ test("same road with additional rounded vertices does not fill multiple route sl
 
 test("context questions attach to actual nodes without duplicating answered questions", async () => {
   const {api,walk,content} = modules();
-  const path = [{lat:35,lng:139},{lat:35.0003,lng:139},{lat:35.0006,lng:139},{lat:35.0009,lng:139},{lat:35.0012,lng:139}];
+  const path = Array.from({length:25},(_,i)=>({lat:35+i*.00005,lng:139}));
   const route = {id:"align",kind:"short",path,distanceM:134,durationS:100,eventCount:3,notes:[]};
   const points = [.18,.45,.72].map((t,i) => ({id:`p-${i}`,t,position:api.pointAt(path,t),heading:0,event:{...content.HAZARD_EVENTS[0],id:`event-${i}`},remainingM:100,remainingS:80}));
   const initial = {source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,points)};
@@ -688,7 +688,7 @@ test("context questions attach to actual nodes without duplicating answered ques
   assert.equal(aligned.questionsAligned,true);
   const events = aligned.steps.filter(s => s.event);
   assert.equal(events.length,3);
-  assert.deepEqual(events.map(s => s.position),path.slice(1,-1));
+  assert.deepEqual(events.map(s => s.position),[path[8],path[16],path[24]]);
   assert.equal(walk.alignWalkQuestions(aligned,route,path.map(position => ({position})),[]),aligned);
 });
 
@@ -709,60 +709,54 @@ test("context detours rerun disaster-specific route comparison from the actual s
   } finally {global.fetch=before;}
 });
 
-test("node scheduling fills a single candidate to three and keeps every gap within 20 moves", () => {
-  const {api,walk,content}=modules();
-  for (const hops of [1,2,3,19,20,21,60,61,100,399]) {
-    const path=Array.from({length:hops+1},(_,i)=>({lat:35+i*.0001,lng:139}));
+test("questions occur exactly every eight nodes without a count limit", () => {
+  const {api,walk}=modules();
+  for (const hops of [0,1,7,8,9,16,24,25,80,399]) {
+    const path=Array.from({length:Math.max(2,hops+1)},(_,i)=>({lat:35+i*.0001,lng:139}));
+    const nodes=path.slice(0,hops+1).map(position=>({position}));
     const route={id:`spacing-${hops}`,kind:"short",path,distanceM:hops*11,durationS:hops*10,notes:[]};
-    const points=[{id:"only-one",t:.5,position:api.pointAt(path,.5),heading:0,event:content.HAZARD_EVENTS[0],remainingM:1,remainingS:1}];
-    const initial={source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,points)};
-    const aligned=walk.alignWalkQuestions(initial,route,path.map(position=>({position})),[],()=>.5);
+    const aligned=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,nodes,[],()=>.5);
     const questions=aligned.steps.filter(s=>s.event);
-    assert.equal(questions.length,Math.max(3,Math.ceil(hops/20)),`hops ${hops}`);
-    const stops=[0,...questions.map(s=>path.findIndex(p=>p.lat===s.position.lat)),hops];
-    assert(stops.slice(1).every((v,i)=>v-stops[i]<=20));
-    assert(questions.every(s=>s.position.lat!==path.at(-1).lat));
+    assert.equal(questions.length,Math.floor(hops/8),`hops ${hops}`);
+    assert.deepEqual(questions.map(s=>path.findIndex(p=>p.lat===s.position.lat)),Array.from({length:Math.floor(hops/8)},(_,i)=>(i+1)*8));
     assert.equal(new Set(questions.map(s=>s.pointId)).size,questions.length);
-    let current=aligned, answered=[];
-    for (const position of path.slice(0,-1)) {
-      for (let guard=0;guard<questions.length;guard++) {
-        current=walk.observeStreetPosition(current,position,0,answered,false);
-        const step=current.steps[current.index];
-        if (!step.pointId || answered.includes(step.pointId) || api.distanceM(step.position,position)>2) break;
+    for(let i=0;i<questions.length;i+=9) assert.equal(new Set(questions.slice(i,i+9).map(s=>s.event.id)).size,questions.slice(i,i+9).length,"complete each common catalogue cycle before repeating");
+    let current=aligned; const answered=[];
+    for (let i=0;i<nodes.length;i++) {
+      const position=nodes[i].position;
+      current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
+      const step=current.steps[current.index];
+      if(step.pointId && !answered.includes(step.pointId) && api.distanceM(step.position,position)<2) {
+        assert.equal(current.street.arrived,false,"answer the eighth-node question before arrival");
         answered.push(step.pointId);
+        current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
       }
     }
-    assert.equal(answered.length,questions.length,`all questions answerable for ${hops} hops`);
+    assert.equal(answered.length,questions.length);
+    assert.equal(current.street.arrived,true);
   }
 });
 
-test("new spacing replaces a previously aligned one-question walk and keeps the answered budget across detours", () => {
+test("old spacing migrates and rerouting keeps answers without exhausting a three-question budget", () => {
   const {api,walk}=modules();
   const path=Array.from({length:81},(_,i)=>({lat:35+i*.0001,lng:139}));
-  const route={id:"reroute-spacing",kind:"short",path,distanceM:890,durationS:800,notes:[]};
-  const initial={source:"context",questionsAligned:true,routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
-  const aligned=walk.alignWalkQuestions(initial,route,path.map(position=>({position})),["walk-case-25","walk-case-28"],()=>.5);
-  assert.equal(aligned.steps.filter(s=>s.event).length,4);
-  assert(aligned.steps.filter(s=>s.event).every(s=>!["walk-case-25","walk-case-28"].includes(s.event.id)));
+  const route={id:"spacing",kind:"short",path,distanceM:880,durationS:800,notes:[]};
+  const initial={source:"context",questionsAligned:true,questionSpacingVersion:2,routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
+  const aligned=walk.alignWalkQuestions(initial,route,path.map(position=>({position})),[],()=>.5);
+  assert.equal(aligned.questionSpacingVersion,3);
   assert.equal(walk.alignWalkQuestions(aligned,route,path.map(position=>({position})),[]),aligned);
-});
-
-test("a route already at its arrival node still allows three queued exercises before completion", () => {
-  const {api,walk}=modules();
-  const position={lat:35,lng:139};
-  const route={id:"same-node",kind:"short",path:[position,position],distanceM:0,durationS:0,notes:[]};
-  let current={source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
-  current=walk.observeStreetPosition(current,position,0,[],true);
-  current=walk.alignWalkQuestions(current,route,[{position}],[],()=>.5);
-  const answered=[];
-  for(let i=0;i<3;i++) {
-    assert.equal(current.street.arrived,false);
-    const step=current.steps[current.index];
-    assert(step.pointId && !answered.includes(step.pointId));
-    answered.push(step.pointId);
-    current=walk.observeStreetPosition(current,position,0,answered,current.street.atArrivalNode);
-  }
-  assert.equal(current.street.arrived,true);
+  const answeredSteps=aligned.steps.filter(s=>s.event).slice(0,4);
+  const last=answeredSteps.at(-1);
+  const atQuestion={...aligned,index:aligned.steps.indexOf(last)};
+  const detourPath=Array.from({length:25},(_,i)=>({lat:last.position.lat+i*.0001,lng:139}));
+  const detour={...route,id:"detour",path:detourPath};
+  const events=answeredSteps.map(s=>s.event.id);
+  const rerouted=walk.rerouteWalk(atQuestion,detour,[],events);
+  const rescheduled=walk.alignWalkQuestions(rerouted,detour,detourPath.map(position=>({position})),events,()=>.5);
+  const questions=rescheduled.steps.filter(s=>s.event);
+  assert.equal(questions.length,7);
+  assert.deepEqual(questions.slice(0,4).map(s=>s.pointId),answeredSteps.map(s=>s.pointId));
+  assert.deepEqual(questions.slice(4).map(s=>detourPath.findIndex(p=>p.lat===s.position.lat)),[8,16,24]);
 });
 
 test("confirmed node identity triggers all questions despite SDK coordinate drift and leaves the schedule unchanged", () => {
@@ -782,7 +776,7 @@ test("confirmed node identity triggers all questions despite SDK coordinate drif
       assert.equal(current.steps,originalSteps,"answering never resets the schedule");
     }
   }
-  assert.equal(answered.length,4);
+  assert.equal(answered.length,10);
 });
 
 test("judgment score averages the rubric and explains good and improvable choices without timing penalties", () => {
@@ -805,4 +799,17 @@ test("judgment scoring cannot turn missing records into a perfect score and supp
   assert.equal(review.scoreDecisions({decisions:[bad],walk:null}).score,null);
   const result=review.scoreDecisions({decisions:[bad,{pointId:"real",eventId:"walk-case-28",choiceId:"distance"}],walk:null});
   assert.equal(result.score,100);assert.equal(result.count,1);assert.equal(result.total,2);
+});
+
+
+test("a nearby seventh node cannot trigger an eighth-node question even with coordinate drift", () => {
+  const {api,walk}=modules();
+  const path=Array.from({length:10},(_,i)=>({lat:35+i*.00003,lng:139}));
+  const route={id:"close-nodes",kind:"short",path,distanceM:30,durationS:30,notes:[]};
+  const current=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,path.map(position=>({position})),[],()=>.5);
+  const question=current.steps.find(s=>s.event);
+  const seventh=walk.observeStreetPosition(current,question.position,0,[],false,walk.questionIdsAtNode(current,path[7]));
+  assert(!seventh.street.questionPointIds.includes(question.pointId));
+  const eighth=walk.observeStreetPosition(seventh,question.position,0,[],false,walk.questionIdsAtNode(current,path[8]));
+  assert.equal(eighth.steps[eighth.index].pointId,question.pointId);
 });

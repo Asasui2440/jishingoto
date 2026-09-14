@@ -42,7 +42,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
 
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
-  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.street.questionPointIds?.includes(step.pointId ?? "") || distanceM(walk.street.position, step.position) <= (walk.questionsAligned ? 2 : 20))) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
+  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.questionsAligned ? walk.street.questionPointIds?.includes(step.pointId ?? "") : distanceM(walk.street.position, step.position) <= 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
   const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending;
 
   const advance = useCallback((jump = false) => {
@@ -102,9 +102,8 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
         ? await fetchDetourFrom(walk.street?.position ?? step.position, current.shelter, current.mode, scenario, walk.source === "context" ? remainingPath : undefined)
         : null;
       if (choice.reroute && !detour) throw new Error("迂回路を取得できませんでした。もう一度試すか、別の行動を選んでください。");
-      const excluded = [...current.decisions.map((d) => d.eventId), step.event.id];
-      const remaining = Math.max(0, 3 - current.decisions.length - 1);
-      const points = detour && remaining ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded, maxPoints: remaining }) : [];
+      const excluded = [...new Set([...current.decisions.map((d) => d.eventId), step.event.id])];
+      const points = detour ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded }) : [];
       if (!mounted.current || getEvac().walk !== walk) return;
       const nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
       // 迂回の移動時間は新しい経路に含まれる。追加時間を二重に加算しない。
