@@ -709,7 +709,7 @@ test("context detours rerun disaster-specific route comparison from the actual s
   } finally {global.fetch=before;}
 });
 
-test("questions occur exactly every eight nodes without a count limit", () => {
+test("questions keep a three-question minimum and no upper limit", () => {
   const {api,walk}=modules();
   for (const hops of [0,1,7,8,9,16,24,25,80,399]) {
     const path=Array.from({length:Math.max(2,hops+1)},(_,i)=>({lat:35+i*.0001,lng:139}));
@@ -717,16 +717,17 @@ test("questions occur exactly every eight nodes without a count limit", () => {
     const route={id:`spacing-${hops}`,kind:"short",path,distanceM:hops*11,durationS:hops*10,notes:[]};
     const aligned=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,nodes,[],()=>.5);
     const questions=aligned.steps.filter(s=>s.event);
-    assert.equal(questions.length,Math.floor(hops/8),`hops ${hops}`);
-    assert.deepEqual(questions.map(s=>path.findIndex(p=>p.lat===s.position.lat)),Array.from({length:Math.floor(hops/8)},(_,i)=>(i+1)*8));
+    const count=Math.max(3,Math.floor(hops/8));
+    assert.equal(questions.length,count,`hops ${hops}`);
+    assert.deepEqual(questions.map(s=>path.findIndex(p=>p.lat===s.position.lat)),Array.from({length:count},(_,i)=>count>Math.floor(hops/8)?Math.ceil((i+1)*hops/count):(i+1)*8));
     assert.equal(new Set(questions.map(s=>s.pointId)).size,questions.length);
     for(let i=0;i<questions.length;i+=9) assert.equal(new Set(questions.slice(i,i+9).map(s=>s.event.id)).size,questions.slice(i,i+9).length,"complete each common catalogue cycle before repeating");
     let current=aligned; const answered=[];
     for (let i=0;i<nodes.length;i++) {
       const position=nodes[i].position;
       current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
-      const step=current.steps[current.index];
-      if(step.pointId && !answered.includes(step.pointId) && api.distanceM(step.position,position)<2) {
+      while(current.steps[current.index].pointId && !answered.includes(current.steps[current.index].pointId) && api.distanceM(current.steps[current.index].position,position)<2) {
+        const step=current.steps[current.index];
         assert.equal(current.street.arrived,false,"answer the eighth-node question before arrival");
         answered.push(step.pointId);
         current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
@@ -741,9 +742,9 @@ test("old spacing migrates and rerouting keeps answers without exhausting a thre
   const {api,walk}=modules();
   const path=Array.from({length:81},(_,i)=>({lat:35+i*.0001,lng:139}));
   const route={id:"spacing",kind:"short",path,distanceM:880,durationS:800,notes:[]};
-  const initial={source:"context",questionsAligned:true,questionSpacingVersion:2,routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
+  const initial={source:"context",questionsAligned:true,questionSpacingVersion:3,routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
   const aligned=walk.alignWalkQuestions(initial,route,path.map(position=>({position})),[],()=>.5);
-  assert.equal(aligned.questionSpacingVersion,3);
+  assert.equal(aligned.questionSpacingVersion,4);
   assert.equal(walk.alignWalkQuestions(aligned,route,path.map(position=>({position})),[]),aligned);
   const answeredSteps=aligned.steps.filter(s=>s.event).slice(0,4);
   const last=answeredSteps.at(-1);
@@ -804,7 +805,7 @@ test("judgment scoring cannot turn missing records into a perfect score and supp
 
 test("a nearby seventh node cannot trigger an eighth-node question even with coordinate drift", () => {
   const {api,walk}=modules();
-  const path=Array.from({length:10},(_,i)=>({lat:35+i*.00003,lng:139}));
+  const path=Array.from({length:25},(_,i)=>({lat:35+i*.00003,lng:139}));
   const route={id:"close-nodes",kind:"short",path,distanceM:30,durationS:30,notes:[]};
   const current=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,path.map(position=>({position})),[],()=>.5);
   const question=current.steps.find(s=>s.event);

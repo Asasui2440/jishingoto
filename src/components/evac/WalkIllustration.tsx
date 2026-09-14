@@ -76,7 +76,7 @@ export function WalkIllustration({event, choice, className=""}: {event:HazardEve
   if (event.id === `walk-case-${number}` && Object.hasOwn(scenes, number)
       && ["situation", firstChoiceId, "go", "consider"].includes(variant)) {
     const description = choice ? `行動のイラスト：${choice.label}` : `状況のイラスト：${event.situation}`;
-    return <Image src={`/illustrations/evac/${event.id}/${variant}-v2.webp`} width={960} height={640} alt={description} aria-label={description} role="img" className={className} style={{objectFit:"contain"}} unoptimized />;
+    return <Image src={`/illustrations/evac/${event.id}/${variant}-v2.webp`} width={960} height={640} alt={description} aria-label={description} role="img" className={className} style={{objectFit:"contain"}} loading="eager" unoptimized />;
   }
   const fallback: Scene = event.id === "practice-flood" ? "water" : event.kind === "wall" ? "wall" : event.kind === "fall" ? "glass" : event.kind === "closed" ? "barrier" : "route";
   const definition = scenes[Number(event.id.replace("walk-case-",""))] ?? [fallback, choice?.id === "detour" ? "back" : "side", "forward", "wait"] as const;

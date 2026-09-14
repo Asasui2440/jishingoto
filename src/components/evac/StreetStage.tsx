@@ -211,6 +211,7 @@ export function StreetStage({
       {/* パノラマの器。sketch のときは隠す（画像は保存もキャッシュもしない） */}
       <div
         ref={boxRef}
+        inert={arrived}
         onKeyDownCapture={event => {
           // Native keyboard navigation bypasses the adjacent-link command boundary.
           if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(event.key.toLowerCase())) {
@@ -263,13 +264,6 @@ export function StreetStage({
       */}
       {zone ? (
         <>
-          {/* 気づいた瞬間のフラッシュ。下端は帰属表示のために外してある。 */}
-          <span
-            key={`flash-${zoneKey}`}
-            aria-hidden
-            className="animate-zone-flash pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 bg-white"
-          />
-
           <div
             key={`zone-${zoneKey}`}
             aria-hidden
@@ -391,7 +385,8 @@ export function StreetStage({
       {/* 避難場所に着いたとき。広がる輪と、着いたことを示すバッジ。 */}
       {arrived ? (
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 flex flex-col items-center justify-center gap-6"
+          data-testid="arrival-overlay"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-white/90"
         >
           <span className="relative grid place-items-center">
             {[0, 1].map((i) => (
@@ -413,6 +408,7 @@ export function StreetStage({
               </svg>
             </span>
           </span>
+          <p role="status" className="text-center text-lg font-bold text-ink">到着しました<span className="mt-1 block text-13 font-medium text-ink-muted">避難ルートの体験は終了です</span></p>
           {onReflect ? <button type="button" onClick={onReflect} className="pointer-events-auto min-h-12 rounded-full bg-primary px-6 font-bold text-ink shadow-lg">ふりかえる</button> : null}
         </div>
       ) : null}
@@ -422,7 +418,7 @@ export function StreetStage({
         ストリートビューのキャンバスが上に乗るので、z-10 で持ち上げる。
         中身側で pointer-events-auto を付けたものだけ押せる。
       */}
-      <div className="pointer-events-none absolute inset-0 z-10">{children}
+      <div className="pointer-events-none absolute inset-0 z-10" inert={arrived} aria-hidden={arrived}>{children}
         {destination ? <div className="absolute right-3 top-16 flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-11 font-bold text-blue-800" aria-label="避難先の方角"><span aria-hidden style={{ display: "inline-block", transform: `rotate(${destinationHeading - pov}deg)` }}>↑</span>避難先の方角</div> : null}
       </div>
     </div>
