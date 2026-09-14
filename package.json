@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/geo-analysis.test.cjs tests/evac-map.test.cjs",
+    "test": "node --test tests/*.test.cjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

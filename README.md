@@ -54,7 +54,7 @@ Next.js 16.3.4 / React 19.2.8 / TypeScript / Tailwind CSS 4
 
 ```bash
 npm run lint
-node --test tests/*.test.cjs
+npm test  # tests/*.test.cjs の全テストを実行
 npm run build
 npm start  # ビルド済みアプリを起動
 ```
