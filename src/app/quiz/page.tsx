@@ -1,5 +1,6 @@
 "use client";
 
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import { questionRoomView } from "@/lib/room-views";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -87,7 +88,8 @@ function QuestionView({
       {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold"><Furigana text={"この部屋で地震が発生"} /></p><p className="mt-3 text-3xl font-black"><Furigana text={"揺れが始まりました！"} /></p></div></div>}
       <div>
         <StatusBar />
-        <div className="flex items-center justify-between px-6 pt-3">
+        <div className="flex items-center gap-2 px-6 pt-3">
+          <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-black text-primary-ink">Q{index + 1}</span>
             <span className="text-13 text-ink-muted">
@@ -98,6 +100,7 @@ function QuestionView({
             <Volume2Icon className="size-4" />
             <Furigana text={"音・振動:"} /><Furigana text={sound ? "ON" : "OFF"} />
           </span>
+          </div><HeaderHomeLink />
         </div>
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
@@ -276,7 +279,7 @@ export default function QuizPage() {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
         <StatusBar />
-        <p className="px-6 text-center text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p>
+        <header className="flex items-center gap-2 px-6 pt-3"><p className="min-w-0 flex-1 text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p><HeaderHomeLink /></header>
         <DisclaimerFooter />
       </div>
     );

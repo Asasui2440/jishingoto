@@ -1,5 +1,6 @@
 "use client";
 
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import Image from "next/image";
 import LiveRoomCamera from "@/components/LiveRoomCamera";
 import { EyeOffIcon, MousePointerIcon } from "@/components/icons";
@@ -106,7 +107,7 @@ export default function RoomCapture() {
 
   return <div className="flex min-h-dvh flex-col">
     <main className="flex flex-1 flex-col gap-2 px-5 py-3">
-      <h1 className="font-display text-28 font-bold"><Furigana text={stage === "input" ? "部屋を写そう" : stage === "photo" ? "写真を撮る" : stage === "video" ? "動画を撮る" : stage === "privacy" ? "画像の確認・マスク" : "部屋の画像を準備しています"} /></h1>
+      <header className="flex items-center gap-2"><h1 className="min-w-0 flex-1 font-display text-28 font-bold"><Furigana text={stage === "input" ? "部屋を写そう" : stage === "photo" ? "写真を撮る" : stage === "video" ? "動画を撮る" : stage === "privacy" ? "画像の確認・マスク" : "部屋の画像を準備しています"} /></h1><HeaderHomeLink /></header>
       {stage === "input" && <>
         <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・家具の上まで広く写した部屋のイラスト" className="h-24 w-full rounded-panel object-cover" priority />
         <p className="text-13 leading-relaxed"><Furigana text="写真でも動画でも確認できるよ。動画は15秒ほどで、一定の速さで部屋を見回すように撮ろう。" adult="写真・動画のどちらでも確認できます。動画は15秒程度を目安に、一定の速さで部屋全体を撮影してください。" /></p>

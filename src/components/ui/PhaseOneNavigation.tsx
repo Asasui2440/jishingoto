@@ -1,17 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { HomeIcon } from "./DetailSheet";
 
-export function PhaseOneNavigation() {
-  const pathname = usePathname();
-  if (pathname.startsWith("/evac")) return null;
-  return <nav aria-label="共通ナビゲーション" className="phase-one-navigation">
-    <TopPageLink />
+/** 各画面のヘッダー内に配置し、専用の行を増やさない。 */
+export function HeaderHomeLink() {
+  return <nav aria-label="共通ナビゲーション" className="shrink-0">
+    <Link href="/home" aria-label="トップページへ戻る" title="トップページへ戻る" className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"><HomeIcon /></Link>
   </nav>;
-}
-
-export function TopPageLink() {
-  return <Link href="/" aria-label="トップページへ戻る" title="トップページへ戻る" className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-primary-ink shadow-sm"><HomeIcon /><span className="text-xs font-bold">トップ</span></Link>;
 }

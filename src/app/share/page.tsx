@@ -1,5 +1,6 @@
 "use client";
 
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import { SocialImageShare } from "@/components/SocialImageShare";
 import { preparePredictionImage, resultImageError } from "@/lib/result-image";
 import { useRouter } from "next/navigation";
@@ -52,12 +53,13 @@ export default function SharePage() {
       <div>
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
-          <h1 className="font-display text-lg font-bold text-ink">
+          <h1 className="min-w-0 flex-1 font-display text-lg font-bold text-ink">
             <Furigana text="結果を共有" />
           </h1>
-          <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"}>
+          <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"} className="grid size-11 shrink-0 place-items-center">
             <XCircleDarkIcon className="size-6 text-ink" />
           </button>
+          <HeaderHomeLink />
         </div>
       </div>
 

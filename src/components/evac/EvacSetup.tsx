@@ -83,6 +83,11 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
   const active = routes.find(r => r.id === startRouteId) ?? null;
   const validShelter = !!shelter && !!shelters?.some(s => s.id === shelter.id);
 
+  useEffect(() => {
+    // 以前の10秒・20秒・制限なしの設定は、新しい既定値へ戻す。
+    if (!TIMER_PRESETS.some(preset => preset.seconds === timerSeconds)) update({ timerSeconds: TIMER_PRESETS[0].seconds });
+  }, [timerSeconds, update]);
+
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
     if (!getEvac().home) update({home: DEMO_HOME, homeLabel: mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺", startedAt: Date.now()});
@@ -214,7 +219,7 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
           <div className="mb-2 flex items-center justify-between gap-2"><h2 className="truncate text-13 font-bold"><GameIcon name="flag" className="mr-1 inline size-4" /><Furigana text={shelter?.name ?? "避難先"} /></h2><button type="button" onClick={() => setSheet("route")} className="min-h-9 shrink-0 text-11 font-bold text-primary-ink">経路の詳細 ↗</button></div>
           <div className="grid grid-cols-2 gap-2">{routes.map((r, i) => <button type="button" key={r.id} onClick={() => chooseRoute(r.id)} aria-pressed={r.id === startRouteId} className={"rounded-2xl border-2 px-3 py-2 text-left " + (r.id === startRouteId ? "border-primary-mid bg-primary-soft" : "border-border bg-white")}><span className="flex items-center justify-between text-11 font-bold"><span><span aria-hidden className={"mr-1.5 inline-block size-2 rounded-full " + (r.kind === "short" ? "bg-primary-mid" : "bg-safe")} />ルート {String.fromCharCode(65+i)}</span>{openedIds.includes(r.id) ? <GameIcon name="check" className="size-3.5" /> : <span className="text-primary-ink">見る</span>}</span><span className="mt-1 block font-display text-xl font-bold">{formatDuration(r.durationS)}</span><span className="block text-11 text-ink-muted">{formatDistance(r.distanceM)}{mode === "mock" || analysisMode === "sample" ? " · " + r.eventCount + "場面" : ""}</span>{scenario === "flood" ? <span className="mt-1 block text-[10px]">{r.assessment?.flood?.status === "available" ? `浸水想定の着色区間 約${Math.round(r.assessment.flood.coloredM)}m` : "ハザード比較：未取得区間あり"}</span> : null}</button>)}</div>
           <p className="mt-2 text-11 text-ink-muted">{routes.length === 1 ? "取得できた候補は1本です。" : openedIds.length < 2 ? "もう1本もタップして、道を見比べよう。" : "道を見比べました。どの道で進む？"}</p>
-          <div className="mt-1 flex items-center gap-1 text-11"><GameIcon name="clock" className="mr-1 size-4" /><span className="mr-auto">考える時間</span>{TIMER_PRESETS.map(t => <button key={t.seconds} type="button" aria-pressed={timerSeconds === t.seconds} onClick={() => update({timerSeconds: t.seconds})} className={"min-h-11 min-w-11 rounded-xl px-2 font-bold " + (timerSeconds === t.seconds ? "bg-primary-soft text-primary-ink" : "text-ink-muted")}>{t.seconds ? t.seconds + "秒" : "なし"}</button>)}</div>
+          <div className="mt-1 flex items-center gap-1 text-11"><GameIcon name="clock" className="mr-1 size-4" /><span className="mr-auto">考える時間</span>{TIMER_PRESETS.map(t => <button key={t.seconds} type="button" aria-pressed={timerSeconds === t.seconds} onClick={() => update({timerSeconds: t.seconds})} className={"min-h-11 min-w-11 rounded-xl px-2 font-bold " + (timerSeconds === t.seconds ? "bg-primary-soft text-primary-ink" : "text-ink-muted")}>{t.seconds + "秒"}</button>)}</div>
         </>}
         </div>
         {stage === "place" ? <button disabled={!validShelter} type="button" onClick={() => void loadRoutes()} className={button + " mt-3 w-full shrink-0 bg-primary"}>ルートを比べる<GameIcon name="route" className="size-4" /></button> : !busy && !routeError && !needsShelter ? <button type="button" onClick={start} disabled={!active} className={button + " w-full shrink-0 bg-primary"}>この道でスタート<GameIcon name="play" className="size-4" /></button> : null}

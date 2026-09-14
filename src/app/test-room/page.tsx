@@ -1,5 +1,6 @@
 "use client";
 
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setRoomTestOptions } from "@/lib/room-test";
@@ -11,8 +12,8 @@ export default function TestRoomPage() {
   const [analysis, setAnalysis] = useState(2);
   const { reset, update } = useSession();
   const router = useRouter();
-  return <main className="space-y-5 px-6 pt-16 pb-6">
-    <h1 className="text-xl font-bold">部屋のテスト（APIなし）</h1>
+  return <main className="space-y-5 px-6 pt-3 pb-6">
+    <header className="flex items-center gap-2"><h1 className="min-w-0 flex-1 text-xl font-bold">部屋のテスト（APIなし）</h1><HeaderHomeLink /></header>
     <p>固定のサンプル写真と解析結果を利用し、AIへは送信しません。</p>
     <p className="text-13 text-ink-muted">解析の待ち時間を指定できます。本物のAPIの速度を測るものではありません。</p>
     <label className="block">解析の模擬待ち時間（秒）<input className="mt-2 block w-full rounded border p-3" type="number" min={0} max={180} value={analysis} onChange={(e) => setAnalysis(Number(e.target.value))} /></label>

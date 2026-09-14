@@ -138,7 +138,7 @@ export default function EvacWalkPage() {
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
             seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !decisionVisible} busy={busy}
             onViewStreet={() => setStreetPointId(step.pointId ?? step.id)}
-            onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
+            onTimerChange={seconds => { update({ timerSeconds: seconds }); setTimerOverride(seconds); }} onChoose={choose} />
         </div>
       </div> : null}
       {(!initialReady && !ready && !error && !street?.error && preparation?.status !== "error") || announcingPoint ? <div role="status" data-testid="attention-toast" className={announcingPoint ? styles.attentionNotice : styles.loadingNotice}>

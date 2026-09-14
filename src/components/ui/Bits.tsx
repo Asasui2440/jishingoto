@@ -1,3 +1,4 @@
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import type { ComponentProps } from "react";
 import { Furigana } from "./Furigana";
 
@@ -60,9 +61,9 @@ export function Meter({
 export function TitleBlock({ title, lead }: { title: string; lead?: string }) {
   return (
     <div className="shrink-0 px-6 pt-4">
-      <h1 className="font-display text-xl font-bold text-ink">
+      <header className="flex items-center gap-2"><h1 className="min-w-0 flex-1 font-display text-xl font-bold text-ink">
         <Furigana text={title} />
-      </h1>
+      </h1><HeaderHomeLink /></header>
       {lead ? (
         <p className="mt-1 text-13 text-ink-muted">
           <Furigana text={lead} />

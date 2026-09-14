@@ -1,5 +1,6 @@
 "use client";
 
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import Image from "next/image";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { useRouter } from "next/navigation";
@@ -122,8 +123,8 @@ export default function RoomRecognitionPage() {
       <StatusBar />
       <main className="flex flex-1 flex-col gap-3 px-5 py-3">
         <div>
-          <p className="text-11 font-bold text-primary-ink"><Furigana text={"体験の準備"} /></p>
-          <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1>
+          <header className="flex items-center gap-2"><div className="min-w-0 flex-1"><p className="text-11 font-bold text-primary-ink"><Furigana text="体験の準備" /></p>
+          <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1></div><HeaderHomeLink /></header>
           <p className="mt-2 text-13 text-ink-muted"><Furigana text="写真[しゃしん]の番号[ばんごう]を押[お]して、危険[きけん]と備[そな]えを確認[かくにん]しよう。" adult="写真の番号を選ぶと、危険の理由と対策を確認できます。" /></p>
         </div>
         {analysisSource === "demo" && <p role="status" className="rounded-field bg-warn-soft p-3 text-11 text-warn">{analysisWarning ?? "サンプルの部屋で体験できます。"}</p>}

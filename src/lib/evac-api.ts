@@ -662,9 +662,8 @@ export async function fetchDecisionPoints(route: RouteOption, options?: { source
 /* ------------------------------------------------------------------ */
 
 export const TIMER_PRESETS = [
-  { seconds: DEFAULT_TIMER_SECONDS, label: "10秒[びょう]" },
-  { seconds: 20, label: "20秒[びょう]（延長[えんちょう]）" },
-  { seconds: 0, label: "なし（時間[じかん]を気[き]にせず考[かんが]える）" },
+  { seconds: DEFAULT_TIMER_SECONDS, label: "15秒[びょう]" },
+  { seconds: 25, label: "25秒[びょう]" },
 ];
 
 /* ------------------------------------------------------------------ */

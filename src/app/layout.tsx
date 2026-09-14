@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Gabarito, Noto_Sans_JP, Rethink_Sans } from "next/font/google";
 import "./globals.css";
-import { PhaseOneNavigation } from "@/components/ui/PhaseOneNavigation";
 import { SettingsProvider } from "@/lib/settings";
 import { SessionProvider } from "@/lib/session";
 
@@ -56,7 +55,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SessionProvider>
             {/* スマホ幅が基準。PC で開いたときは中央に寄せる */}
             <div className="mx-auto w-full max-w-[402px] bg-canvas shadow-[0_0_60px_rgba(26,32,44,0.08)]">
-              <PhaseOneNavigation />
               {children}
             </div>
           </SessionProvider>
