@@ -24,6 +24,7 @@ type Props = {
   returnPano?: string | null;
   recommendedPano?: string | null;
   onNavigation?: (state: StreetSnapshot) => void;
+  onChangeStart?: () => void;
   destination?: LatLng;
   arrivalEndpoint?: LatLng;
 
@@ -44,6 +45,7 @@ type Props = {
   onAdvance?: () => void;
   /** 避難場所に着いたか。着いたときの演出に使う */
   arrived?: boolean;
+  onReflect?: () => void;
   height?: number | string;
   demo?: boolean;
   sceneKey?: string;
@@ -70,6 +72,7 @@ export function StreetStage({
   demoPosition: position,
   navigationRef,
   onNavigation,
+  onChangeStart,
   recommendedPano,
   returnPano,
   destination,
@@ -83,6 +86,7 @@ export function StreetStage({
   walking = false,
   onAdvance,
   arrived = false,
+  onReflect,
   height = 260,
   demo = false,
   sceneKey = "",
@@ -94,6 +98,8 @@ export function StreetStage({
   const controls = useRef<ReturnType<typeof streetController> | null>(null);
   const [snapshot, setSnapshot] = useState<StreetSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const retryPano = useRef<string | null>(null);
   useImperativeHandle(navigationRef, () => ({ move: id => controls.current?.move(id) }), []);
   const endpointLat = (arrivalEndpoint ?? destination)?.lat;
   const endpointLng = (arrivalEndpoint ?? destination)?.lng;
@@ -136,23 +142,27 @@ export function StreetStage({
     let panorama: google.maps.StreetViewPanorama | null = null;
     let observer: ResizeObserver | null = null;
     let controller: ReturnType<typeof streetController> | null = null;
-    const fail = () => {
+    const fail = (error?: unknown) => {
       if (!alive) return;
       controller?.dispose();
       alive = false;
-      const message = "Street Viewを読み込めませんでした。地図を確認するか、ページを読み直してください。";
+      const code = error instanceof Error ? error.message : typeof error === "object" && error !== null && "code" in error ? String(error.code) : String(error ?? "");
+      const message = /ZERO_RESULTS|no-pano/.test(code) ? "出発地点の近くに屋外のStreet Viewが見つかりませんでした。出発地点を近くの道路に変更してください。"
+        : /missing-key|auth|REQUEST_DENIED/.test(code) ? "Google Mapsの認証を確認できませんでした。APIキーとこのサイトでの利用設定を確認してください。"
+        : /timeout/.test(code) ? "Street Viewの読み込みがタイムアウトしました。通信を確認して再試行してください。"
+        : "この地点のStreet Viewを取得できませんでした。";
       setLoadError(message);
       setSnapshot(prev => prev ? { ...prev, ready: false, busy: false, error: message } : {
         pano: "", position: null, heading: start.current.heading, links: [], previousPano: null,
         travelHeading: null, ready: false, busy: false, error: message,
       });
     };
-    const unsubscribe = onMapsAuthError(fail);
-    const timeout = setTimeout(() => { fail(); alive = false; }, 20000);
+    const unsubscribe = onMapsAuthError(() => fail(new Error("maps-auth-failed")));
+    const timeout = setTimeout(() => fail(new Error("street-timeout")), 20000);
     void (async () => {
       if (!hasMapsKey()) throw new Error("missing-key");
       const maps = await loadMaps();
-      const { data } = await new maps.StreetViewService().getPanorama({
+      const { data } = await new maps.StreetViewService().getPanorama(retryPano.current ? {pano:retryPano.current} : {
         location: start.current.position, radius: 40,
         preference: maps.StreetViewPreference.NEAREST,
         sources: [maps.StreetViewSource.OUTDOOR, maps.StreetViewSource.GOOGLE],
@@ -176,7 +186,15 @@ export function StreetStage({
       controls.current = null; observer?.disconnect(); panorama?.setVisible(false);
       box?.replaceChildren();
     };
-  }, [demo]);
+  }, [demo, loadAttempt]);
+
+  const retryLoad = () => {
+    retryPano.current = snapshot?.pano || null;
+    if (snapshot?.position) start.current = {position:snapshot.position,heading:snapshot.heading};
+    setLoadError(null);
+    setSnapshot(null);
+    setLoadAttempt(n => n + 1);
+  };
 
   return (
     <div
@@ -193,6 +211,7 @@ export function StreetStage({
       {/* パノラマの器。sketch のときは隠す（画像は保存もキャッシュもしない） */}
       <div
         ref={boxRef}
+        inert={arrived}
         onKeyDownCapture={event => {
           // Native keyboard navigation bypasses the adjacent-link command boundary.
           if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(event.key.toLowerCase())) {
@@ -214,6 +233,10 @@ export function StreetStage({
       {!demo && (loadError || snapshot?.error || !snapshot?.position) ? (
         <div role={loadError || snapshot?.error ? "alert" : "status"} className="absolute inset-x-3 top-1/3 rounded-xl bg-white/95 p-3 text-13 text-ink">
           {loadError ?? snapshot?.error ?? "Street Viewを読み込んでいます…"}
+          {loadError || snapshot?.error ? <div className="mt-3 space-y-2">
+            {onChangeStart ? <><p>出発地点を、近くの道路上へ少しずらして試してみてください。</p><button type="button" onClick={onChangeStart} className="pointer-events-auto block min-h-11 rounded-full bg-primary px-4 font-bold text-ink">出発地点を少しずらす</button></> : null}
+            <button type="button" onClick={retryLoad} className="pointer-events-auto block min-h-11 px-2 text-11 text-ink-muted underline">同じ地点で再試行</button>
+          </div> : null}
         </div>
       ) : null}
       {!demo && showArrow && snapshot?.ready && !loadError ? (
@@ -241,13 +264,6 @@ export function StreetStage({
       */}
       {zone ? (
         <>
-          {/* 気づいた瞬間のフラッシュ。下端は帰属表示のために外してある。 */}
-          <span
-            key={`flash-${zoneKey}`}
-            aria-hidden
-            className="animate-zone-flash pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 bg-white"
-          />
-
           <div
             key={`zone-${zoneKey}`}
             aria-hidden
@@ -369,8 +385,8 @@ export function StreetStage({
       {/* 避難場所に着いたとき。広がる輪と、着いたことを示すバッジ。 */}
       {arrived ? (
         <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 bottom-8 z-10 grid place-items-center"
+          data-testid="arrival-overlay"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-white/90"
         >
           <span className="relative grid place-items-center">
             {[0, 1].map((i) => (
@@ -392,6 +408,8 @@ export function StreetStage({
               </svg>
             </span>
           </span>
+          <p role="status" className="text-center text-lg font-bold text-ink">到着しました<span className="mt-1 block text-13 font-medium text-ink-muted">避難ルートの体験は終了です</span></p>
+          {onReflect ? <button type="button" onClick={onReflect} className="pointer-events-auto min-h-12 rounded-full bg-primary px-6 font-bold text-ink shadow-lg">ふりかえる</button> : null}
         </div>
       ) : null}
 
@@ -400,7 +418,7 @@ export function StreetStage({
         ストリートビューのキャンバスが上に乗るので、z-10 で持ち上げる。
         中身側で pointer-events-auto を付けたものだけ押せる。
       */}
-      <div className="pointer-events-none absolute inset-0 z-10">{children}
+      <div className="pointer-events-none absolute inset-0 z-10" inert={arrived} aria-hidden={arrived}>{children}
         {destination ? <div className="absolute right-3 top-16 flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-11 font-bold text-blue-800" aria-label="避難先の方角"><span aria-hidden style={{ display: "inline-block", transform: `rotate(${destinationHeading - pov}deg)` }}>↑</span>避難先の方角</div> : null}
       </div>
     </div>

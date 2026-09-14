@@ -1,0 +1,126 @@
+{
+  "mode": "built-in imagegen",
+  "status": "先行3問の試作。v2は電線V2と同じ画風方針を示す。",
+  "assets": [
+    {
+      "number": 9,
+      "variant": "situation",
+      "prompt": "Use case: illustration-story. Educational walking game, mobile thumbnail. Match reference visual style ONLY: very thick dark navy outlines, rounded joints, simple blue-shirt dark-trousers yellow-backpack faceless adult, pale blue background, gray pavement. Large person fills 60 percent of image height. Very few broad shapes, no tiny details, no text, numbers, arrows, checkmarks, approval colors, speech balloons, or injury. One 3:2 landscape image, readable at 94x64 pixels. Keep important features away from upper-left corner where UI number overlays. NEW SCENE, no utility pole or wire. A flooded street. Oblique side view: main road runs left to right, right half covered by opaque muted blue floodwater, completely concealing road surface, with only two broad ripples. A dry side road branches toward lower-left behind the person. Person stands center-left on dry pavement facing the water ahead. All main elements large; waterline clearly separated from feet by open dry pavement. No visible water bottom, drain, hidden obstacles, shelter, distant scenery or rain clutter. Do not depict a river: this is water pooled across a roadway with a road continuing behind it.",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c1ac60ae-d3ee-4f81-bb64-03835b0c9980.png",
+      "asset": "public/illustrations/evac/walk-case-9/situation-v2.webp"
+    },
+    {
+      "number": 9,
+      "variant": "detour",
+      "prompt": "Edit this illustration into action option: person turns LEFT away from flooded road and WALKS BACK toward the dry branch lower-left. Same large blue-shirt yellow-backpack character, full body, clear walking stride facing away from water. Keep flooded waterline and road geometry exactly the same. Same very thick navy outlines and sparse large shapes, 3:2. No arrows, text, marks, additional people or new hazards. Readable at 94x64px. Only change person pose and a small movement along dry pavement.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c1ac60ae-d3ee-4f81-bb64-03835b0c9980.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-0da667a4-fb21-46c2-b155-274ad948b2a5.png",
+      "asset": "public/illustrations/evac/walk-case-9/detour-v2.webp"
+    },
+    {
+      "number": 9,
+      "variant": "go",
+      "prompt": "Edit this scene into a hypothetical action option. Preserve road and opaque floodwater geometry, simple thick navy outlines and large character. Move same blue-shirt yellow-backpack person to the NEAR EDGE of water at center-right. Person leans forward looking at feet and cautiously extends one foot into the opaque water along its near edge, other foot still on dry road. Show the extended shoe partially obscured by water, but do not reveal water bottom or assign a depth. Full body large, clear bent-neck and tentative stepping pose. No stick, extra tools, text, icons, arrows, injury, successful crossing, or extra people. 3:2. Important: water remains opaque and forward path not proven safe.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c1ac60ae-d3ee-4f81-bb64-03835b0c9980.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-385ebbeb-0ec9-4ab0-8596-d675c2dcf5ef.png",
+      "asset": "public/illustrations/evac/walk-case-9/go-v2.webp"
+    },
+    {
+      "number": 9,
+      "variant": "consider",
+      "prompt": "Edit this scene into another action option: blue-shirt yellow-backpack person remains standing on DRY road before floodwater, and faces a passing adult in muted purple shirt and dark trousers to ask them about the route. Two large simple faceless people in conversation, one open hand gesture, both feet visibly dry, waterline behind/right with no body-water overlap. Preserve same road fork and floodwater geometry, crop closer if necessary so each person roughly 60 percent image height, very thick navy outline, simple style. No phone, speech bubbles, text, checkmarks, arrows or injury. Do not show the passerby successfully crossing water; they are already on dry side. 3:2.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c1ac60ae-d3ee-4f81-bb64-03835b0c9980.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a771ec2c-e0fd-4e6a-9ec9-f1fc1c64e6ce.png",
+      "asset": "public/illustrations/evac/walk-case-9/consider-v2.webp"
+    },
+    {
+      "number": 14,
+      "variant": "situation",
+      "prompt": "Use case: illustration-story. Educational walking game, mobile thumbnail. Match reference visual style ONLY: very thick dark navy outlines, rounded joints, simple blue-shirt dark-trousers yellow-backpack faceless adult, pale blue background, gray pavement. Large person fills 60 percent of image height. Very few broad shapes, no tiny details, no text, numbers, arrows, checkmarks, approval colors, speech balloons, or injury. One 3:2 landscape image, readable at 94x64 pixels. Keep important features away from upper-left corner where UI number overlays. NEW SCENE: sidewalk beside a building with broken window above and scattered glass below. No pole or wire. Tight oblique side composition: right third a simple gray building wall, ONE LARGE broken rectangular window upper right with 3 large jagged remaining pane shapes in its frame; a few separate pale-blue sharp triangular shards on pavement lower-right, and a strip with fewer shards along outer sidewalk edge. Left foreground a gray side path branching away from building, clear paving border. One large protagonist stands center-left facing ahead along sidewalk, arms down. Show BOTH overhead broken window and ground shards clearly separated, without long full building facade or empty sky. All glass has thick navy outlines. No actively raining glass, extra danger, vehicles, text, or tiny particles. Distinguish window from door.",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-20cb567b-d25d-49c6-890d-bd6ba91cef78.png",
+      "asset": "public/illustrations/evac/walk-case-14/situation-v2.webp"
+    },
+    {
+      "number": 14,
+      "variant": "distance",
+      "prompt": "Edit image into action option. Preserve exact broken window, large ground shards, side path on left, thick navy outlined sparse style. Same large blue-shirt yellow-backpack person now WALKING LEFT away from building toward the side path, BOTH forearms raised across top of head to shield it, bent elbows clearly attached to shoulders, head visible beneath arms. Stride and body face LEFT, not toward glass. Keep feet on clear pavement and both feet fully visible. Face turned slightly toward leftward path. No new objects, text, symbols, arrows, extra people or falling glass. 3:2 landscape, large mobile-readable silhouette.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-20cb567b-d25d-49c6-890d-bd6ba91cef78.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5576595f-87b0-43da-bb5c-99399bca3177.png",
+      "asset": "public/illustrations/evac/walk-case-14/distance-v2.webp"
+    },
+    {
+      "number": 14,
+      "variant": "go",
+      "prompt": "Edit reference into another action option: preserve broken window above, ground shards, building and sidewalk geometry and very thick outline style. Same large person now advances RIGHT along the outer sidewalk strip with fewer glass shards. Head bows down to inspect shoe placement; one knee lifted slightly to step between shards, arms LOW near waist, NOT shielding head. Both feet remain on sidewalk, not on grass or road. Show full body around 65 percent image height, broken window retained visibly overhead on right. Keep glass pieces in original locations, no new hazards or successful arrival. No text, arrows, icons, tools or extra people. 3:2 single image.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-20cb567b-d25d-49c6-890d-bd6ba91cef78.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a1abb2aa-55f8-463a-8d70-8b9d69ffa9f5.png",
+      "asset": "public/illustrations/evac/walk-case-14/go-v2.webp"
+    },
+    {
+      "number": 14,
+      "variant": "consider",
+      "prompt": "Edit reference into action option: same large blue-shirt yellow-backpack person stays STILL in original sidewalk position, BOTH FEET planted together with no walking stride. Both forearms raised over head, shielding it, elbows cleanly attached, face visible below. Person looks to the right at another passerby further along sidewalk. Add ONE simple small muted-purple-shirt passerby at far right edge, not obscuring glass or window. This indicates watching others rather than leaving. Preserve broken window and glass pieces, road and side path, framing, colors and very thick navy outlines. No text, arrows, checkmarks, injury, successful crossing or new hazards. 3:2 image. Standing protagonist must clearly differ from walking-left pose.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-20cb567b-d25d-49c6-890d-bd6ba91cef78.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-2ddf6a89-2c44-4ec0-a5fd-0d4a1123fe5f.png",
+      "asset": "public/illustrations/evac/walk-case-14/consider-v2.webp"
+    },
+    {
+      "number": 27,
+      "variant": "situation",
+      "prompt": "Use case: illustration-story. Educational walking game, mobile thumbnail. Match reference visual style ONLY: very thick dark navy outlines, rounded joints, simple blue-shirt dark-trousers yellow-backpack faceless adult, pale blue background, gray pavement. Large person fills 60 percent of image height. Very few broad shapes, no tiny details, no text, numbers, arrows, checkmarks, approval colors, speech balloons, or injury. One 3:2 landscape image, readable at 94x64 pixels. Keep important features away from upper-left corner where UI number overlays. NEW SCENE no pole, wire, water or damage. Two large simple faceless adults on sidewalk at a bend: blue-shirt yellow-backpack protagonist LEFT listens with arms relaxed, muted-purple-shirt passerby RIGHT extends an arm toward the route that disappears behind one plain gray building corner on far right. Foreground gray paving, minimal pale blue backdrop, no distant buildings. Keep both people full body and each about 65 percent image height. This is before a decision: passerby offers route information, protagonist only listens, no phone yet. Clearly show path turns out of sight, without depicting its hidden condition. No writing, speech bubbles, floating icons, arrows or third person. 3:2.",
+      "references": [
+        "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d709e165-ec8c-4c60-857b-0521191f7c88.png",
+      "asset": "public/illustrations/evac/walk-case-27/situation-v2.webp"
+    },
+    {
+      "number": 27,
+      "variant": "distance",
+      "prompt": "Edit reference into action option: same blue-shirt yellow-backpack protagonist faces same purple-shirt passerby to ask detailed questions. Protagonist holds a LARGE readable dark phone between them at chest height and points to a simple bent route line on screen; passerby leans attention toward screen, open-hand conversational gesture. Tight waist-up crop of the two adults, faces and entire phone visible, so questioning and checking map is clear at 94x64px. Preserve original building corner at right edge and same road direction, colors and very thick outlines. Screen contains ONLY one broad route line, no text, numbers or icons. No speech bubbles, clocks, arrows, checkmarks, new people or visible conditions beyond corner. 3:2.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d709e165-ec8c-4c60-857b-0521191f7c88.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-78211574-60f9-4f91-ace0-26cbdf335240.png",
+      "asset": "public/illustrations/evac/walk-case-27/distance-v2.webp"
+    },
+    {
+      "number": 27,
+      "variant": "go",
+      "prompt": "Edit reference into action option: same blue-shirt yellow-backpack protagonist leaves the purple-shirt informant behind and WALKS RIGHT toward the road disappearing behind building corner. Large full-body blue character in center-right taking a clear rightward stride, arms swinging, no phone. Purple-shirt person remains left in background with arm relaxed. Preserve exact road bend and gray building corner, same simple colors and bold thick outlines. Do not reveal beyond corner or add hazards. Keep protagonist about 70 percent canvas height, no tiny distant walking person. No text, symbols, bubbles, arrows or approval markers. One 3:2 image.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d709e165-ec8c-4c60-857b-0521191f7c88.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9f9083ba-52dc-4360-9f5f-3a8846ad4703.png",
+      "asset": "public/illustrations/evac/walk-case-27/go-v2.webp"
+    },
+    {
+      "number": 27,
+      "variant": "consider",
+      "prompt": "Edit reference into another action choice: the blue-shirt yellow-backpack protagonist asks a SECOND passerby as well, without phone. Three large simple faceless people: blue protagonist center-left turning with open palm toward a new TAN-shirt passerby on right who gestures toward road; original PURPLE-shirt informant still visible on far left, standing relaxed. Preserve same gray building corner and road turning out of sight at right. Crop about knees-up to keep all three large and gestures obvious at 94x64px. Distinguish second passerby by tan shirt AND position, not color alone. Thick navy outlines, minimal background. No text, speech balloons, vote counts, phones, arrows, checkmarks, extra hazards or extra people. ONE 3:2 image.",
+      "references": [
+        "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d709e165-ec8c-4c60-857b-0521191f7c88.png"
+      ],
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ea1605cf-8c66-415d-ab0d-61fd22903a69.png",
+      "asset": "public/illustrations/evac/walk-case-27/consider-v2.webp"
+    }
+  ]
+}

@@ -5,13 +5,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const ts = require("typescript");
 
-function modules(mapsEnabled = false, computeRoutes = async () => { throw new Error("API not configured in test"); }) {
+function modules(mapsEnabled = false, computeRoutes = async () => { throw new Error("API not configured in test"); }, streetMaps = {}) {
   const cache = new Map();
   const load = (file) => {
     file = path.resolve(file);
     if (/[\\/]gmaps\.ts$/.test(file)) return {
       hasMapsKey: () => mapsEnabled,
-      loadMaps: async () => ({ importLibrary: async (name) => { assert.equal(name, "routes"); return { Route: { computeRoutes } }; } }),
+      loadMaps: async () => ({ ...streetMaps, importLibrary: async (name) => { assert.equal(name, "routes"); return { Route: { computeRoutes } }; } }),
     };
     if (cache.has(file)) return cache.get(file).exports;
     const mod = { exports: {} };
@@ -20,7 +20,7 @@ function modules(mapsEnabled = false, computeRoutes = async () => { throw new Er
     new Function("require", "module", "exports", code)((p) => p.startsWith(".") ? load(path.resolve(path.dirname(file), `${p}.ts`)) : require(p), mod, mod.exports);
     return mod.exports;
   };
-  return { plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
+  return { review: load("src/lib/evac-review.ts"), shelterGroups: load("src/lib/shelter-groups.ts"), branches: load("src/lib/route-branches.ts"), plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
 }
 
 const { api, walk, content, state } = modules();
@@ -171,12 +171,12 @@ test("keep the one real route if finding an alternative fails", async () => {
   const live = modules(true, async () => { if (++calls > 1) throw new Error("no alternative"); return { routes: [sdkRoute()] }; }).api;
   const routes = await live.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "api");
   assert.equal(routes.length, 1); assert.equal(routes[0].demo, undefined);
-  assert.equal(routes[0].durationS, 750); assert.equal(calls, 2);
+  assert.equal(routes[0].durationS, 750); assert.equal(calls, 1);
 });
 
-test("deduplicate SDK paths and label the shortest candidate after via lookup", async () => {
+test("deduplicate SDK paths and label the shortest real candidate", async () => {
   const path = [content.DEMO_HOME, { lat: 35.72, lng: 139.73 }, content.DEMO_SHELTERS[0].position];
-  const live = modules(true, async request => ({ routes: request.intermediates ? [sdkRoute(path, 800, 700000)] : [sdkRoute(), sdkRoute()] })).api;
+  const live = modules(true, async () => ({ routes: [sdkRoute(path, 800, 700000), sdkRoute(), sdkRoute()] })).api;
   const routes = await live.fetchRoutes(content.DEMO_HOME, content.DEMO_SHELTERS[0], "api");
   assert.equal(routes.length, 2);
   assert.equal(routes[0].distanceM, 800); assert.equal(routes[0].kind, "short");
@@ -499,12 +499,12 @@ test("shelter lookup uses the selected disaster layer and excludes incompatible 
   global.fetch = async url => { urls.push(String(url)); return Response.json({features:[feature("洪水のみ",{disaster1:1}),feature("地震のみ",{disaster4:1}),feature("両方",{disaster1:"1",disaster4:1})]}); };
   try {
     const flood = await live.fetchShelters({lat:34.702,lng:135.495},"api","flood");
-    assert.deepEqual(flood.map(s=>s.name),["洪水のみ"]); // duplicate location is shown once
+    assert.deepEqual(flood.map(s=>s.name).sort(),["洪水のみ","両方"].sort()); // names distinguish facilities sharing coordinates
     assert(flood.every(s=>s.kind.includes("洪水") && s.supportedDisasters.includes("洪水")));
     assert(urls.every(url=>url.includes("/skhb01/")));
     urls.length=0;
     const quake = await live.fetchShelters({lat:34.702,lng:135.495},"api","earthquake");
-    assert.equal(quake[0].name,"地震のみ");
+    assert.deepEqual(quake.map(s=>s.name).sort(),["地震のみ","両方"].sort());
     assert(urls.every(url=>url.includes("/skhb04/")));
     global.fetch = async () => new Response(null,{status:503});
     await assert.rejects(live.fetchShelters({lat:34.702,lng:135.495},"api","flood"),/洪水/);
@@ -519,4 +519,298 @@ test("flood fallback questions stay explicitly synthetic and cannot become earth
   assert.equal(points[0].event.evidence,undefined);
   assert(points[0].event.situation.includes("固定の練習問題"));
   assert(points[0].event.situation.includes("浸水"));
+});
+
+test("route calculation rejects retraced spurs even when reverse geometry uses different vertices", async () => {
+  const a={lat:35,lng:139}, b={lat:35,lng:139.001}, tip={lat:35.0005,lng:139.001}, mid={lat:35.0002,lng:139.001}, end={lat:35,lng:139.002};
+  const straight=[a,b,end], spur=[a,b,tip,mid,b,end];
+  const sdk = modules(true,async ()=>({routes:[sdkRoute(spur),sdkRoute(straight)]})).googleRoutes;
+  assert.deepEqual((await sdk.requestWalkingRoutes(a,end)).map(r=>r.path),[straight]);
+  const live=modules(true,async request=>({routes:[sdkRoute(request.intermediates ? spur : straight)]})).api;
+  assert.equal((await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api")).length,1);
+  assert.equal(await live.fetchDetourFrom(a,{...content.DEMO_SHELTERS[0],position:end},"api"),null);
+  const onlySpur=modules(true,async()=>({routes:[sdkRoute(spur)]})).api;
+  await assert.rejects(onlySpur.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api"),/引き返さず/);
+});
+
+test("route filtering keeps corners, distinct parallel roads and crossings, but catches rounded reverse paths", async () => {
+  const p=(x,y)=>({lat:35+y/111132,lng:139+x/(111320*Math.cos(35*Math.PI/180))});
+  for (const path of [
+    [p(0,0),p(50,0),p(50,50)],
+    [p(0,0),p(100,0),p(100,10),p(0,10)],
+    [p(0,0),p(50,50),p(0,50),p(50,0)],
+    [p(0,0),p(0,0),p(50,0)],
+    [p(0,0),p(50,0),p(48,0),p(48,50)],
+  ]) {
+    const sdk=modules(true,async()=>({routes:[sdkRoute(path)]})).googleRoutes;
+    assert.equal((await sdk.requestWalkingRoutes(path[0],path.at(-1))).length,1);
+  }
+  const rounded=[p(0,0),p(100,0),p(99,1),p(50,1),p(50,50)];
+  const sdk=modules(true,async()=>({routes:[sdkRoute(rounded)]})).googleRoutes;
+  assert.equal((await sdk.requestWalkingRoutes(rounded[0],rounded.at(-1))).length,0);
+});
+
+const meterPoint = (x,y) => ({lat:35+y/111132,lng:139+x/(111320*Math.cos(35*Math.PI/180))});
+function branchMaps(nodes) {
+  return {
+    StreetViewPreference:{NEAREST:"NEAREST"}, StreetViewSource:{OUTDOOR:"OUTDOOR",GOOGLE:"GOOGLE"},
+    StreetViewService: class {
+      async getPanorama(request) {
+        const node = request.pano ? nodes[request.pano] : Object.values(nodes).find(n=>api.distanceM(n.position,request.location)<=35);
+        if (!node) throw new Error("no panorama");
+        return {data:{location:{pano:node.pano,latLng:{lat:()=>node.position.lat,lng:()=>node.position.lng}},links:node.links}};
+      }
+    },
+  };
+}
+
+test("at a shared fork, discover the straight road instead of an arbitrary distant waypoint", async () => {
+  const a=meterPoint(0,0), j=meterPoint(100,0), e=meterPoint(140,0), end=meterPoint(200,100);
+  const left=[a,j,meterPoint(100,100),end], right=[a,j,meterPoint(100,-100),meterPoint(250,-100),meterPoint(250,100),end];
+  const straight=[a,j,e,meterPoint(200,0),end];
+  const maps=branchMaps({
+    J:{pano:"J",position:j,links:[{pano:"unavailable",heading:45},{pano:"E",heading:90},{pano:"N",heading:0},{pano:"S",heading:180},{pano:"W",heading:270}]},
+    E:{pano:"E",position:e,links:[{pano:"J",heading:270}]},
+  });
+  const calls=[];
+  const live=modules(true,async request=>{
+    calls.push(request);
+    return {routes:request.intermediates ? [sdkRoute(straight,1500)] : [sdkRoute(left,300),sdkRoute(right,500)]};
+  },maps).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.deepEqual(routes.map(r=>r.distanceM),[300,500,1500],"longer routes remain eligible");
+  assert.deepEqual(calls[1].intermediates,[{location:j},{location:e}]);
+  assert.equal(calls.length,2);
+  assert.deepEqual(routes[2].path,straight);
+});
+
+test("via search recovers after backtracking rejection using a real connected branch", async () => {
+  const a=meterPoint(0,0), j=meterPoint(100,0), n=meterPoint(100,40), end=meterPoint(200,0);
+  const alternate=[a,j,n,meterPoint(200,40),end];
+  const maps=branchMaps({J:{pano:"J",position:j,links:[{pano:"N",heading:0}]},N:{pano:"N",position:n,links:[{pano:"J",heading:180}]}});
+  const live=modules(true,async request=>({routes:[sdkRoute(request.intermediates ? alternate : [a,j,a,end])]}),maps).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.equal(routes.length,1);
+  assert.deepEqual(routes[0].path,alternate);
+});
+
+
+test("branch validation rejects a snapped-away road or a long loop before reaching the branch", () => {
+  const {followsRouteBranch}=modules().branches;
+  const a=meterPoint(0,0), j=meterPoint(100,0), e=meterPoint(140,0), end=meterPoint(200,100);
+  const branch={via:[j,e],headingDifference:0};
+  assert(followsRouteBranch([a,j,e,meterPoint(200,0),end],branch));
+  assert.equal(followsRouteBranch([a,j,meterPoint(100,100),end],branch),false);
+  assert.equal(followsRouteBranch([a,j,meterPoint(100,-100),meterPoint(140,-100),e,end],branch),false);
+});
+
+test("school buildings form one choice while each disaster routes to an eligible building", async () => {
+  const near={lat:35,lng:139};
+  const feature=(name,offset,flags,address="東京都文京区本町1-2-3")=>({geometry:{coordinates:[139+offset,35]},properties:{name,address,remarks:"校舎は3階以上",...flags}});
+  const features=[
+    feature("さくら小学校（東校舎）",0.0001,{disaster4:1}),
+    feature("さくら小学校 西校舎",0.0005,{disaster1:1,disaster4:1}),
+    feature("さくら小学校（体育館）",0.0006,{disaster4:1}),
+    feature("さくら小学校",0.001,{disaster1:1,disaster4:1},"東京都文京区別町1-2-3"),
+    feature("さくら小学校分校",0.0007,{disaster1:1,disaster4:1}),
+  ];
+  const before=global.fetch;
+  global.fetch=async()=>Response.json({features});
+  try {
+    const live=modules(true).api;
+    const quake=await live.fetchShelters(near,"api","earthquake");
+    const flood=await live.fetchShelters(near,"api","flood");
+    assert.equal(quake.length,3);
+    assert.equal(flood.length,3);
+    assert.equal(quake[0].name,"さくら小学校");
+    assert.equal(quake[0].facilities.length,3);
+    assert.equal(flood[0].facilities.length,1);
+    assert.equal(quake[0].id,flood[0].id,"case changes retain the school selection");
+    nearly(quake[0].position.lng,139.0001,0.000001);
+    nearly(flood[0].position.lng,139.0005,0.000001);
+    assert(flood[0].facilities[0].note.includes("3階以上"));
+    const combined=modules().shelterGroups.groupSchoolShelters([...quake,...flood],near);
+    assert.equal(combined.length,3,"location screen also merges across disaster layers");
+    assert.equal(combined[0].facilities.length,3);
+    assert(combined[0].supportedDisasters.includes("洪水"));
+  } finally {global.fetch=before;}
+});
+
+test("school grouping happens before the five-choice limit and does not merge remote campuses", async () => {
+  const features=Array.from({length:6},(_,i)=>({geometry:{coordinates:[139+i*0.0001,35]},properties:{name:`第一小学校（第${i+1}校舎）`,address:"東京都文京区本町1",disaster4:1}}));
+  features.push({geometry:{coordinates:[139.002,35]},properties:{name:"第二小学校",address:"東京都文京区本町2",disaster4:1}});
+  const before=global.fetch;global.fetch=async()=>Response.json({features});
+  try {
+    const schools=await modules(true).api.fetchShelters({lat:35,lng:139},"api");
+    assert.equal(schools.length,2);
+    assert.equal(schools[0].facilities.length,6);
+    assert.equal(schools[1].name,"第二小学校");
+    const one=schools[1].facilities[0];
+    const separate=modules().shelterGroups.groupSchoolShelters([one,{...one,id:"remote",position:{lat:35.01,lng:139}}],{lat:35,lng:139});
+    assert.equal(separate.length,2);
+    assert.notEqual(separate[0].id,separate[1].id);
+  } finally {global.fetch=before;}
+});
+
+test("flood planning requests hazard-guided alternatives, reassesses them and prioritizes reduced exposure", async () => {
+  const a={lat:35,lng:139},end={lat:35,lng:139.002},via={lat:35.001,lng:139.001};
+  const direct=[a,end],detour=[a,via,end],calls=[];
+  const live=modules(true,async request=>{calls.push(request);return {routes:[sdkRoute(request.intermediates?detour:direct,request.intermediates?1000:200)]};}).api;
+  const before=global.fetch,assessed=[];
+  global.fetch=async(url,options)=>{
+    assert.equal(url,"/api/evac/assess");const body=JSON.parse(options.body);assert.equal(body.scenario,"flood");assessed.push(body);
+    return Response.json({version:"training-google-v1",assessments:Object.fromEntries(body.routes.map(route=>[route.id,{
+      notes:[],flood:{status:"available",coloredM:route.distanceM===200?200:0,weightedM:route.distanceM===200?1000:0,unknownM:0,uncoloredM:route.distanceM===200?0:1000,maxDepth:route.distanceM===200?"3〜5m":null,suggestedVias:route.distanceM===200?[via]:[]}
+    }]))});
+  };
+  try {
+    const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api","flood");
+    assert.equal(routes.length,2);assert.equal(routes[0].distanceM,1000,"prefer the longer route with reduced mapped exposure");
+    assert.deepEqual(calls[1].intermediates,[{location:via}]);assert.equal(assessed.length,2,"evaluate the entire new path again");
+    assert.equal(routes[0].assessment.flood.coloredM,0);
+  } finally {global.fetch=before;}
+});
+
+test("same road with additional rounded vertices does not fill multiple route slots", async () => {
+  const a={lat:35,lng:139},end={lat:35,lng:139.002};
+  const live=modules(true,async()=>({routes:[sdkRoute([a,end],200),sdkRoute([a,{lat:35.000001,lng:139.001},end],201)]})).api;
+  const routes=await live.fetchRoutes(a,{...content.DEMO_SHELTERS[0],position:end},"api");
+  assert.equal(routes.length,1);assert.equal(routes[0].distanceM,200);
+});
+
+test("context questions attach to actual nodes without duplicating answered questions", async () => {
+  const {api,walk,content} = modules();
+  const path = Array.from({length:25},(_,i)=>({lat:35+i*.00005,lng:139}));
+  const route = {id:"align",kind:"short",path,distanceM:134,durationS:100,eventCount:3,notes:[]};
+  const points = [.18,.45,.72].map((t,i) => ({id:`p-${i}`,t,position:api.pointAt(path,t),heading:0,event:{...content.HAZARD_EVENTS[0],id:`event-${i}`},remainingM:100,remainingS:80}));
+  const initial = {source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,points)};
+  const aligned = walk.alignWalkQuestions(initial,route,path.map(position => ({position})),[]);
+  assert.equal(aligned.questionsAligned,true);
+  const events = aligned.steps.filter(s => s.event);
+  assert.equal(events.length,3);
+  assert.deepEqual(events.map(s => s.position),[path[8],path[16],path[24]]);
+  assert.equal(walk.alignWalkQuestions(aligned,route,path.map(position => ({position})),[]),aligned);
+});
+
+test("context detours rerun disaster-specific route comparison from the actual stop and reject the unchanged road", async () => {
+  const from={lat:35,lng:139}, end={lat:35,lng:139.002}, via={lat:35.001,lng:139.001};
+  const calls=[];
+  const live=modules(true,async request=>{calls.push(request);return {routes:[sdkRoute([from,end],200),sdkRoute([from,via,end],400)]};}).api;
+  const before=global.fetch;
+  global.fetch=async(_url,options)=>{
+    const body=JSON.parse(options.body);assert.equal(body.scenario,"flood");
+    return Response.json({version:"training-google-v1",assessments:Object.fromEntries(body.routes.map(route=>[route.id,{notes:[],flood:{status:"available",coloredM:0,weightedM:0,unknownM:0,uncoloredM:route.distanceM,maxDepth:null,suggestedVias:[]}}]))});
+  };
+  try {
+    const result=await live.fetchDetourFrom(from,{...content.DEMO_SHELTERS[0],position:end},"api","flood",[from,end]);
+    assert(result);assert.deepEqual(result.path,[from,via,end]);
+    assert(calls.every(call=>call.origin.lat===from.lat && call.origin.lng===from.lng));
+    assert(result.id.startsWith("detour-"));
+  } finally {global.fetch=before;}
+});
+
+test("questions keep a three-question minimum and no upper limit", () => {
+  const {api,walk}=modules();
+  for (const hops of [0,1,7,8,9,16,24,25,80,399]) {
+    const path=Array.from({length:Math.max(2,hops+1)},(_,i)=>({lat:35+i*.0001,lng:139}));
+    const nodes=path.slice(0,hops+1).map(position=>({position}));
+    const route={id:`spacing-${hops}`,kind:"short",path,distanceM:hops*11,durationS:hops*10,notes:[]};
+    const aligned=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,nodes,[],()=>.5);
+    const questions=aligned.steps.filter(s=>s.event);
+    const count=Math.max(3,Math.floor(hops/8));
+    assert.equal(questions.length,count,`hops ${hops}`);
+    assert.deepEqual(questions.map(s=>path.findIndex(p=>p.lat===s.position.lat)),Array.from({length:count},(_,i)=>count>Math.floor(hops/8)?Math.ceil((i+1)*hops/count):(i+1)*8));
+    assert.equal(new Set(questions.map(s=>s.pointId)).size,questions.length);
+    for(let i=0;i<questions.length;i+=9) assert.equal(new Set(questions.slice(i,i+9).map(s=>s.event.id)).size,questions.slice(i,i+9).length,"complete each common catalogue cycle before repeating");
+    let current=aligned; const answered=[];
+    for (let i=0;i<nodes.length;i++) {
+      const position=nodes[i].position;
+      current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
+      while(current.steps[current.index].pointId && !answered.includes(current.steps[current.index].pointId) && api.distanceM(current.steps[current.index].position,position)<2) {
+        const step=current.steps[current.index];
+        assert.equal(current.street.arrived,false,"answer the eighth-node question before arrival");
+        answered.push(step.pointId);
+        current=walk.observeStreetPosition(current,position,0,answered,i===hops,walk.questionIdsAtNode(current,position));
+      }
+    }
+    assert.equal(answered.length,questions.length);
+    assert.equal(current.street.arrived,true);
+  }
+});
+
+test("old spacing migrates and rerouting keeps answers without exhausting a three-question budget", () => {
+  const {api,walk}=modules();
+  const path=Array.from({length:81},(_,i)=>({lat:35+i*.0001,lng:139}));
+  const route={id:"spacing",kind:"short",path,distanceM:880,durationS:800,notes:[]};
+  const initial={source:"context",questionsAligned:true,questionSpacingVersion:3,routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])};
+  const aligned=walk.alignWalkQuestions(initial,route,path.map(position=>({position})),[],()=>.5);
+  assert.equal(aligned.questionSpacingVersion,4);
+  assert.equal(walk.alignWalkQuestions(aligned,route,path.map(position=>({position})),[]),aligned);
+  const answeredSteps=aligned.steps.filter(s=>s.event).slice(0,4);
+  const last=answeredSteps.at(-1);
+  const atQuestion={...aligned,index:aligned.steps.indexOf(last)};
+  const detourPath=Array.from({length:25},(_,i)=>({lat:last.position.lat+i*.0001,lng:139}));
+  const detour={...route,id:"detour",path:detourPath};
+  const events=answeredSteps.map(s=>s.event.id);
+  const rerouted=walk.rerouteWalk(atQuestion,detour,[],events);
+  const rescheduled=walk.alignWalkQuestions(rerouted,detour,detourPath.map(position=>({position})),events,()=>.5);
+  const questions=rescheduled.steps.filter(s=>s.event);
+  assert.equal(questions.length,7);
+  assert.deepEqual(questions.slice(0,4).map(s=>s.pointId),answeredSteps.map(s=>s.pointId));
+  assert.deepEqual(questions.slice(4).map(s=>detourPath.findIndex(p=>p.lat===s.position.lat)),[8,16,24]);
+});
+
+test("confirmed node identity triggers all questions despite SDK coordinate drift and leaves the schedule unchanged", () => {
+  const {api,walk}=modules();
+  const path=Array.from({length:81},(_,i)=>({lat:35+i*.0001,lng:139}));
+  const route={id:"drift",kind:"short",path,distanceM:880,durationS:800,notes:[]};
+  let current=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,path.map(position=>({position})),[],()=>.5);
+  const originalSteps=current.steps, answered=[];
+  for(const position of path) {
+    const actual={lat:position.lat+.00004,lng:position.lng};
+    const matching=walk.questionIdsAtNode(current,position);
+    current=walk.observeStreetPosition(current,actual,0,answered,false,matching);
+    const step=current.steps[current.index];
+    if(step.pointId && matching.includes(step.pointId) && !answered.includes(step.pointId)) {
+      answered.push(step.pointId);
+      current=walk.observeStreetPosition(current,actual,0,answered,false,matching);
+      assert.equal(current.steps,originalSteps,"answering never resets the schedule");
+    }
+  }
+  assert.equal(answered.length,10);
+});
+
+test("judgment score averages the rubric and explains good and improvable choices without timing penalties", () => {
+  const {review,content}=modules();
+  const event={...content.HAZARD_EVENTS[0],id:"rubric",choices:[1,2,3].map((priority,i)=>({...content.HAZARD_EVENTS[0].choices[0],id:`c${i}`,priority}))};
+  const decisions=[0,1,2].map(i=>({pointId:`p${i}`,eventId:event.id,choiceId:`c${i}`,timedOut:true,extraSeconds:100}));
+  const walk={steps:decisions.map(d=>({pointId:d.pointId,event}))};
+  const result=review.scoreDecisions({decisions,walk});
+  assert.equal(result.score,50);assert.equal(result.count,3);
+  assert.equal(result.good.length,1);assert.equal(result.improvements.length,2);
+  assert(result.improvements.every(row=>row.recommended.id==="c2"));
+  assert.equal(review.scoreDecisions({decisions:decisions.map(d=>({...d,timedOut:false,extraSeconds:0})),walk}).score,50);
+  assert.equal(result.followUps.length,1);
+});
+
+test("judgment scoring cannot turn missing records into a perfect score and supports dynamic case IDs", () => {
+  const {review}=modules();
+  assert.equal(review.scoreDecisions({decisions:[],walk:null}).score,null);
+  const bad={pointId:"missing",eventId:"unknown",choiceId:"go"};
+  assert.equal(review.scoreDecisions({decisions:[bad],walk:null}).score,null);
+  const result=review.scoreDecisions({decisions:[bad,{pointId:"real",eventId:"walk-case-28",choiceId:"distance"}],walk:null});
+  assert.equal(result.score,100);assert.equal(result.count,1);assert.equal(result.total,2);
+});
+
+
+test("a nearby seventh node cannot trigger an eighth-node question even with coordinate drift", () => {
+  const {api,walk}=modules();
+  const path=Array.from({length:25},(_,i)=>({lat:35+i*.00003,lng:139}));
+  const route={id:"close-nodes",kind:"short",path,distanceM:30,durationS:30,notes:[]};
+  const current=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,path.map(position=>({position})),[],()=>.5);
+  const question=current.steps.find(s=>s.event);
+  const seventh=walk.observeStreetPosition(current,question.position,0,[],false,walk.questionIdsAtNode(current,path[7]));
+  assert(!seventh.street.questionPointIds.includes(question.pointId));
+  const eighth=walk.observeStreetPosition(seventh,question.position,0,[],false,walk.questionIdsAtNode(current,path[8]));
+  assert.equal(eighth.steps[eighth.index].pointId,question.pointId);
 });

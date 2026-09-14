@@ -1,0 +1,17 @@
+.panel { border: 2px solid; border-radius: 16px; padding: 12px; }
+.benefit { border-color: #5eaf9f; background: #effbf6; color: #145c4e; }
+.caution { border-color: #e8a14d; background: #fff8ea; color: #7a450e; }
+.instruction { margin-bottom: 8px; text-align: center; font-size: 11px; font-weight: 700; }
+.tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border: 1px solid #91a7ad; border-radius: 14px; background: white; }
+.indicator { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 10px; background: #1b7767; transition: transform 200ms ease, background-color 200ms; }
+.tabs[data-caution="true"] .indicator { transform: translateX(100%); background: #9a5109; }
+.tab { position: relative; min-width: 0; min-height: 44px; padding: 6px; border-radius: 10px; font-size: 13px; font-weight: 800; line-height: 1.5; color: #405364; }
+.tab[aria-selected="true"] { color: white; }
+.body { margin-top: 12px; min-height: 104px; padding: 12px; border-radius: 10px; background: #ffffffdd; font-size: 13px; line-height: 1.8; transform-origin: center; }
+.heading { margin-bottom: 8px; font-size: 13px; font-weight: 800; }
+.list { display: grid; gap: 8px; padding-left: 18px; list-style: disc; }
+.closing { animation: flatten 160ms ease-in forwards; }
+.opening { animation: unfold 200ms ease-out both; }
+@keyframes flatten { from { transform: scaleY(1); opacity: 1; } to { transform: scaleY(.035); opacity: .4; } }
+@keyframes unfold { from { transform: scaleY(.035); opacity: .4; } to { transform: scaleY(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .closing, .opening { animation: none; } .indicator { transition: none; } }

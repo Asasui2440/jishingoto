@@ -44,6 +44,8 @@ export type LatLng = { lat: number; lng: number };
 export type Shelter = {
   purpose?: "home";
   commuteFrom?: "work" | "school";
+  /** 学校内の指定地点。対応災害・名称・座標は地点ごとに保持する。 */
+  facilities?: Shelter[];
   supportedDisasters?: string[];
   id: string;
   name: string;
@@ -64,6 +66,7 @@ export type RouteKind = "short" | "safe";
  * training-v1 の考え方を使うが、実際の安全性・被害確率を表す点数ではない。
  */
 export type RouteAssessment = {
+  flood?: import("./flood-hazard").FloodAssessment;
   version: "training-google-v1";
   coverage: "full" | "outside";
   /** 候補内の比較にだけ使う教育用の指数。画面に安全度として表示しない。 */
@@ -103,7 +106,7 @@ export type RouteOption = {
 /** 判断イベントの種類 */
 export type EventKind = "wall" | "fall" | "closed" | "terrain";
 
-export type ChoiceId = "go" | "distance" | "detour";
+export type ChoiceId = "go" | "distance" | "detour" | "consider";
 
 export type EvacChoice = {
   id: ChoiceId;
@@ -126,10 +129,11 @@ export type EvacChoice = {
 };
 
 export type HazardEvent = {
+  locationReference?: { label: string; url: string };
   evidence?: import("./geo-types").GeoEvidence;
   id: string;
   kind: EventKind;
-  /** 見出し。必ず「〜した想定」で書く */
+  /** 場面の見出し。訓練の前提は共通の説明にまとめる */
   title: string;
   /** 状況説明 */
   situation: string;
