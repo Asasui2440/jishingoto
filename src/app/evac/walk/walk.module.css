@@ -1,0 +1,12 @@
+.shell { min-height: 440px; }
+.main { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; }
+.status { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; padding: 0 16px; }
+.scene { flex: 1; min-height: 140px; margin: 0 12px; overflow: hidden; border-radius: 24px; }
+.actions { display: flex; flex-shrink: 0; flex-direction: column; gap: 10px; padding: 4px 16px 14px; }
+.decisionSlot { position: absolute; z-index: 20; bottom: 124px; left: 12px; right: 12px; display: grid; max-height: calc(100% - 160px); border-radius: 24px; box-shadow: 0 8px 32px #17212c33; }
+.decisionContent { display: flex; min-height: 0; grid-area: 1 / 1; }
+.decisionHidden { visibility: hidden; }
+.attentionNotice { z-index: 1; display: flex; grid-area: 1 / 1; align-self: end; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; background: #eff6ff; padding: 14px; color: #1e40af; font-size: 14px; font-weight: 800; text-align: center; }
+@keyframes attention-toast-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-height: 650px) { .main { gap: 4px; } .scene { min-height: 112px; } .actions { gap: 6px; padding-bottom: 8px; } }
+@media (max-height: 650px) { .decisionSlot { bottom: 100px; max-height: calc(100% - 105px); } }

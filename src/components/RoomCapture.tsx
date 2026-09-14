@@ -110,14 +110,14 @@ export default function RoomCapture() {
       {stage === "input" && <>
         <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・家具の上まで広く写した部屋のイラスト" className="h-auto w-full rounded-panel" priority />
         <p className="text-base leading-relaxed"><Furigana text="写真でも動画でも、部屋の様子を確認できます。動画は15秒ほどで、一定の速さで部屋を見回すように撮ろう。" /></p>
-        <section aria-labelledby="photo-method" className="rounded-panel bg-primary-soft p-4">
+        <section aria-labelledby="photo-method" className="rounded-panel bg-secondary-soft p-4">
           <h2 id="photo-method" className="mb-3 font-display text-xl font-bold"><Furigana text="写真" /></h2>
           <div className="grid grid-cols-2 gap-3">
             <Button aria-label="写真を撮影する" onClick={() => { setError(""); setStage("photo"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
             <Button variant="outline" onClick={() => photoFileInput.current?.click()} disabled={!!busy}><Furigana text="写真から選ぶ" /></Button>
           </div>
         </section>
-        <section aria-labelledby="video-method" className="rounded-panel bg-primary-soft p-4">
+        <section aria-labelledby="video-method" className="rounded-panel bg-secondary-soft p-4">
           <h2 id="video-method" className="mb-3 font-display text-xl font-bold"><Furigana text="動画" /></h2>
           <div className="grid grid-cols-2 gap-3">
             <Button aria-label="動画を撮影する" onClick={() => { setError(""); setStage("video"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
@@ -129,9 +129,9 @@ export default function RoomCapture() {
       </>}
       {(stage === "photo" || stage === "video") && <LiveRoomCamera mode={stage} onCapture={(file, duration) => void loadFile(file, duration)} onBack={() => setStage("input")} />}
       {stage === "privacy" && <>
-        <p className="font-bold text-primary-ink"><Furigana text={`AIが選んだ画像 ${selected.indexOf(index) + 1} / ${selected.length}`} /></p>
-        <div className="rounded-panel bg-primary-soft p-4 text-base leading-relaxed"><Furigana text="顔や住所が写っていたら、画像をタップして隠そう。もう一度タップすると解除できます。隠すところがなければ、そのまま次へ進めます。" /></div>
-        <div className="flex flex-wrap gap-2">{selected.map((i, position) => <button key={i} disabled={!!busy} aria-pressed={index === i} onClick={() => setIndex(i)} className={`min-h-11 min-w-11 rounded-field border-2 px-2 ${i === index ? "border-primary bg-primary-soft" : "border-border"}`}>{position + 1}{reviewed.includes(i) ? " ✓" : ""}</button>)}</div>
+        <p className="font-bold text-secondary-ink"><Furigana text={`AIが選んだ画像 ${selected.indexOf(index) + 1} / ${selected.length}`} /></p>
+        <div className="rounded-panel bg-secondary-soft p-4 text-base leading-relaxed"><Furigana text="顔や住所が写っていたら、画像をタップして隠そう。もう一度タップすると解除できます。隠すところがなければ、そのまま次へ進めます。" /></div>
+        <div className="flex flex-wrap gap-2">{selected.map((i, position) => <button key={i} disabled={!!busy} aria-pressed={index === i} onClick={() => setIndex(i)} className={`min-h-11 min-w-11 rounded-field border-2 px-2 ${i === index ? "border-primary bg-secondary-soft" : "border-border"}`}>{position + 1}{reviewed.includes(i) ? " ✓" : ""}</button>)}</div>
         <div className="relative cursor-crosshair overflow-hidden rounded-panel" onClick={event => {
           if (busy) return;
           const rect = event.currentTarget.getBoundingClientRect();
@@ -168,7 +168,7 @@ export default function RoomCapture() {
         {frames.length > 0 && <Button disabled={!!busy} onClick={() => void retrySelection()}><Furigana text="AIでもう一度選ぶ" /></Button>}
         <Button variant="outline" disabled={!!busy} onClick={() => { setFrames([]); setSelected([]); setError(""); setStage("input"); }}><Furigana text="動画を選び直す" /></Button>
       </>}
-      {busy && <div role="status" className="rounded-panel bg-primary-soft p-4"><Furigana text={busy} />{busy === "動画から画像を取り出しています…" && <progress value={progress} max={1} aria-label="動画の読み込み" className="mt-3 w-full" />}</div>}
+      {busy && <div role="status" className="rounded-panel bg-secondary-soft p-4"><Furigana text={busy} />{busy === "動画から画像を取り出しています…" && <progress value={progress} max={1} aria-label="動画の読み込み" className="mt-3 w-full" />}</div>}
       {error && <p role="alert" className="text-base text-danger"><Furigana text={error} /></p>}
       <button type="button" className="min-h-11 text-base underline" onClick={() => { operation.current?.abort(); router.push("/home"); }}><Furigana text="戻る" /></button>
     </main><DisclaimerFooter />

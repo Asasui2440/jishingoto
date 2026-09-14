@@ -10,7 +10,7 @@
  *   危険はすべて **想定シナリオ** として書く。
  *     ×「この塀は危険です」
  *     ○「この地点で塀の一部が崩れた想定です」
- *   ストリートビューの画像から安全性を判定しない。
+ *   地図上のイベントは練習用に配置し、画像解析から生成しない。
  */
 
 /* ------------------------------------------------------------------ */
@@ -23,15 +23,15 @@ export const SCENARIO_BADGE = "想定[そうてい]シナリオ";
 export const SCENARIO_NOTE =
   "実際[じっさい]の建物[たてもの]や塀[へい]が壊[こわ]れるという意味[いみ]ではありません。";
 
-/** ストリートビュー画像だけでは安全性を判定できない、という但し書き */
-export const STREETVIEW_NOTE =
-  "現在[げんざい]のストリートビュー画像[がぞう]だけでは、その場所[ばしょ]の安全性[あんぜんせい]は判定[はんてい]できません。撮影[さつえい]時期[じき]も現在[げんざい]とは異[こと]なります。";
+/** 地図上の想定と、実際の災害情報を区別する。 */
+export const MAP_NOTE =
+  "地図[ちず]の番号[ばんごう]は練習用[れんしゅうよう]の判断[はんだん]ポイントです。実際[じっさい]の被害[ひがい]や通行止[つうこうど]めを示[しめ]すものではありません。";
 
 /** 位置情報の使いみち（仕様 9 の保存方針。地図を出す前に見せる） */
 export const LOCATION_NOTICE = [
-  "指定[してい]した地点[ちてん]は、避難場所[ひなんばしょ]と経路[けいろ]をさがすためだけに使[つか]います。",
-  "保存[ほぞん]するのは、選[えら]んだ避難場所[ひなんばしょ]・経路[けいろ]の座標[ざひょう]・イベントの回答[かいとう]だけです。",
-  "ストリートビューの画像[がぞう]はアプリ側[がわ]に保存[ほぞん]しません。",
+  "指定[してい]した地点[ちてん]は、避難場所[ひなんばしょ]・経路[けいろ]・近[ちか]くの地理[ちり]データをさがすために使[つか]います。",
+  "選[えら]んだ避難場所[ひなんばしょ]・経路[けいろ]・問題[もんだい]と回答[かいとう]・進[すす]み具合[ぐあい]は、同[おな]じタブの中[なか]で保持[ほじ]します。",
+  "AI版[ばん]では経路[けいろ]をサーバーで地理[ちり]データと照合[しょうごう]します。AIへ送[おく]るのは国土地理院[こくどちりいん]の地形[ちけい]の情報[じょうほう]だけで、地図[ちず]の画像[がぞう]や経路[けいろ]の座標[ざひょう]は送[おく]りません。",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -42,6 +42,7 @@ export type LatLng = { lat: number; lng: number };
 
 /** 自治体オープンデータ由来の避難場所 */
 export type Shelter = {
+  supportedDisasters?: string[];
   id: string;
   name: string;
   /** 「指定緊急避難場所」「指定避難所」など、出典どおりの区分 */
@@ -55,6 +56,29 @@ export type Shelter = {
 };
 
 export type RouteKind = "short" | "safe";
+
+/**
+ * Google が作った経路を、収録済みの国土地理院データと照合した結果。
+ * training-v1 の考え方を使うが、実際の安全性・被害確率を表す点数ではない。
+ */
+export type RouteAssessment = {
+  version: "training-google-v1";
+  coverage: "full" | "outside";
+  /** 候補内の比較にだけ使う教育用の指数。画面に安全度として表示しない。 */
+  comparisonScore: number | null;
+  rank: number | null;
+  provisional: boolean;
+  terrain: {
+    /** 各値は独立集計。同じ区間が複数項目へ入ることがある。 */
+    anyAttentionM: number;
+    slopeM: number;
+    liquefactionM: number;
+    shakingM: number;
+    floodM?: number;
+  } | null;
+  notes: string[];
+  source: { name: string; url: string } | null;
+};
 
 export type RouteOption = {
   id: string;
@@ -70,10 +94,12 @@ export type RouteOption = {
   eventCount: number;
   /** デモ用に合成した経路か（実 API から取れなかったとき true） */
   demo?: boolean;
+  /** API版だけ。Google由来の経路を自前データで比較した結果。 */
+  assessment?: RouteAssessment;
 };
 
 /** 判断イベントの種類 */
-export type EventKind = "wall" | "fall" | "closed";
+export type EventKind = "wall" | "fall" | "closed" | "terrain";
 
 export type ChoiceId = "go" | "distance" | "detour";
 
@@ -81,7 +107,7 @@ export type EvacChoice = {
   id: ChoiceId;
   label: string;
   detail: string;
-  /** 選択直後に短く出す文（詳しくは結果レポートへ） */
+  /** 結果レポートで見せる説明文 */
   feedback: string;
   /** 結果レポートで見せる、この選択の利点と注意点 */
   pros: string[];
@@ -98,6 +124,7 @@ export type EvacChoice = {
 };
 
 export type HazardEvent = {
+  evidence?: import("./geo-types").GeoEvidence;
   id: string;
   kind: EventKind;
   /** 見出し。必ず「〜した想定」で書く */
@@ -108,7 +135,7 @@ export type HazardEvent = {
   hint: string;
   choices: EvacChoice[];
   /**
-   * ストリートビューに重ねる想定範囲（％）。
+   * 想定イラスト用の範囲（％）。
    * 実在の建物の損壊を描き込まず、半透明の範囲と番号だけを重ねる。
    */
   zone: { x: number; y: number; w: number; h: number };

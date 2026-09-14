@@ -1,396 +1,152 @@
 "use client";
 
+import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EventSheet } from "@/components/evac/EventSheet";
-import { EvacMap } from "@/components/evac/EvacMap";
 import { StreetStage } from "@/components/evac/StreetStage";
-import { XCircleDarkIcon } from "@/components/icons";
-import { Meter } from "@/components/ui/Bits";
+import { EvacMap } from "@/components/evac/EvacMap";
+import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/GameUI";
 import { Button } from "@/components/ui/Button";
-import { Furigana } from "@/components/ui/Furigana";
-import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import {
-  buildWalkSteps,
-  fetchDecisionPoints,
-  fetchDetourFrom,
-  type WalkStep,
-} from "@/lib/evac-api";
-import { SCENARIO_BADGE, type EvacChoice } from "@/lib/evac-content";
-import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
-import { useHaptics } from "@/lib/settings";
+import { plain } from "@/components/ui/Furigana";
+import { formatDistance, formatDuration, getEvac } from "@/lib/evac";
+import { walkedPath } from "@/lib/evac-walk";
+import { useEvacWalk } from "@/lib/use-evac-walk";
+import { angleDifference, type StreetControls, type StreetSnapshot } from "@/lib/street-navigation";
+import { useStreetRoutePlan } from "@/lib/use-street-route-plan";
+import { plannedStreetLink, plannedReturnLink } from "@/lib/street-route-plan";
+import styles from "./walk.module.css";
 
-/** 自動で歩くときの1歩の間隔（ms）。1歩ぶんは約70m。 */
-const STEP_MS = 2000;
-
-/** この先の曲がりを案内し始める角度（度） */
-const TURN_THRESHOLD_DEG = 25;
-
-/** 2つの方位の差（-180〜180）。＋が右まわり。 */
-function turnBetween(from: number, to: number) {
-  return ((to - from + 540) % 360) - 180;
-}
-
-/**
- * フェーズ2 ③：自宅付近から避難場所まで、ストリートビューで実際に歩く。
- *
- * 経路を約70mごとに区切り、「歩きだす」で自動的に next の地点へ進んでいく。
- * 判断地点に着いたら **その場で自動的に止まり**、下部シートに想定シナリオと3択が出る。
- * （歩いている本人が危ないものに気づいて足を止める、という体験に合わせている）
- *
- * 画面の並び（仕様 7）:
- *   [ 想定シナリオ帯 ]
- *   [ ストリートビュー ＋ HUD（進む向き・危険範囲はイベント時だけ） ]
- *   [ 下部：歩く／判断シート ]  ← パノラマの上には重ねない（帰属表示を隠さない）
- */
 export default function EvacWalkPage() {
   const router = useRouter();
-  const { home, shelter, routes, startRouteId, timerSeconds, decide, pushTakenRoute, update } =
-    useEvac();
-  const vibrate = useHaptics();
-
-  const [steps, setSteps] = useState<WalkStep[] | null>(null);
-  const [index, setIndex] = useState(0);
-  /** 自動で歩いている最中か */
-  const [walking, setWalking] = useState(false);
-  /** 迂回して切り替わったあとの経路。null なら最初に選んだ経路のまま。 */
-  const [reroutedTo, setReroutedTo] = useState<string | null>(null);
-  const [extraSeconds, setExtraSeconds] = useState(0);
-  /** この地点だけ制限時間を延ばした・なくしたときの値 */
-  const [timerOverride, setTimerOverride] = useState<number | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [answered, setAnswered] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<{
-    choice: EvacChoice;
-    timedOut: boolean;
-    rerouted: boolean;
-  } | null>(null);
-
-  // 経路を選んでいなければ戻す
+  const navigation = useRef<StreetControls>(null);
+  const [street, setStreet] = useState<StreetSnapshot | null>(null);
+  const [sheet, setSheet] = useState<"map" | "help" | null>(null);
+  const [readyStepId, setReadyStepId] = useState<string | null>(null);
+  const [announcedPointId, setAnnouncedPointId] = useState<string | null>(null);
+  const game = useEvacWalk({ readyStepId, paused: sheet !== null });
+  const { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry } = game;
+  const { mode, home, shelter, walk, decisions, timerSeconds, update } = evac;
+  const { preparation, retry: retryPlan } = useStreetRoutePlan(route, street, mode === "api");
+  const plan = preparation?.plan ?? null;
+  const arrivalNode = plan?.nodes.at(-1) ?? street?.arrivalNode;
+  const ready = mode === "api" ? preparation?.status === "ready" && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  const onNavigation = useCallback((snapshot: StreetSnapshot) => {
+    setStreet(snapshot);
+    observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode });
+  }, [observeStreet, plan]);
+  const offRoute = !!plan && !!street && !plan.nodes.some(node => node.pano === street.pano);
+  const returnPano = !arrived ? plannedReturnLink(street, plan)?.pano ?? null : null;
+  const automaticPano = !arrived ? plannedStreetLink(street, plan)?.pano ?? null : null;
   useEffect(() => {
-    const s = getEvac();
-    if (!s.startRouteId || s.routes.length === 0) router.replace("/evac");
+    if (mode !== "api" || !walking || !ready || pending || notice || arrived || busy || sheet) return;
+    if (!automaticPano) return;
+    const timer = setTimeout(() => {
+      if (!getEvac().walk?.street?.arrived) navigation.current?.move(automaticPano);
+    }, 1600);
+    return () => clearTimeout(timer);
+  }, [mode, walking, ready, pending, notice, arrived, busy, sheet, automaticPano, street?.pano, setWalking]);
+  const announcingPoint = !!pending && ready && announcedPointId !== step?.pointId;
+  const decisionVisible = !!pending && ready && !announcingPoint;
+  useEffect(() => {
+    const state = getEvac();
+    if (!state.startRouteId || !state.shelter) router.replace("/evac");
+    else if (state.finishedAt) router.replace("/evac/report");
   }, [router]);
-
-  const routeId = reroutedTo ?? startRouteId;
-  const route = useMemo(() => routes.find((r) => r.id === routeId) ?? null, [routes, routeId]);
-  const timerFor = timerOverride ?? timerSeconds;
-
-  // 経路を「歩ける粒度」に割る
   useEffect(() => {
-    if (!route || steps) return;
-    let alive = true;
-    void fetchDecisionPoints(route).then((points) => {
-      if (alive) setSteps(buildWalkSteps(route, points));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [route, steps]);
+    if (!announcingPoint || !step?.pointId) return;
+    const pointId = step.pointId;
+    const timer = setTimeout(() => setAnnouncedPointId(pointId), 1000);
+    return () => clearTimeout(timer);
+  }, [announcingPoint, step?.pointId]);
 
-  const step = steps?.[index] ?? null;
-  const decisionSteps = useMemo(() => steps?.filter((s) => s.event) ?? [], [steps]);
-  const decisionNo = step?.event
-    ? decisionSteps.findIndex((s) => s.id === step.id) + 1
-    : decisionSteps.filter((s) => s.t < (step?.t ?? 0)).length;
+  if (!route || !step || !walk || !home || !shelter) return <GameShell>
+    <GameHeader title="道を準備しています" step={2} onBack={() => router.push("/evac/routes")} />
+    <main className="m-auto flex flex-col gap-4 p-6 text-center">
+      <p role={error ? "alert" : "status"}>{error ?? "途中の判断ポイントを確認しています…"}</p>
+      {error ? <><Button onClick={retry}>もう一度試す</Button><Button variant="outline" onClick={() => { update({ analysisMode: "sample", walk: null }); retry(); }}>固定の練習問題で始める</Button></> : null}
+    </main>
+  </GameShell>;
 
-  /** いま判断シートを出すべきか（まだ答えていないイベント地点） */
-  const pendingEvent =
-    step?.event && step.pointId && !answered.includes(step.pointId) && !feedback
-      ? step.event
-      : null;
-
-  const arrived = steps !== null && index >= steps.length - 1 && !pendingEvent && !feedback;
-
-  /**
-   * 自動で歩く。
-   *
-   * 判断地点に着くと `pendingEvent` が立つので、次の一歩を予約せずに止まる。
-   * `walking` は立てたままにしておき、答え終わって「先へ進む」を押したら
-   * そのまま歩きを続けられるようにしている。
-   */
-  useEffect(() => {
-    if (!walking || !steps) return;
-    if (pendingEvent || feedback || arrived) return;
-    const t = setTimeout(() => {
-      setIndex((i) => Math.min(i + 1, steps.length - 1));
-    }, STEP_MS);
-    return () => clearTimeout(t);
-  }, [walking, index, steps, pendingEvent, feedback, arrived]);
-
-  // 危ないところで足が止まったことを、短い振動でも伝える
-  useEffect(() => {
-    if (pendingEvent) vibrate(24);
-  }, [pendingEvent, vibrate]);
-
-  const onChoose = useCallback(
-    async (choice: EvacChoice, timedOut: boolean) => {
-      if (!steps || !step?.event || !step.pointId) return;
-      const pointId = step.pointId;
-      vibrate(12);
-
-      // 迂回するときは、いまいる場所から避難場所までを引き直す。
-      // もう1本の候補ルートへ飛び移ると、そのルートの同じ進捗地点は
-      // 数百m先にあるのでワープしてしまうため。
-      const detour =
-        choice.reroute && shelter ? await fetchDetourFrom(step.position, shelter) : null;
-      // 引き直せない環境（キーなしなど）は、これまでどおり別ルートへ切り替える
-      const other = !detour && choice.reroute ? (routes.find((r) => r.id !== routeId) ?? null) : null;
-      const rerouted = detour !== null || other !== null;
-
-      decide({
-        pointId,
-        eventId: step.event.id,
-        choiceId: choice.id,
-        rerouted,
-        timedOut,
-        extraSeconds: choice.extraSeconds,
-      });
-      setAnswered((prev) => [...prev, pointId]);
-      setExtraSeconds((s) => s + choice.extraSeconds);
-
-      if (detour) {
-        const points = await fetchDecisionPoints(detour);
-        // 引き直した道は現在地から始まるので、先頭は重複する。落とす。
-        const detourSteps = buildWalkSteps(detour, points).slice(1);
-        update({ routes: [...routes, detour] });
-        setSteps([...steps.slice(0, index + 1), ...detourSteps]);
-        setReroutedTo(detour.id);
-        pushTakenRoute(detour.id);
-      } else if (other) {
-        const altPoints = await fetchDecisionPoints(other);
-        const altSteps = buildWalkSteps(other, altPoints).filter((s) => s.t > step.t);
-        setSteps([...steps.slice(0, index + 1), ...altSteps]);
-        setReroutedTo(other.id);
-        pushTakenRoute(other.id);
-      }
-
-      setFeedback({ choice, timedOut, rerouted });
-    },
-    [decide, index, pushTakenRoute, routeId, routes, shelter, step, steps, update, vibrate],
-  );
-
+  const connectionChanged = ready && mode === "api" && !!plan && !offRoute && !arrived && !automaticPano;
+  const decisionBlocking = !!pending && preparation?.status !== "error";
+  const moving = (mode === "mock" || !!automaticPano) && walking && ready && !pending && !notice && !arrived && !busy && !sheet;
+  const events = walk.steps.filter(s => s.event);
+  const decisionIndex = events.findIndex(s => s.pointId === step.pointId);
+  const next = walk.steps[walk.index + 1];
+  const turn = next ? ((next.heading - step.heading + 540) % 360) - 180 : 0;
+  const facingLink = street?.links.slice().sort((a, b) => Math.abs(angleDifference(a.heading, street.heading)) - Math.abs(angleDifference(b.heading, street.heading)))[0];
+  const canForward = mode === "mock" || !!facingLink && !!street && Math.abs(angleDifference(facingLink.heading, street.heading)) < 60;
   const forward = () => {
-    if (!steps) return;
-    setFeedback(null);
-    setTimerOverride(null);
-    setIndex((i) => Math.min(i + 1, steps.length - 1));
+    if (!ready || busy || pending || sheet) return;
+    advance(); // Clears the notice; only mock mode changes the planned step here.
+    if (mode === "api" && facingLink && canForward) navigation.current?.move(facingLink.pano);
   };
+  const actualPosition = street?.position ?? walk.street?.position;
+  const currentPosition = mode === "api" ? actualPosition ?? home : step.position;
+  const remainingM = mode === "api" ? walk.street?.remainingM : step.remainingM;
+  const remainingS = mode === "api" ? walk.street?.remainingS : step.remainingS;
+  const remainingLabel = remainingM === undefined ? "現在地を確認しています" : `残り ${formatDistance(remainingM)}`;
+  const timeLabel = remainingS === undefined ? "" : formatDuration(remainingS);
+  const showSheet = (next: "map" | "help") => { setSheet(next); };
 
-  if (!route || !steps || !step) {
-    return (
-      <div className="flex min-h-dvh flex-col justify-between">
-        <StatusBar />
-        <p className="px-6 text-center text-13 text-ink-muted">経路を用意しています...</p>
-        <DisclaimerFooter />
+  return <GameShell className={styles.shell}>
+    <GameHeader title={arrived ? "避難先付近に到着" : "道を歩いてみよう"} subtitle={`${EVAC_SCENARIOS[evac.scenario ?? "earthquake"].label}｜${plain(shelter.name)}`} step={2}
+      onBack={() => { setWalking(false); router.push("/evac/routes"); }} onHelp={() => showSheet("help")} />
+    <main className={styles.main} aria-label="避難ルートの体験">
+      <div className={styles.status}>
+        <span className="rounded-md bg-blue-50 px-2 py-1 text-11 font-bold text-blue-800">想定シナリオ</span>
+        {mode === "api" && walk.source === "sample" ? <span className="text-11 text-ink-muted">固定の練習問題</span> : null}
+        <span className="text-11 text-ink-muted">判断 {decisions.length} / {events.length}</span>
       </div>
-    );
-  }
-
-  // この先で道が曲がるか。次の地点との方位差から出す。
-  const nextStep = steps[index + 1] ?? null;
-  const turn = nextStep ? turnBetween(step.heading, nextStep.heading) : 0;
-
-  return (
-    <div className="flex min-h-dvh flex-col justify-between">
-      <div>
-        <StatusBar />
-
-        {/* 常時表示：これは想定シナリオである（仕様 14） */}
-        <div className="flex items-center gap-2 border-y border-warn bg-warn-soft px-5 py-2">
-          <span className="rounded-chip bg-warn px-2 py-0.5 font-display text-11 font-black text-ink">
-            <Furigana text={SCENARIO_BADGE} />
-          </span>
-          <p className="text-11 font-semibold text-ink-muted">
-            <Furigana text="実際[じっさい]にこの場所[ばしょ]が壊[こわ]れたという意味[いみ]ではありません" />
-          </p>
-        </div>
-
-        <div className="px-5 pt-3">
-          <StreetStage
-            position={step.position}
-            heading={step.heading}
-            kind={step.event?.kind ?? null}
-            zone={pendingEvent ? pendingEvent.zone : null}
-            zoneNumber={decisionNo}
-            showArrow={!pendingEvent && !feedback && !arrived}
-            turn={Math.abs(turn) >= TURN_THRESHOLD_DEG ? turn : null}
-            walking={walking && !pendingEvent && !feedback && !arrived}
-            // 自動で歩いている間は押せなくする（自分で進むのは手動のときだけ）
-            onAdvance={!walking && !pendingEvent && !feedback && !arrived ? forward : undefined}
-            arrived={arrived}
-            height={250}
-          >
-            {/* HUD。下端は Google の帰属表示のために空けている。 */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
-              <span className="flex flex-col items-start gap-1.5">
-                <span className="rounded-chip bg-black/65 px-2 py-1 text-11 font-bold text-white">
-                  <Furigana text="避難場所[ひなんばしょ]まで" /> {formatDistance(step.remainingM)}・
-                  {formatDuration(step.remainingS)}
-                </span>
-                {extraSeconds > 0 ? (
-                  <span className="rounded-chip bg-warn/90 px-2 py-1 text-11 font-bold text-ink">
-                    <Furigana text="判断[はんだん]でついた遅[おく]れ" /> ＋
-                    {Math.max(1, Math.round(extraSeconds / 60))}分
-                  </span>
-                ) : null}
-              </span>
-              <span className="flex flex-col items-end gap-1.5">
-                <span className="rounded-chip bg-black/65 px-2 py-1 text-11 font-bold text-white">
-                  <Furigana text="判断[はんだん]" /> {Math.max(decisionNo, 0)}/
-                  {decisionSteps.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setMapOpen(true)}
-                  className="pointer-events-auto rounded-chip bg-surface/95 px-2 py-1 font-display text-11 font-bold text-primary-ink shadow-sm"
-                >
-                  <Furigana text="地図[ちず]へ戻[もど]る" />
-                </button>
-              </span>
-            </div>
-          </StreetStage>
-
-          {/* 家からの進み具合 */}
-          <div className="mt-2">
-            <Meter value={step.t} height={5} track="var(--color-border)" />
-            <div className="mt-1 flex justify-between text-11 text-ink-soft">
-              <span>
-                <Furigana text="家[いえ]の近[ちか]く" />
-              </span>
-              <span>
-                <Furigana text={shelter?.name ?? "避難場所[ひなんばしょ]"} />
-              </span>
-            </div>
+      <div className={styles.scene}>
+        <StreetStage initialPosition={walk.street?.position ?? walk.steps[0].position} demoPosition={step.position}
+          navigationRef={navigation} onNavigation={onNavigation} recommendedPano={automaticPano} returnPano={returnPano} heading={step.heading} destination={shelter.position} arrivalEndpoint={route.path[route.path.length - 1]} kind={pending?.kind ?? null}
+          zone={ready ? pending?.zone : null} zoneNumber={decisionIndex + 1} height="100%" demo={mode === "mock"}
+          sceneKey={step.id} onSettled={setReadyStepId} showArrow={ready && !pending && !arrived && !sheet}
+          walking={moving} onAdvance={(!walking || !automaticPano) && ready && !pending && !arrived && !sheet ? forward : undefined}
+          arrived={arrived && ready} turn={Math.abs(turn) >= 25 ? turn : null}>
+          <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
+            <span className="rounded-xl bg-black/70 px-3 py-2 text-11 font-bold text-white">{remainingLabel}<br />{timeLabel}</span>
+            <button type="button" onClick={() => showSheet("map")} className="pointer-events-auto inline-flex min-h-11 items-center gap-1 rounded-xl border border-border bg-white px-3 text-11 font-bold text-ink"><GameIcon name="map" className="size-4" />地図</button>
           </div>
-          <p className="mt-1 text-11 text-ink-soft">
-            <Furigana text="背景[はいけい]はストリートビュー（Google）。重[かさ]ねているのは想定[そうてい]の範囲[はんい]だけです。" />
-          </p>
-        </div>
+        </StreetStage>
       </div>
-
-      {/* 下部：判断シート → フィードバック → 進む／到着 */}
-      {pendingEvent ? (
-        <EventSheet
-          // 制限時間を変えたら作り直して、カウントを入れ替える
-          key={`${step.id}:${timerFor}`}
-          event={pendingEvent}
-          index={Math.max(decisionNo - 1, 0)}
-          total={decisionSteps.length}
-          seconds={timerFor}
-          onExtend={() => setTimerOverride(timerFor > 0 ? timerFor + 10 : 10)}
-          onDisableTimer={() => {
-            setTimerOverride(0);
-            update({ timerSeconds: 0 });
-          }}
-          onChoose={onChoose}
-        />
-      ) : feedback ? (
-        <div className="animate-rise flex flex-col gap-3 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
-          <p className="font-display text-13 font-bold text-primary-ink">
-            {feedback.timedOut ? (
-              <Furigana text="時間切[じかんぎ]れ：そのまま進[すす]みました" />
-            ) : (
-              <Furigana text="えらんだ行動[こうどう]" />
-            )}
-          </p>
-          <p className="font-display text-15 font-bold text-ink">
-            <Furigana text={feedback.choice.label} />
-          </p>
-          {/* 選択直後は短く。詳しい利点・注意点は結果レポートでまとめる（仕様 6.3） */}
-          <p className="text-13 leading-[1.6] text-ink-muted">
-            <Furigana text={feedback.choice.feedback} />
-          </p>
-          {feedback.rerouted ? (
-            <p className="rounded-field bg-safe-soft px-3 py-2 text-13 font-semibold text-ink-muted">
-              <Furigana text="別[べつ]ルートに切[き]り替[か]えました。ここから先[さき]の道[みち]も変[か]わります。" />
-            </p>
-          ) : null}
-          <Button onClick={forward}>
-            <Furigana text={walking ? "歩[ある]きを続[つづ]ける" : "先[さき]へ進[すす]む"} />
-          </Button>
+      {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
+      {decisionBlocking ? <div className={styles.decisionSlot}>
+        <div aria-hidden={!decisionVisible} className={`${styles.decisionContent} ${decisionVisible ? "" : styles.decisionHidden}`}>
+          <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
+            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready || announcingPoint} busy={busy}
+            onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
         </div>
-      ) : arrived ? (
-        <div className="animate-rise flex flex-col gap-3 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
-          <p className="font-display text-15 font-bold text-ink">
-            <Furigana text={shelter?.name ?? "避難場所[ひなんばしょ]"} />
-            <Furigana text=" に着[つ]きました" />
-          </p>
-          <p className="text-13 text-ink-muted">
-            <Furigana text="ここまでの判断[はんだん]と、通[とお]った道[みち]をふりかえります。" />
-          </p>
-          <Button
-            onClick={() => {
-              update({ finishedAt: Date.now() });
-              router.push("/evac/report");
-            }}
-          >
-            <Furigana text="ふりかえりを見[み]る" />
-          </Button>
-        </div>
-      ) : walking ? (
-        <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
-          <p className="text-13 text-ink-muted">
-            <Furigana text="自動[じどう]で歩[ある]いています。危[あぶ]ないところがあると、その場[ば]で止[と]まります。" />
-          </p>
-          <Button variant="outline" onClick={() => setWalking(false)}>
-            <Furigana text="自分[じぶん]で歩[ある]く" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2 rounded-t-panel bg-surface px-5 pt-4 pb-5 shadow-[0_-8px_24px_rgba(26,32,44,0.10)]">
-          <p className="text-13 text-ink-muted">
-            <Furigana text="画面[がめん]をドラッグで見回[みまわ]せます。白[しろ]い矢印[やじるし]をタップすると進[すす]みます。" />
-          </p>
-          <Button onClick={forward}>
-            <Furigana text="進[すす]む" />
-          </Button>
-          <button
-            type="button"
-            onClick={() => setWalking(true)}
-            className="font-display text-13 font-bold text-primary-ink underline underline-offset-2"
-          >
-            <Furigana text="自動[じどう]で歩[ある]いてもらう" />
-          </button>
-        </div>
-      )}
-
-      <DisclaimerFooter />
-
-      {mapOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-          <div className="w-full max-w-[402px] rounded-t-panel bg-surface p-5">
-            <div className="flex items-center justify-between">
-              <p className="font-display text-15 font-bold text-ink">
-                <Furigana text="いまいる場所[ばしょ]" />
-              </p>
-              <button type="button" onClick={() => setMapOpen(false)} aria-label="閉じる">
-                <XCircleDarkIcon className="size-6" />
-              </button>
-            </div>
-            <div className="mt-3">
-              <EvacMap
-                center={step.position}
-                home={home}
-                shelters={shelter ? [shelter] : []}
-                selectedShelterId={shelter?.id ?? null}
-                routes={routes}
-                activeRouteId={routeId}
-                walker={step.position}
-                height={240}
-              />
-            </div>
-            <p className="mt-2 text-11 text-ink-soft">
-              <Furigana text="太[ふと]い線[せん]がいま進[すす]んでいる経路[けいろ]です。" />
-            </p>
-            <div className="mt-3">
-              <Button size="md" variant="quiet" onClick={() => setMapOpen(false)}>
-                <Furigana text="ストリートビューにもどる" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
+        {!decisionVisible ? <div role="status" data-testid="attention-toast" className={styles.attentionNotice}>
+          {announcingPoint ? <><span aria-hidden>⚠</span><span>注意ポイントだよ</span></> : <span>風景を読み込んでいます…</span>}
+        </div> : null}
+      </div> : null}
+        <section className={styles.actions} aria-label="歩行の操作" inert={decisionBlocking} style={{ visibility: decisionBlocking ? "hidden" : "visible" }}>
+          <p role="status" className="text-11 leading-relaxed text-ink-muted">{street?.error ? "移動を停止しました。地図で現在地を確認できます。" : mode === "api" && preparation?.status === "error" ? preparation.error : mode === "api" && preparation?.status === "loading" ? `道のつながりを確認しています（${preparation.count}地点）…` : !ready ? street?.arrivalError ?? "風景と道を準備しています…" : notice ?? (mode === "api" && !street?.arrivalNode ? street?.arrivalError ?? "避難先に隣接する到着地点を確認しています…" : returnPano ? "青い「ルートに戻る」を選ぶと、通った道をたどって戻れます。" : connectionChanged ? "道の接続が変わりました。道を再確認してください。" : offRoute && !arrived ? "選んだルートから外れています。地図で道を確認してください。" : arrived ? "通った道と選んだ行動をふりかえろう." : moving ? "選んだルートに沿って歩いています。判断地点と避難先付近で止まります。" : "ドラッグで周りを見回せます。")}</p>
+          {mode === "api" && (preparation?.status === "error" || connectionChanged) ? <div className="flex gap-2"><Button size="md" onClick={retryPlan}>道を再確認する</Button><Button size="md" variant="outline" onClick={() => router.push("/evac/routes")}>ルートを選び直す</Button></div> : null}
+          {arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
+            : <div className="flex gap-2">
+              <Button size="md" disabled={!ready || busy || !canForward} onClick={forward}><GameIcon name="walk" />{mode === "api" ? "向いている道へ進む" : notice ? "先へ進む" : "進む"}</Button>
+              <Button size="md" variant="outline" disabled={!walking && (!ready || busy || (mode === "api" && !automaticPano))} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>
+            </div>}
+        </section>
+    </main>
+    <BottomSheet open={sheet === "map"} title="いまいる場所と通った道" onClose={() => setSheet(null)}>
+      <EvacMap mode={mode} center={currentPosition} home={home} shelters={[shelter]} selectedShelterId={shelter.id} routes={[route]} activeRouteId={route.id}
+        markers={arrivalNode ? [{ id: "arrival", position: arrivalNode.position, label: "着", color: "#bfdbfe", title: "体験の到着地点" }] : []}
+        walker={mode === "api" ? actualPosition ?? null : step.position} walkerHeading={mode === "api" ? street?.heading ?? walk.street?.heading ?? step.heading : step.heading} traveledPath={walkedPath(walk)} height={250} />
+      <p className="my-3 text-13 text-ink-muted">{remainingLabel} {timeLabel}。地図を動かしても現在地は変わりません。</p>
+      <Button size="md" onClick={() => setSheet(null)}>Street Viewに戻る</Button>
+    </BottomSheet>
+    <BottomSheet open={sheet === "help"} title="歩き方・設定" onClose={() => setSheet(null)}>
+      <div className="space-y-4 text-13 leading-relaxed text-ink-muted">
+        <p>風景をドラッグすると、その場で周囲を見回せます。API版では画面に表示された道を選び、隣の撮影地点へ一歩ずつ進みます。歩き始める前に、選んだルートを最後まで歩ける道のつながりを確認します。「自動で歩く」は確認済みの道を進みます。判断や地図の表示中は待機し、回答・閉じる操作のあと自動で再開します。避難先側の経路終点に近いStreet Viewの撮影地点を到着地点にしています。地図の「着」が目印です。</p>
+        <p>途中で起こる場面を想定して、行動を選びましょう。説明や地図を開いている間、判断のタイマーは停止します。</p>
+        <p>風景はGoogle Street Viewです。枠やイラストは練習用の想定で、実際の被害や画像解析の結果ではありません。API版で風景が利用できない場合は移動を停止します。地図はいつでも確認できます。</p>
+        {mode === "mock" ? <Button size="md" variant="outline" disabled={!ready || busy || !!pending || arrived} onClick={() => { setSheet(null); advance(true); }}>次の判断ポイントへ進む</Button> : null}
+      </div>
+    </BottomSheet>
+  </GameShell>;
 }

@@ -68,7 +68,7 @@ export default function AnalysisLoadingPage() {
       </div>
 
       <div className="flex flex-col items-center gap-5 px-6">
-        <div className="rounded-pill bg-primary-soft p-3">
+        <div className="rounded-pill bg-secondary-soft p-3">
           <div className="relative size-[120px] overflow-hidden rounded-tile bg-ink">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -105,7 +105,7 @@ export default function AnalysisLoadingPage() {
                   {done ? (
                     <CheckCircleTealIcon className="size-4 shrink-0 text-safe" />
                   ) : active ? (
-                    <DotBlueIcon className="size-4 shrink-0 animate-pulse text-primary-ink" />
+                    <DotBlueIcon className="size-4 shrink-0 animate-pulse text-secondary-ink" />
                   ) : (
                     <DotGrayIcon className="size-4 shrink-0 text-ink-faint" />
                   )}
@@ -113,7 +113,7 @@ export default function AnalysisLoadingPage() {
                     className={[
                       "text-13",
                       active
-                        ? "font-bold text-primary-ink"
+                        ? "font-bold text-secondary-ink"
                         : done
                           ? "font-bold text-ink"
                           : "text-ink-muted",
@@ -156,7 +156,7 @@ export default function AnalysisLoadingPage() {
             router.push("/");
           }}
         >
-          <XCircleBlueIcon className="size-5 text-primary-ink" />
+          <XCircleBlueIcon className="size-5 text-secondary-ink" />
           キャンセル
         </Button>
       </div>

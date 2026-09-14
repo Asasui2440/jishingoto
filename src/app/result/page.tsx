@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
+import { DetailSheet } from "@/components/ui/DetailSheet";
 import { AftermathCard } from "@/components/AftermathCard";
 import { ActionReview } from "@/components/ActionReview";
 import { EvacuationGuide } from "@/components/EvacuationGuide";
@@ -73,9 +74,10 @@ export default function ResultPage() {
       </div>
 
       <div className="animate-rise flex flex-col gap-4 px-6 pt-3 pb-6">
-        <p role="status" className="font-display text-sm font-bold text-primary-ink"><Furigana text={stepLabel} /> <span className="text-11 text-ink-soft">({step + 1} / {lastStep + 1})</span></p>
-        <Meter value={(step + 1) / (lastStep + 1)} />
+        <p role="status" className="font-display text-sm font-bold text-primary-ink">{stepLabel} <span className="text-11 text-ink-soft">({step + 1} / {lastStep + 1})</span></p>
+        <Meter color="var(--color-primary)" value={(step + 1) / (lastStep + 1)} />
         {step === summaryStep && <>
+        <div className="-mx-6"><AftermathCard photoUrl={photoUrl} risks={risks} /></div>
         <Card>
           <p className="font-display text-sm font-bold text-ink">
             <Furigana text="あなたの防災[ぼうさい]4つのチカラ" />
@@ -90,7 +92,7 @@ export default function ResultPage() {
                     <Furigana text={AXIS_LABEL[axis]} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <Meter value={score === null ? 0 : score / 5} />
+                    <Meter color="var(--color-primary)" value={score === null ? 0 : score / 5} />
                   </span>
                   <span className="shrink-0 text-right">
                     {score === null ? (
@@ -113,8 +115,8 @@ export default function ResultPage() {
 
 
         {wins.length > 0 ? (
-          <div className="rounded-tile bg-safe-soft p-4">
-            <p className="font-display text-sm font-bold text-safe">✓ <Furigana text={adult ? "適切に判断できたこと" : "できたこと"} /> <span className="ml-2 rounded-full bg-safe px-2 py-1 text-white">{wins.length}<Furigana text={"件達成"} /></span></p>
+          <DetailSheet title={`できたことを見る（${wins.length}件）`}><div className="rounded-tile bg-safe-soft p-4">
+            <p className="font-display text-sm font-bold text-safe">✓ {adult ? "適切に判断できたこと" : "できたこと"} <span className="ml-2 rounded-full bg-safe px-2 py-1 text-white">{wins.length}件達成</span></p>
             <ul className="mt-2.5 flex flex-col gap-1.5">
               {wins.map((w, i) => (
                 <li key={i} className="flex items-start gap-2 rounded-field bg-surface p-3 text-13 text-ink">
@@ -122,29 +124,20 @@ export default function ResultPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </div></DetailSheet>
         ) : null}
-        <AftermathCard photoUrl={photoUrl} risks={risks} />
 
         </>}
-        {step < summaryStep && <Card className="p-[18px]">
-          <p className="font-display text-15 font-bold text-ink">
-            <Furigana text="えらんだ行動[こうどう]のふりかえり" />
-          </p>
-          <p className="mt-1 text-11 text-ink-soft">
-            <Furigana text="この場面[ばめん]で、何[なに]をどうするか確認[かくにん]しよう。" />
-          </p>
-          <div className="mt-3 flex flex-col gap-2">
+        {step < summaryStep && <div>
             {review.slice(step, step + 1).map(({ id, q, c, timedOut }) => (
               <ActionReview key={id} question={q} choice={c} timedOut={!!timedOut} number={step + 1} />
             ))}
-          </div>
-        </Card>}
+        </div>}
 
         {step === checklistStep && <><Card className="p-[18px]">
-          <h2 className="text-lg font-bold"><Furigana text={"室内の備え"} /></h2>
-          <p className="mt-2 font-bold text-safe" role="status">{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} <Furigana text={"か所 対策済み"} /></p>
-          <ul className="mt-3 space-y-2">{risks.map(r => <li key={r.id}><label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-field bg-canvas p-3"><input type="checkbox" checked={checked.includes(`prepared:${r.id}`)} onChange={() => toggleChecked(`prepared:${r.id}`)} className="size-5 accent-teal-700" /><span className="flex-1"><Furigana text={r.name} adult={r.adultName} /></span><span className="text-sm font-bold text-safe"><Furigana text={checked.includes(`prepared:${r.id}`) ? "対策済み！" : "対策したらチェック"} /></span></label></li>)}</ul>
+          <h2 className="text-lg font-bold">室内の備え</h2>
+          <p className="mt-2 font-bold text-safe" role="status">{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
+          <div className="mt-3"><DetailSheet title="備えのチェックリストを開く" summary="家具ごとに対策済みのチェックをつける"><ul className="space-y-2">{risks.map(r => <li key={r.id}><label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-field bg-canvas p-3"><input type="checkbox" checked={checked.includes(`prepared:${r.id}`)} onChange={() => toggleChecked(`prepared:${r.id}`)} className="size-5 accent-teal-700" /><span className="flex-1"><Furigana text={r.name} adult={r.adultName} /></span><span className="text-sm font-bold text-safe">{checked.includes(`prepared:${r.id}`) ? "対策済み！" : "対策したらチェック"}</span></label></li>)}</ul></DetailSheet></div>
         </Card>
 
           <EvacuationGuide />
@@ -165,9 +158,9 @@ export default function ResultPage() {
             <Furigana text="もういちど挑戦[ちょうせん]" />
           </button>
         </>}
-        <nav aria-label="結果のページ切り替え" className="sticky bottom-0 flex gap-3 border-t border-border bg-canvas py-3">
-          <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}><Furigana text={"戻る"} /></Button>
-          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? <Furigana text="次へ" /> : <Furigana text="結果を共有" adult="結果を保存・共有" />}</Button>
+        <nav aria-label="結果のページ切り替え" className="phase-one-actions flex gap-3 border-t border-border py-3">
+          <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}>戻る</Button>
+          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果を共有" adult="結果を保存・共有" />}</Button>
         </nav>
       </div>
 
