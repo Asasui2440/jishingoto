@@ -1,0 +1,102 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 6,
+  "assets": [
+    {
+      "number": 21,
+      "variant": "situation",
+      "prompt": "STYLE ONLY reference, no wires. ONE3:2 simple VERYTHICK navy illustration largeblue yellowbackpack faceless person65%height LEFT. 道を横切る規制線、手前の人物と後方分岐。端末は必要なら人物の手元に小さく。係員は描かない。 Red-white barrier tape stretched clearly across road between TWO separate short posts RIGHT. Branchbehindperson LEFT. No officer, no text signageletters, no fallinghazards arrows icons. Pale bluesky mutedgrayroad. 近づく案でも規制線を越えた描写にはしない。小さい掲示の文章は生成しない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d84913d8-c16c-4a63-9679-cb28b76737f3.png",
+      "asset": "public/illustrations/evac/walk-case-21/situation-v2.webp"
+    },
+    {
+      "number": 21,
+      "variant": "detour",
+      "prompt": "Edit action: person returns LEFT tobranch awayfrombarrier, looking at phone heldfront in onehand, walking left. Barrier behindRIGHT same redwhitetape posts geography. Large65%height person thicknavy V2 simple no words arrows icons officer.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d84913d8-c16c-4a63-9679-cb28b76737f3.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-541ba3df-8e37-4b7d-b4ca-b99193543bf2.png",
+      "asset": "public/illustrations/evac/walk-case-21/detour-v2.webp"
+    },
+    {
+      "number": 21,
+      "variant": "go",
+      "prompt": "Edit action: person approaches barrier and leans upperbodyforward looking at gap belowtape, BOTH FEET remain NEAR side not crossing, hands on knees. Tape must remain infront not through body. Largeperson leftofpost, samebranch tape. ThicknavyV2 no phone officer text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d84913d8-c16c-4a63-9679-cb28b76737f3.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-bf07adf4-b9c9-4f3f-b006-e8c7634c7c4d.png",
+      "asset": "public/illustrations/evac/walk-case-21/go-v2.webp"
+    },
+    {
+      "number": 21,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist waits upright feetparallel immediately BEFORE barrier on near roadway, bodyfacingright armsdown no phone. Movecloserthan originalsituation but clear gap from tape andpost. Samebranchleft. Person60%height thicknavyV2 no text arrows icons officer.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d84913d8-c16c-4a63-9679-cb28b76737f3.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fda3cbf3-166d-4060-b591-9c88929ac207.png",
+      "asset": "public/illustrations/evac/walk-case-21/consider-v2.webp"
+    },
+    {
+      "number": 22,
+      "variant": "situation",
+      "prompt": "STYLE ONLY reference no wires. ONE3:2 verythicknavy flat simple mobile illustration blueyellowbackpack largeperson60%height. 開いた門と建物の敷地、手前の公道と分岐。門の内外を敷居・路面色で明確に分ける。 RIGHT open twoleaf metalgate andcream building cropped, BEIGE interiorground, GRAY publicroad foreground distinct thick threshold. Person LEFT outsidegate. Branchbehindleft withplainphysicalsign carrying ONLY simplejunctionline no text. No knownexit throughgrounds, no prohibition or newpeople arrowsicons. 禁止看板や明確な出口を追加しない。アプリ切替自体は絵だけで表せないため文言を残す。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-39e41c3d-340f-4798-ab9a-9f6a6809e615.png",
+      "asset": "public/illustrations/evac/walk-case-22/situation-v2.webp"
+    },
+    {
+      "number": 22,
+      "variant": "distance",
+      "prompt": "Edit action: protagonist returned LEFT tobranch physical Yjunctionsign, holding phone looking between phone and sign, otherhandpointsign. GateRIGHT furtherbackground. Bothfeet GRAY publicroad. Crop person large65%height. Same sign gate palette verythicknavy. No text icons floatingarrows extra people.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-39e41c3d-340f-4798-ab9a-9f6a6809e615.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-2e0387fe-e5f1-45da-ab25-77022ccdd06a.png",
+      "asset": "public/illustrations/evac/walk-case-22/distance-v2.webp"
+    },
+    {
+      "number": 22,
+      "variant": "go",
+      "prompt": "Edit action: person steps through OPENgate RIGHT lookinginside grounds, onefoot BEIGE insideground otherfoot GRAY publicroad atthreshold. No phone. Gateposts clearly frame entrance separatefromperson. Tightcrop largeperson60%height, same building gate colors thicknavyV2. No exit beyondbuilding, arrows words icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-39e41c3d-340f-4798-ab9a-9f6a6809e615.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-4c0e6c13-9cd4-43df-8a66-62432f03d93a.png",
+      "asset": "public/illustrations/evac/walk-case-22/go-v2.webp"
+    },
+    {
+      "number": 22,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist stands OUTSIDE opengate bothfeet graypublicroad, stationary operatingphone BOTHhands lookingdown. Gatejustbehindright beigeinside clearlyseparate. Cropcloserfullperson65%height. Samepalette simpleverythicknavy no letters arrows icons extraobjects.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-39e41c3d-340f-4798-ab9a-9f6a6809e615.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ba86e972-5b1f-4d68-94dc-957aadc2a5bc.png",
+      "asset": "public/illustrations/evac/walk-case-22/consider-v2.webp"
+    },
+    {
+      "number": 29,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY no wires. One3:2 VERYTHICKnavy simple mobile illustration blueyellowbackpack personlarge60%height LEFT. Closedfacility gate RIGHT twohalves meetmiddle verticalseam, buildingcroppedbehind. Publicpath followsperimeter LEFT. Physicalwhite sign besidegate displays single NAVY LEFT ARROW directing aroundgrounds, no words. Same arrow toretainallvariants. No floatingarrows checks icons extrapeople hazards. 施設の閉じた門、敷地沿いの道、反対側を示す案内板。門の閉鎖は左右の扉が合わさった形で表す。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8969a7da-06a1-46bd-ae09-d9040c79958f.png",
+      "asset": "public/illustrations/evac/walk-case-29/situation-v2.webp"
+    },
+    {
+      "number": 29,
+      "variant": "distance",
+      "prompt": "Edit action: largeperson points at physicalLEFTarrow sign with onehand, headtowardsign, bodyfeet turningLEFT toperimeterpath. Closedgate right unchanged. Person65%height close, arrow remainsLEFT. No phone newpeople words floatingarrows icons. ThicknavyV2 one3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8969a7da-06a1-46bd-ae09-d9040c79958f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c046c591-0b75-4c36-bffc-8ff3427d9b6e.png",
+      "asset": "public/illustrations/evac/walk-case-29/distance-v2.webp"
+    },
+    {
+      "number": 29,
+      "variant": "go",
+      "prompt": "Edit action: protagonist stands directly atCLOSEDgate RIGHT, onehandcupped beside mouth callinginside, feetstationary. Cropcloser person65%height gateclearlyclosed twopanels, physicalLEFTarrow sign stillleft. No respondingperson or openedgate words bubbles icons. VerythicknavyV2 one3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8969a7da-06a1-46bd-ae09-d9040c79958f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a8d625b1-5396-4f2a-b5a1-a8b00b255a8d.png",
+      "asset": "public/illustrations/evac/walk-case-29/go-v2.webp"
+    },
+    {
+      "number": 29,
+      "variant": "consider",
+      "prompt": "Edit action: ONE purpleperson walking LEFT on perimeterpath ahead, blueprotagonist follows LEFT armsdown headforward towardperson, NOTlooking sign. Large twofigures55-65%height withgap. GateclosedRIGHT and physicalLEFTarrow sign unchanged. ThicknavyV2 no text bubbles icons extrapeople.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8969a7da-06a1-46bd-ae09-d9040c79958f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8f23e93d-241d-4bbb-8ed6-b8d18eb9c48e.png",
+      "asset": "public/illustrations/evac/walk-case-29/consider-v2.webp"
+    }
+  ]
+}
