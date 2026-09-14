@@ -244,7 +244,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   await noPageOverflow(page, page.getByRole("button",{name:"別のルートで試す",exact:true}));
   await page.screenshot({path:testInfo.outputPath("complete-options.png")});
   await page.getByRole("button",{name:"トップに戻る",exact:true}).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/home$/);
   await page.goto("/evac/complete");
   await page.getByRole("button",{name:"別のルートで試す",exact:true}).click();
   await expect(page).toHaveURL(/\/evac\/routes$/);
@@ -778,4 +778,16 @@ test("残り5秒で強調し3秒で赤くなり、風景確認中は演出も止
   await page.screenshot({path:testInfo.outputPath("preparation-progress.png")});
   await expect(page.getByRole("button",{name:"自動で歩く",exact:true})).toBeEnabled();
   await expect(bar).toHaveCount(0);
+});
+
+test("mainの対象選択と避難体験のトップ導線を両立する", async ({page}) => {
+  await page.goto("/");
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(0);
+  await page.getByRole("button",{name:/子供/}).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
+  await page.goto("/evac?mode=mock&from=standalone");
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
+  await page.getByRole("link",{name:"トップページへ戻る",exact:true}).click();
+  await expect(page).toHaveURL(/\/home$/);
 });

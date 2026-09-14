@@ -137,19 +137,19 @@ export default function PrivacyBlurPage() {
 
       <div className="mx-5 rounded-panel bg-secondary-soft p-5">
         <p className="font-display text-lg font-bold text-ink">
-          <Furigana text="アニメ風の地震後の予想図を生成できます" adult="アニメ風の地震後の予想図をSNSで共有できます" />
+          <Furigana text="アニメ風の地震後の予想図を作れるよ" adult="アニメ風の地震後の予想図をSNSで共有できます" />
         </p>
         <p className="mt-3 text-base leading-relaxed text-ink">
-          <Furigana text="顔や住所が写っていたら、タップして隠[かく]そう。もう一度タップすると元に戻せます。" adult="顔や住所が写っていたら、タップして隠してください。再度タップすると元に戻せます。" />
+          <Furigana text="顔や住所が写っていたら、タップして隠[かく]そう。もう一度タップすると解除できるよ。" adult="顔や住所が写っていたら、タップして隠してください。再度タップすると元に戻せます。" />
         </p>
         <p className="mt-3 text-base leading-relaxed">
-          <Furigana text="隠[かく]すところがなければ、そのまま進めます。" />
+          <Furigana text="隠すところがなければ、そのまま次へ進もう。" adult="隠す箇所がなければ、そのまま進めます。" />
         </p>
       </div>
 
       <div className="flex flex-col gap-3 px-6 pb-5">
         <p className="text-sm leading-relaxed text-ink-muted">
-          <Furigana text="「OK」を押すと、隠[かく]した部分を除いた画像をOpenAIに送り、部屋の確認と予想図づくりに使います。" />
+          <Furigana text="「OK」を押すと、隠した部分を除いた画像をOpenAIに送るよ。部屋の確認と予想図づくりに使うよ。" adult="「OK」を押すと、隠した部分を除いた画像をOpenAIに送り、部屋の確認と予想図づくりに使います。" />
         </p>
         {error && <p role="alert" className="text-sm text-danger"><Furigana text={error} /></p>}
         <Button disabled={busy} onClick={() => void continueWithMaskedPhoto()}>

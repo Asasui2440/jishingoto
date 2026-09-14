@@ -48,7 +48,7 @@ export function GameHeader({ title, subtitle, step, onBack, onHelp, actions, lea
       {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" className="flex min-h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-2 text-11 font-bold"><GameIcon name="info" className="size-4" />使い方</button> : null}
     </div>
     <ol aria-label="体験の進み具合" className="mt-2 flex items-center gap-2">
-      {(["準備", "体験", "ふりかえり"] as const).map((label, i) => <li key={label} aria-current={step === i + 1 ? "step" : undefined} className={`flex flex-1 items-center gap-1.5 text-[10px] font-bold ${step >= i + 1 ? "text-blue-800" : "text-ink-soft"}`}><span className={`h-1 flex-1 rounded-full ${step >= i + 1 ? "bg-blue-600" : "bg-border"}`} /><span>{label}</span></li>)}
+      {(["準備", "体験", "ふりかえり"] as const).map((label, i) => <li key={label} aria-current={step === i + 1 ? "step" : undefined} className={`flex flex-1 items-center gap-1.5 text-[0.625rem] font-bold ${step >= i + 1 ? "text-blue-800" : "text-ink-soft"}`}><span className={`h-1 flex-1 rounded-full ${step >= i + 1 ? "bg-blue-600" : "bg-border"}`} /><span>{label}</span></li>)}
     </ol>
   </header>;
 }

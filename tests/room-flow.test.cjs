@@ -69,17 +69,21 @@ test("glass doors and dish cupboards keep object-specific advice and illustratio
 test("every correct action uses its corresponding generated illustration", async () => {
   const { reviewIllustration, reviewImagePath } = load("src/lib/review-illustrations.ts");
   const { SCENARIOS } = load("src/lib/scenarios.ts");
-  const questions = [...SCENARIOS];
+  const { AFTER_SHAKING_QUESTIONS } = load("src/lib/after-shaking-questions.ts");
+  const questions = [...SCENARIOS, ...AFTER_SHAKING_QUESTIONS];
   for (const fixtures of [[], [risk("bookshelf")], [risk("window", "break")], [risk("desk")], [risk("elevated_objects")], [risk("doorway", "block")]]) {
     questions.push(...await fetchQuestions(fixtures));
   }
   for (const q of questions) {
     const scene = reviewIllustration(q);
-    if (q.id === "shelter-damaged") { assert.equal(scene, null); continue; }
-    if (q.id === "home-kitchen-after") assert.equal(scene.image, "kitchen-question-v8");
+    if (q.id === "home-kitchen-after") assert.equal(scene.image, "cooktop-off-v20");
+    if (q.id === "home-kitchen-after") {
+      assert.equal(scene.secondary?.image, "gas-shutoff-v21");
+      assert(fs.existsSync(`public${reviewImagePath(scene.secondary.image)}`));
+    }
     assert(scene, `missing illustration for ${q.id}`);
     assert(fs.existsSync(`public${reviewImagePath(scene.image)}`), scene.image);
-    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, `${q.id}-v4`);
+    if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, q.id === "shelter-tsunami" ? "coast-evacuate-v20" : q.id === "shelter-damaged" ? "damaged-exit-v22" : `${q.id}-v4`);
     if (q.phase === "after") assert.match(scene.timing, /収ま/);
     assert.deepEqual(reviewIllustration({ ...q, choices: [...q.choices].reverse() }), scene);
   }
@@ -128,7 +132,7 @@ test("elevated objects never get a floor-scatter question; furniture advice is s
     assert.match(aftermathEvents([item])[0].adultText, /床/);
   }
   assert.match(roomAdvice(risk("cupboard")).detail, /閉めるだけでは/);
-  assert.match(roomAdvice(risk("tv")).detail, /滑り止め/);
+  assert.equal(roomAdvice(risk("tv")).detail, "");
   assert.match(roomAdvice(risk("bookshelf")).headline, /本/);
   assert.match(roomAdvice(risk("bed")).detail, /非常用の靴/);
   assert.match(EXIT_EXPLANATION.join(""), /靴下や薄いスリッパ/);
@@ -216,7 +220,7 @@ test("all room combinations follow during → after, including zero confirmed ri
   fixtures.push([risk("doorway", "block"), risk("window", "break"), risk("bookshelf"), risk("bed")]);
   for (const risks of fixtures) {
     const qs = await fetchQuestions(risks);
-    assert(qs.length >= 2 && qs.length <= 5);
+    assert.equal(qs.length, 5);
     assert.equal(qs[0].phase, "during");
     assert.equal(qs.at(-1).phase, "after");
     let after = false;
@@ -244,16 +248,37 @@ test("photo questions exclude kitchen checks when no cooktop is visible", async 
       let state = seed;
       const random = () => { state = (1664525 * state + 1013904223) >>> 0; return state / 2 ** 32; };
       const qs = await fetchQuestions([risk("bookshelf"), risk("tv", "fall", false)], setting, random);
-      assert(qs.length >= 2 && qs.length <= 5);
+      assert.equal(qs.length, 5);
       assert.equal(qs[0].phase, "during");
       assert.equal(qs.at(-1).phase, "after");
-      assert(qs.every((q) => !q.id.startsWith("shelter-") && !q.category.includes("別[べつ]の場面")));
+      assert(qs.every((q) => q.id !== "home-kitchen-after"));
       assert(qs.every((q) => q.sourceRiskId !== "tv"));
       const nonPhoto = qs.filter((q) => !q.sourceRiskId);
-      assert.deepEqual(nonPhoto.map((q) => q.id), ["q5"]);
+      assert(nonPhoto.every(q => ["q5", "shelter-home", "shelter-damaged", "floor-common", "after-open-exit", "after-family-check"].includes(q.id)));
       for (const q of nonPhoto) assert.equal(q.phase, "after");
     }
   }
+});
+
+test("SNSの問題は選ばれた場合だけ5問目に出し、揺れの後の問題を保つ", async () => {
+  let withInformation = 0;
+  let withoutInformation = 0;
+  for (const fixtures of [[], [risk("tv")], [risk("desk"), risk("tv"), risk("doorway", "block"), risk("cooktop")]]) {
+    for (const value of [0, 0.2, 0.4, 0.6, 0.8, 0.999]) {
+      const qs = await fetchQuestions(fixtures, "home", () => value);
+      assert.equal(qs.length, 5);
+      assert.equal(new Set(qs.map(q => q.id)).size, 5);
+      assert.equal(qs[0].phase, "during");
+      const duringCount = qs.filter(q => q.phase === "during").length;
+      assert(duringCount >= 1 && duringCount <= 2);
+      assert(qs.slice(duringCount).every(q => q.phase === "after"));
+      if (qs.some(q => q.id === "q5")) {
+        withInformation++;
+        assert.equal(qs.at(-1).id, "q5");
+      } else withoutInformation++;
+    }
+  }
+  assert(withInformation > 0 && withoutInformation > 0);
 });
 
 test("a detected desk always gets the first protection question", async () => {
@@ -262,7 +287,29 @@ test("a detected desk always gets the first protection question", async () => {
     assert.equal(qs[0].sourceRiskId, "desk");
     assert.equal(qs[0].choices.find((c) => c.safety >= 0.9).id, "under-desk");
     assert.equal(qs.filter((q) => q.sourceRiskId).length, 3);
+    assert.equal(qs.filter((q) => q.phase === "during").length, 2);
   }
+});
+
+test("身を守る問題は確認した家具から最大2問、少ない場合は1問にする", async () => {
+  for (const [fixtures, expected] of [
+    [[], 1], [[risk("tv")], 1],
+    [[risk("tv"), risk("bookshelf")], 2],
+    [[risk("tv"), risk("bookshelf"), risk("window", "break")], 2],
+    [[risk("tv"), risk("bookshelf", "fall", false)], 1],
+  ]) {
+    const questions = await fetchQuestions(fixtures, "home", () => 0.4);
+    const during = questions.filter(q => q.phase === "during");
+    assert.equal(questions.length, 5);
+    assert.equal(during.length, expected);
+    if (expected === 2) assert.equal(new Set(during.map(q => q.sourceRiskId)).size, 2);
+  }
+});
+
+test("情報の扱いは、写真に対応した揺れ後の問題がある場合は毎回固定で出さない", async () => {
+  const qs = await fetchQuestions([risk("doorway", "block")], "home", () => 0.999);
+  assert.ok(qs.some((q) => q.sourceRiskId === "doorway"));
+  assert.ok(qs.every((q) => q.id !== "q5"));
 });
 
 test("exit choices start with checking the floor, not assuming shoes are available", async () => {
@@ -352,7 +399,8 @@ test("upper elementary reading and adult guidance remain distinct", async () => 
   const { roomAdvice } = load("src/lib/room-guidance.ts");
   const { TRIVIA } = load("src/lib/trivia.ts");
   assert.equal(upperElementaryText("まどガラス"), "窓[まど]ガラス");
-  assert(TRIVIA.length >= 7);
+  assert(TRIVIA.length >= 14);
+  for (const trivia of TRIVIA) assert.doesNotMatch(trivia.body + trivia.note, /ください|ません|できます|です。/);
   assert(TRIVIA.every(t => t.adultBody && typeof t.adultNote === "string" && t.source.url.startsWith("https://")));
   const questions = await fetchQuestions([risk("desk"), risk("doorway", "block")]);
   for (const question of questions) assert.doesNotMatch(reviewNotes(question, "adult").join(""), /おとな|だよ|してね|しよう|家族に知らせ/);
@@ -451,7 +499,7 @@ test("ordinary floor checks and rescue conditions are distinct", () => {
     assert.match(notes[1], /閉じ込め|移動すると危険|動くと危ない/);
     assert.match(notes[1], /119/);
   }
-  assert.equal(reviewIllustration(question).image, "check-floor-v18");
+  assert.equal(reviewIllustration(question).image, "floor-protection-v19");
 });
 
 
@@ -477,7 +525,7 @@ test("cooktop preparation has fire precautions instead of furniture-moving advic
     assert.match(advice, /消火器/);
     assert.doesNotMatch(advice, /重.*低|寝る場所|転倒/);
   }
-  assert.match(roomAdviceImage(stove).src, /kitchen/);
+  assert.match(roomAdviceImage(stove).src, /cooktop-storage-v20/);
 });
 
 test("elevated object illustration selects exactly one of books or box", () => {
@@ -490,4 +538,47 @@ test("elevated object illustration selects exactly one of books or box", () => {
   assert.match(books[0].src, /lower-items/);
   assert.match(box[0].src, /lower-box/);
   assert.deepEqual(roomAdviceImages(risk("tv"), 0.2), roomAdviceImages(risk("tv"), 0.8));
+});
+
+test('動画の解析はマスク済み一覧、予想図はマスク済みの広い写真1枚を使い再利用する', async () => {
+  const { prepareMaskedRoom, prepareAftermath, clearRoomPreparation } = load('src/lib/room-preparation.ts');
+  const originalFetch=global.fetch;
+  const calls=[];
+  global.fetch=async(url,options)=>{
+    calls.push({url,body:JSON.parse(options.body)});
+    return Response.json(url.endsWith('/analyze')?{risks:[]}:{imageUrl:'generated-wide'});
+  };
+  clearRoomPreparation();
+  try {
+    const collage='data:image/png;base64,Y29sbGFnZQ==';
+    const wide='data:image/png;base64,bWFza2VkLXdpZGU=';
+    await prepareMaskedRoom(collage,wide);
+    assert.deepEqual(calls.map(c=>[c.url,c.body.image]),[['/api/room/analyze',collage],['/api/room/aftermath',wide]]);
+    assert.equal((await prepareAftermath(wide,[])).imageUrl,'generated-wide');
+    assert.equal(calls.length,2);
+  } finally {global.fetch=originalFetch;clearRoomPreparation();}
+});
+
+test("生成失敗と写真なしはサンプル、成功時は本人の予想図を表示する", () => {
+  const { aftermathDisplay, MOCK_AFTERMATH } = load("src/lib/aftermath-display.ts");
+  assert(fs.existsSync(`public${MOCK_AFTERMATH}`));
+  for (const source of ["preview", "test"]) assert.deepEqual(aftermathDisplay({ source, imageUrl: null, events: [] }), { mock: true, imageUrl: MOCK_AFTERMATH });
+  assert.deepEqual(aftermathDisplay({ source: "ai", imageUrl: "data:image/png;base64,generated", events: [] }), { mock: false, imageUrl: "data:image/png;base64,generated" });
+});
+
+test("サンプルを保存するPNGにもサンプル表示と4項目を含む", async () => {
+  const { createResultSummaryFile, axisRows } = load("src/lib/share-card.ts");
+  const before = { Image: global.Image, document: global.document };
+  const labels = [];
+  const context = { fillRect() {}, beginPath() {}, roundRect() {}, fill() {}, fillText(t) { labels.push(t); }, save() {}, clip() {}, drawImage() {}, restore() {} };
+  global.Image = class { naturalWidth = 1536; naturalHeight = 1024; async decode() {} };
+  global.document = { fonts: { ready: Promise.resolve() }, createElement: () => ({ getContext: () => context, toBlob: callback => callback(new Blob(["png"], { type: "image/png" })) }) };
+  try {
+    const file = await createResultSummaryFile({ rows: axisRows({ initial: 3, judgement: 5, room: null, evacuation: 4 }), audience: "adult", imageUrl: "/illustrations/aftermath-sample-v3.png", mock: true });
+    assert.equal(file.name, "jishingoto-result-sample.png");
+    assert(labels.includes("対象なし"));
+    assert(labels.some(text => text.includes("サンプル")));
+    assert(labels.some(text => text.includes("あなたの部屋を再現した画像ではありません")));
+    assert(labels.includes("3/5") && labels.includes("4/5"));
+  } finally { global.Image = before.Image; global.document = before.document; }
 });

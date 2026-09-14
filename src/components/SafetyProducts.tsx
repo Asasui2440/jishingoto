@@ -52,10 +52,9 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
             {adult && product.examples?.map((example) => <div key={example.name} className="mt-3 rounded-field bg-canvas p-3">
               <p className="text-13 font-bold"><Furigana text={example.name} /></p>
               <p className="mt-1 text-11"><Furigana text={example.specification} /></p>
-              <p className="mt-2 text-11 text-ink-muted"><Furigana text={"買う前に："} /><Furigana text={example.check} /></p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <a href={example.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-13 font-bold text-primary-ink underline"><Furigana text={"メーカー仕様 ↗"} /></a>
-                <a href={amazonSearchUrl(example.name)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 w-full items-center justify-center rounded-pill border border-primary-mid bg-surface px-3 py-2 text-center text-13 font-bold text-primary-ink"><Furigana text={"この型番をAmazonで探す ↗"} /></a>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <a href={example.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary-mid bg-surface px-3 py-2 text-center text-13 font-bold text-primary-ink"><Furigana text={"メーカーサイト ↗"} /></a>
+                <a href={example.amazonUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-pill border border-primary-mid bg-surface px-3 py-2 text-center text-13 font-bold text-primary-ink"><Furigana text={"Amazonで見る ↗"} /></a>
               </div>
             </div>)}
             {adult && !product.examples?.length && <a
@@ -72,7 +71,7 @@ export function SafetyProducts({ risks }: { risks: Risk[] }) {
 
       <p className="border-t border-border px-[18px] py-3 text-11 leading-[1.55] text-ink-faint">
         {adult
-          ? "製品仕様の確認日：2026年9月12日。価格・在庫はリンク先で確認してください。学校・会社への設置は施設管理者と相談してください。"
+          ? "製品仕様の確認日：2026年9月14日。価格・在庫はリンク先で確認してください。学校・会社への設置は施設管理者と相談してください。"
           : <Furigana text="イラストはグッズの種類[しゅるい]の例[れい]です。選[えら]び方[かた]や取[と]り付[つ]け方[かた]は、お家[うち]の人[ひと]と相談[そうだん]しよう。" />}
       </p>
     </Card>

@@ -95,8 +95,8 @@ export default function RoomCapture() {
       const roomViews = await prepareRoomViews(masked);
       if (controller.signal.aborted) return;
       reset(); setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
-      update({ photoUrl: photo, roomViews, blurRegions: [] });
-      void prepareMaskedRoom(photo);
+      update({ photoUrl: photo, aftermathPhotoUrl: masked[0], roomViews, blurRegions: [] });
+      void prepareMaskedRoom(photo, masked[0]);
       router.push("/analyzing");
     } catch {
       setError("画像を準備できませんでした。もう一度お試しください。");
@@ -105,23 +105,23 @@ export default function RoomCapture() {
   };
 
   return <div className="flex min-h-dvh flex-col">
-    <main className="flex flex-1 flex-col gap-5 px-5 py-8">
+    <main className="flex flex-1 flex-col gap-2 px-5 py-3">
       <h1 className="font-display text-28 font-bold"><Furigana text={stage === "input" ? "部屋を写そう" : stage === "photo" ? "写真を撮る" : stage === "video" ? "動画を撮る" : stage === "privacy" ? "画像の確認・マスク" : "部屋の画像を準備しています"} /></h1>
       {stage === "input" && <>
-        <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・家具の上まで広く写した部屋のイラスト" className="h-auto w-full rounded-panel" priority />
-        <p className="text-base leading-relaxed"><Furigana text="写真でも動画でも、部屋の様子を確認できます。動画は15秒ほどで、一定の速さで部屋を見回すように撮ろう。" /></p>
-        <section aria-labelledby="photo-method" className="rounded-panel bg-secondary-soft p-4">
-          <h2 id="photo-method" className="mb-3 font-display text-xl font-bold"><Furigana text="写真" /></h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Button aria-label="写真を撮影する" onClick={() => { setError(""); setStage("photo"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
-            <Button variant="outline" onClick={() => photoFileInput.current?.click()} disabled={!!busy}><Furigana text="写真から選ぶ" /></Button>
+        <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・家具の上まで広く写した部屋のイラスト" className="h-24 w-full rounded-panel object-cover" priority />
+        <p className="text-13 leading-relaxed"><Furigana text="写真でも動画でも確認できるよ。動画は15秒ほどで、一定の速さで部屋を見回すように撮ろう。" adult="写真・動画のどちらでも確認できます。動画は15秒程度を目安に、一定の速さで部屋全体を撮影してください。" /></p>
+        <section aria-labelledby="photo-method" className="rounded-field bg-secondary-soft p-2">
+          <h2 id="photo-method" className="mb-1 font-display text-sm font-bold"><Furigana text="写真" /></h2>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="sm" aria-label="写真を撮影する" onClick={() => { setError(""); setStage("photo"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
+            <Button size="sm" variant="outline" onClick={() => photoFileInput.current?.click()} disabled={!!busy}><Furigana text="写真から選ぶ" /></Button>
           </div>
         </section>
-        <section aria-labelledby="video-method" className="rounded-panel bg-secondary-soft p-4">
-          <h2 id="video-method" className="mb-3 font-display text-xl font-bold"><Furigana text="動画" /></h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Button aria-label="動画を撮影する" onClick={() => { setError(""); setStage("video"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
-            <Button variant="outline" onClick={() => videoFileInput.current?.click()} disabled={!!busy}><Furigana text="動画から選ぶ" /></Button>
+        <section aria-labelledby="video-method" className="rounded-field bg-secondary-soft p-2">
+          <h2 id="video-method" className="mb-1 font-display text-sm font-bold"><Furigana text="動画" /></h2>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="sm" aria-label="動画を撮影する" onClick={() => { setError(""); setStage("video"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>
+            <Button size="sm" variant="outline" onClick={() => videoFileInput.current?.click()} disabled={!!busy}><Furigana text="動画から選ぶ" /></Button>
           </div>
         </section>
         <input ref={photoFileInput} type="file" accept="image/*" aria-label="写真ファイルを選ぶ" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void loadFile(file); }} hidden />
@@ -130,7 +130,7 @@ export default function RoomCapture() {
       {(stage === "photo" || stage === "video") && <LiveRoomCamera mode={stage} onCapture={(file, duration) => void loadFile(file, duration)} onBack={() => setStage("input")} />}
       {stage === "privacy" && <>
         <p className="font-bold text-secondary-ink"><Furigana text={`AIが選んだ画像 ${selected.indexOf(index) + 1} / ${selected.length}`} /></p>
-        <div className="rounded-panel bg-secondary-soft p-4 text-base leading-relaxed"><Furigana text="顔や住所が写っていたら、画像をタップして隠そう。もう一度タップすると解除できます。隠すところがなければ、そのまま次へ進めます。" /></div>
+        <div className="rounded-panel bg-secondary-soft p-4 text-base leading-relaxed"><Furigana text="顔や住所が写っていたら、画像をタップして隠そう。もう一度タップすると解除できるよ。隠すところがなければ、そのまま次へ進もう。" adult="顔や住所が写っていたら、画像をタップして隠してください。再度タップすると解除できます。隠す箇所がなければ、そのまま進めます。" /></div>
         <div className="flex flex-wrap gap-2">{selected.map((i, position) => <button key={i} disabled={!!busy} aria-pressed={index === i} onClick={() => setIndex(i)} className={`min-h-11 min-w-11 rounded-field border-2 px-2 ${i === index ? "border-primary bg-secondary-soft" : "border-border"}`}>{position + 1}{reviewed.includes(i) ? " ✓" : ""}</button>)}</div>
         <div className="relative cursor-crosshair overflow-hidden rounded-panel" onClick={event => {
           if (busy) return;
@@ -170,7 +170,7 @@ export default function RoomCapture() {
       </>}
       {busy && <div role="status" className="rounded-panel bg-secondary-soft p-4"><Furigana text={busy} />{busy === "動画から画像を取り出しています…" && <progress value={progress} max={1} aria-label="動画の読み込み" className="mt-3 w-full" />}</div>}
       {error && <p role="alert" className="text-base text-danger"><Furigana text={error} /></p>}
-      <button type="button" className="min-h-11 text-base underline" onClick={() => { operation.current?.abort(); router.push("/"); }}><Furigana text="戻る" /></button>
+      <button type="button" className="min-h-11 text-base underline" onClick={() => { operation.current?.abort(); router.push("/home"); }}><Furigana text="戻る" /></button>
     </main><DisclaimerFooter />
   </div>;
 }

@@ -1,4 +1,4 @@
-import type { Risk } from "./content";
+import type { Risk, Question } from "./content";
 
 export type ViewBounds = { x: number; y: number; w: number; h: number };
 export type RoomView = { url: string; bounds: ViewBounds };
@@ -52,4 +52,16 @@ export function groupRisksByView(risks: Risk[], views: RoomView[]): Risk[] {
   return risks.map((risk, order) => ({ risk, order, view: viewForRisk(risk, views) }))
     .sort((a, b) => a.view - b.view || a.order - b.order)
     .map(item => item.risk);
+}
+
+export function questionRoomView(question: Question, risks: Risk[], views: RoomView[], photo: string | null) {
+  const risk = risks.find(item => item.id === question.sourceRiskId);
+  const view = risk ? views[viewForRisk(risk, views)] : views[0];
+  if (!view) return { question, photo };
+  const projected = risk && riskOnView({ ...risk, bounds: question.highlight ?? risk.bounds }, view);
+  return {
+    photo: view.url,
+    question: { ...question, highlight: projected?.bounds && question.highlight
+      ? { ...question.highlight, ...projected.bounds } : undefined },
+  };
 }
