@@ -3,7 +3,7 @@
 import { questionRoomView } from "@/lib/room-views";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import roomQuiz from "@/../public/figma/img/room-risk.jpg";
 import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
 import { Meter, Tag } from "@/components/ui/Bits";
@@ -226,6 +226,7 @@ export default function QuizPage() {
 
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [index, setIndex] = useState(0);
+  const answeredQuestion = useRef<string | null>(null);
 
   // 部屋で確認した危険にひもづく設問を取りに行く
   useEffect(() => {
@@ -252,6 +253,9 @@ export default function QuizPage() {
     (choice: Choice, timedOut: boolean) => {
       if (!questions) return;
       const question = questions[index];
+      // 連打や時間切れとタップの競合でも、同じ回答から二度進めない。
+      if (answeredQuestion.current === question.id) return;
+      answeredQuestion.current = question.id;
 
       // answer は同じ設問への回答を上書きするので、進む前に記録しておく
       answer({
@@ -269,7 +273,7 @@ export default function QuizPage() {
       if (index + 1 < questions.length) {
         setIndex(index + 1);
       } else {
-        update({ finishedAt: Date.now() });
+        update({ finishedAt: Date.now(), resultStep: 0, resultIntroPending: true });
         router.push("/result");
       }
     },

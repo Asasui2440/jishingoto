@@ -13,6 +13,7 @@ function load(file) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   new Function('require', 'module', 'exports', code)((p) => {
     if (/\.(jpg|png|webp)$/.test(p)) return { default: { src: p, width: 1536, height: 1024 } };
+    if (p.endsWith('.module.css')) return { default: {} };
     if (p === 'next/navigation') return { useRouter: () => ({ push() {}, replace() {} }) };
     if (p === '@/lib/session') return { useSession: () => ({ answers: [], risks: [], questions: [], photoUrl: null, checked: [], resultStep: savedStep }), getSession: () => ({ finishedAt: 1 }), strengths: () => [], scoreByAxis: () => ({ initial: null, judgement: null, room: null, evacuation: null }) };
     if (p === '@/components/ui/Button') return { Button: ({ children, disabled }) => React.createElement('button', { disabled }, children) };
@@ -58,9 +59,20 @@ test('action review distinguishes safe, risky and timed-out answers without righ
   assert.match(render(safe), /text-green-700/);
   assert.match(render(risky), /けがにつながるおそれがある行動/);
   assert.match(render(risky), /text-amber-900/);
-  assert.match(render(safe), /あなたが選んだ行動[\s\S]*?<p class="mt-1 text-13 font-bold[^"]*text-green-700[^"]*"[^>]*>[\s\S]*?安全につながる行動を選べました[\s\S]*?<\/p><\/div>/);
+  for (const choice of [safe, risky]) {
+    const html = render(choice);
+    const recall = html.slice(html.indexOf('aria-label="質問とあなたの回答"'), html.indexOf('</dl>'));
+    assert(recall.includes(question.situation));
+    assert(recall.includes(choice.label));
+    if (choice.detail) assert(recall.includes(choice.detail));
+    assert(recall.indexOf(question.situation) < recall.indexOf(choice.label));
+    assert(html.indexOf('</dl>') < html.indexOf('<img'));
+  }
   const timed = render(safe, true);
   assert.match(timed, /時間内に選べませんでした/);
+  assert.match(timed, /時間切.*未回答/);
+  const unanswered = timed.slice(timed.indexOf('aria-label="質問とあなたの回答"'), timed.indexOf('</dl>'));
+  assert(!unanswered.includes(safe.label));
   assert.doesNotMatch(timed, /安全につながる行動を選べました|あなたが選んだ行動/);
   for (const html of [render(safe), render(risky), timed]) {
     assert.doesNotMatch(html, /正解|不正解|AI生成の説明用イラスト/);

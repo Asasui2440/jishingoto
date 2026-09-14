@@ -1,0 +1,126 @@
+/* ホームと結果に共通する、黄みのある紙面・茶色の見出しでつなぐ。 */
+.scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow-y: auto;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+}
+.scene::backdrop { background: var(--color-canvas); }
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: max(28px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+.brand {
+  color: var(--color-primary-ink);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+.eyebrow { margin-top: 8px; font-size: 0.75rem; font-weight: 600; color: var(--color-ink-muted); }
+.illustration {
+  width: min(100%, 400px);
+  height: clamp(140px, 24dvh, 240px);
+  margin: 0 auto 16px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  animation: paper-in 0.75s ease-out both;
+}
+.illustration img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.wave { display: flex; justify-content: center; align-items: center; gap: 5px; height: 24px; margin-bottom: 16px; }
+.wave span {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  animation: wave-settle 1.6s ease-out 0.1s both;
+}
+.title {
+  color: var(--color-primary-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 900;
+  line-height: 1.55;
+  outline: none;
+  animation: message-in 0.5s ease-out 0.25s both;
+}
+.underlined { position: relative; display: inline-block; isolation: isolate; }
+.underlined::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -2px;
+  bottom: 0.1em;
+  left: -2px;
+  height: 0.16em;
+  border-radius: 40% 20% 30% 20%;
+  background: var(--color-primary);
+  transform: rotate(-0.6deg);
+  transform-origin: left;
+  animation: underline-in 0.65s ease-out 0.65s both;
+}
+.description {
+  margin-top: 12px;
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  line-height: 2.1;
+  animation: message-in 0.5s ease-out 0.6s both;
+}
+.scene ruby > rt { color: inherit; }
+.footer { width: min(100%, 320px); margin: 0 auto; font-size: 0.75rem; }
+.footer p { color: var(--color-ink-soft); }
+@keyframes paper-in {
+  from { transform: translateY(6px) rotate(-0.5deg); opacity: 0; }
+  to { transform: translateY(0) rotate(0); opacity: 1; }
+}
+@keyframes wave-settle {
+  0% { transform: scaleY(0.7); }
+  18% { transform: scaleY(1); }
+  38% { transform: scaleY(0.45); }
+  52% { transform: scaleY(0.65); }
+  100% { transform: scaleY(0.08); }
+}
+@keyframes message-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes underline-in {
+  from { transform: rotate(-0.6deg) scaleX(0); }
+  to { transform: rotate(-0.6deg) scaleX(1); }
+}
+@media (max-height: 700px) {
+  .content { gap: 14px; padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .brand { font-size: 1.25rem; }
+  .eyebrow { margin-top: 6px; }
+  .illustration { height: clamp(90px, 18dvh, 125px); margin-bottom: 10px; }
+  .wave { height: 18px; margin-bottom: 10px; }
+  .title { font-size: 1.625rem; line-height: 1.5; }
+  .description { margin-top: 8px; font-size: 0.8125rem; line-height: 2; }
+}
+@media (max-height: 440px) and (min-width: 640px) {
+  .content { max-width: 880px; gap: 10px; }
+  .eyebrow { display: none; }
+  .message { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: center; }
+  .illustration { grid-column: 1; grid-row: 1 / 4; height: 180px; margin-bottom: 0; }
+  .wave, .title, .description { grid-column: 2; }
+  .wave { margin-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .illustration, .wave span, .title, .description, .underlined::after { animation: none; }
+}

@@ -28,13 +28,29 @@ for (const viewport of [{width:320,height:720}, {width:600,height:900}, {width:7
     await page.goto("/test-room");
     await page.getByRole("button",{name:"結果ページを試す（APIなし）"}).click();
     await expect(page.locator("article")).toBeVisible();
-    const review = await page.locator("article").boundingBox();
-    const figure = await page.locator("article > figure").boundingBox();
-    const copy = await page.locator(".review-copy").boundingBox();
+    // 入場アニメーション中でも同一フレームの位置を比較する。
+    const {review, figure, copy, recallBox, actions} = await page.evaluate(() => {
+      const box = (selector: string) => {
+        const {x, y, width, height} = document.querySelector(selector)!.getBoundingClientRect();
+        return {x, y, width, height};
+      };
+      return {review:box("article"), figure:box("article > figure"),
+        copy:box(".review-copy"), recallBox:box(".review-recall"),
+        actions:box('nav[aria-label="結果のページ切り替え"]')};
+    });
+    const recall = page.getByRole("region", {name:"質問とあなたの回答"});
+    expect(recallBox!.y + recallBox!.height).toBeLessThanOrEqual(figure!.y + 1);
+    const recorded = await page.evaluate(() => {
+      const session = JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!);
+      const answer = session.answers[0];
+      return session.questions.find((q: {id: string}) => q.id === answer.questionId).choices
+        .find((choice: {id: string}) => choice.id === answer.choiceId);
+    });
+    await expect(recall.locator(".review-answer")).toContainText(recorded.label.replace(/\[[^\]]*\]/g,""));
+    expect(await recall.locator(".review-answer dd p").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
     if(width>=640) expect(copy!.x).toBeGreaterThanOrEqual(figure!.x+figure!.width-1);
     else expect(copy!.y).toBeGreaterThanOrEqual(figure!.y+figure!.height-1);
     expect(review!.width).toBeLessThanOrEqual(width);
-    const actions = await page.getByRole("navigation", {name:"結果のページ切り替え"}).boundingBox();
     expect(actions!.y).toBeGreaterThanOrEqual(review!.y + review!.height);
     await page.getByRole("button",{name:/理由・注意点を読む/}).click();
     await expect(page.getByRole("dialog")).toBeVisible();

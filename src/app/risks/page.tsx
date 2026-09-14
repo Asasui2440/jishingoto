@@ -116,6 +116,7 @@ export default function RoomRecognitionPage() {
       answers: [],
       finishedAt: null,
       resultStep: 0,
+      resultIntroPending: false,
     }));
     const session = getSession();
     const prediction = aftermathInput(session);

@@ -629,7 +629,7 @@ test("サンプルを保存するPNGにもサンプル表示と4項目を含む"
   const { createResultSummaryFile, axisRows } = load("src/lib/share-card.ts");
   const before = { Image: global.Image, document: global.document };
   const labels = [];
-  const context = { fillRect() {}, beginPath() {}, roundRect() {}, fill() {}, fillText(t) { labels.push(t); }, save() {}, clip() {}, drawImage() {}, restore() {} };
+  const context = { fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, roundRect() {}, fill() {}, fillText(t) { labels.push(t); }, save() {}, clip() {}, drawImage() {}, restore() {} };
   global.Image = class { naturalWidth = 1536; naturalHeight = 1024; async decode() {} };
   global.document = { fonts: { ready: Promise.resolve() }, createElement: () => ({ getContext: () => context, toBlob: callback => callback(new Blob(["png"], { type: "image/png" })) }) };
   try {

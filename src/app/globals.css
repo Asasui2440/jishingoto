@@ -300,7 +300,7 @@ html { scroll-padding-top: 60px; }
   .quiz-room, .quiz-question { min-width: 0; }
   .quiz-question > ul { gap: 14px; }
   .action-review { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  .action-review > div:first-child { grid-column: 1 / -1; }
+  .action-review > .review-heading, .review-recall, .review-fallback { grid-column: 1 / -1; }
   .action-review > figure { min-width: 0; }
   .action-review > figure > div:not(.grid) img { height: clamp(210px, 28cqw, 290px); object-fit: contain; }
   .review-copy { min-width: 0; padding: 24px; }
@@ -336,7 +336,7 @@ html { scroll-padding-top: 60px; }
 /* 色は見出しや小さな面に使い、本文と挿絵には白い余白を残す。 */
 .home-phase-two { border-color: #9fc9df; background: var(--color-glass-soft); color: var(--color-glass); }
 .home-phase-two:active { background: #d5eaf7; }
-.action-review > div:first-child { background: var(--color-glass-soft); color: var(--color-glass); }
+.review-heading { background: var(--color-glass-soft); color: var(--color-glass); }
 .detail-trigger { border-color: var(--color-border); color: var(--color-glass); }
 .detail-trigger:hover { background: var(--color-glass-soft); }
 .detail-trigger > span:first-child > span:first-child { color: var(--color-ink); }

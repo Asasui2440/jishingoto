@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { aftermathInput } from "@/lib/aftermath-plan";
 import { SaveResultImage } from "@/components/SaveResultImage";
 import { AftermathCard } from "@/components/AftermathCard";
+import { QuizResultTransition } from "@/components/QuizResultTransition";
 import { ActionReview } from "@/components/ActionReview";
 import { EvacuationGuide } from "@/components/EvacuationGuide";
 import { Meter } from "@/components/ui/Bits";
@@ -23,11 +24,15 @@ const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 
 export default function ResultPage() {
   const router = useRouter();
-  const { answers, risks, questions, photoUrl, aftermathPhotoUrl, roomViews, checked, toggleChecked, reset, resultStep, update } = useSession();
+  const { answers, risks, questions, photoUrl, aftermathPhotoUrl, roomViews, checked, toggleChecked, reset, resultStep, resultIntroPending, update } = useSession();
   const { audience } = useSettings();
   const adult = audience === "adult";
   const prediction = useMemo(() => aftermathInput({ photoUrl, aftermathPhotoUrl, roomViews, risks }), [photoUrl, aftermathPhotoUrl, roomViews, risks]);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const finishIntro = useCallback(() => {
+    update({ resultIntroPending: false });
+    headingRef.current?.focus({ preventScroll: true });
+  }, [update]);
   const scores = useMemo(() => scoreByAxis(answers, risks), [answers, risks]);
   const wins = useMemo(() => strengths(answers, questions, audience), [answers, questions, audience]);
   // ふりかえり。答えた順に、選んだ行動と解説を並べる。
@@ -65,6 +70,7 @@ export default function ResultPage() {
 
   return (
     <div className="result-page flex min-h-dvh flex-col justify-between">
+      {resultIntroPending && <QuizResultTransition onComplete={finishIntro} />}
       <div>
         <StatusBar />
         <div className="flex items-center gap-2 px-6 pt-3">

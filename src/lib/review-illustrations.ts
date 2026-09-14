@@ -14,21 +14,21 @@ export function reviewIllustration(question: Question): ReviewIllustration | nul
   const best = question.choices.reduce<typeof question.choices[number] | undefined>((best, choice) => !best || choice.safety > best.safety ? choice : best, undefined);
   if (!best) return null;
   switch (best.id) {
-    case "open-exit": return { image: "open-exit-v22", alt: "開いたドアと出口までの通路を表すシンプルな図", headline: "足元と周りを確かめてからドアを開け、出口を確かめよう", timing: "揺れが収まったあと" };
+    case "open-exit": return { image: "open-exit-v22", alt: "足元を確認しながらドアを開ける大人と、後ろで待つ子ども", headline: "足元と周りを確かめてからドアを開け、出口を確かめよう", timing: "揺れが収まったあと" };
     case "check-family": return { image: "family-check-v22", alt: "離れた位置から声をかけ、返事を確かめる親子の図", headline: "自分の安全を確かめたら、家族に声をかけて様子を確かめよう", timing: "揺れが収まったあと" };
-    case "shelter-damaged-0": return { image: "damaged-exit-v22", alt: "損傷した建物から離れる方向を矢印で表した図", headline: "建物が倒れるおそれがある時は、避難所が開くのを待たずに離れよう", timing: "揺れが収まったあと" };
+    case "shelter-damaged-0": return { image: "damaged-exit-v22", alt: "損傷した建物から離れ、手をつないで歩く大人と子ども", headline: "建物が倒れるおそれがある時は、避難所が開くのを待たずに離れよう", timing: "揺れが収まったあと" };
     case "under-desk": return SCENES.shelter;
     case "cover": case "move-away": case "protect-head": return { ...SCENES.shelter, headline: "近くに丈夫[じょうぶ]な机があり、安全に入れる場合は下へ。難[むずか]しい場合はその場で頭と首を守る" };
     case "curtain": return { ...SCENES.shelter, headline: "窓から離れ、すぐ近くに安全に入れる丈夫な机があれば下へ。難しい場合はその場で頭と首を守る" };
     case "wait": return { ...SCENES.shelter, headline: "火を消しに走らず、まず身を守る。安全に入れる丈夫な机がすぐ近くにあれば下へ" };
     case "kitchen-check": return {
       image: "cooktop-off-v20",
-      alt: "コンロを表すシンプルな図",
+      alt: "コンロの手前のつまみを操作して火を止める大人",
       headline: "① コンロの火を止める",
       timing: "揺れが収まったあと・安全に近づける場合だけ",
-      secondary: { image: "gas-shutoff-v21", alt: "配管とガスの元栓を表すシンプルな図", headline: "② ガスの元栓を閉める" },
+      secondary: { image: "gas-shutoff-v21", alt: "配管の元栓に手を添えて閉める大人", headline: "② ガスの元栓を閉める" },
     };
-    case "shelter-tsunami-0": return { image: "coast-evacuate-v20", alt: "海から高い場所へ向かう方向を示すシンプルな図", headline: "海の近くで強い揺れや長い揺れを感じたら、津波警報を待たず高い場所へ", timing: "揺れが収まったあと・海の近く" };
+    case "shelter-tsunami-0": return { image: "coast-evacuate-v20", alt: "海から離れ、高台へ向かって歩く大人と子ども", headline: "海の近くで強い揺れや長い揺れを感じたら、津波警報を待たず高い場所へ", timing: "揺れが収まったあと・海の近く" };
     case "shoes": case "clear-exit": return SCENES.exit;
     case "verify": return SCENES.information;
     default: {
@@ -48,12 +48,12 @@ const SCENARIO_IMAGES: Record<string, string> = Object.fromEntries([
 const TEXTBOOK_IMAGES: Record<string, string> = {
   "desk-hold-v12": "shelter-v3.webp", "protect-head": "shelter-v3.webp",
   "floor-protection-v19": "exit-v4.webp", "information-tv-v11": "information-v4.webp",
-  "open-exit-v22": "open-exit-v1.svg", "family-check-v22": "family-check-v4.webp",
-  "damaged-exit-v22": "damaged-exit-v1.svg", "cooktop-off-v20": "kitchen-v1.svg",
-  "gas-shutoff-v21": "gas-valve-v1.svg", "coast-evacuate-v20": "upstairs-v1.svg",
-  "shelter-home-v4": "home-v1.svg", "shelter-tsunami-v4": "upstairs-v1.svg", "home-bed-v4": "bed-v1.svg",
+  "open-exit-v22": "open-exit-v2.webp", "family-check-v22": "family-check-v4.webp",
+  "damaged-exit-v22": "damaged-exit-v2.webp", "cooktop-off-v20": "kitchen-v2.webp",
+  "gas-shutoff-v21": "gas-valve-v2.webp", "coast-evacuate-v20": "actions/coast-evacuate-v2.webp",
+  "shelter-home-v4": "information-v4.webp", "shelter-tsunami-v4": "actions/coast-evacuate-v2.webp", "home-bed-v4": "bed-v2.webp",
   "classroom-desk-v4": "shelter-v3.webp", "classroom-exit-v4": "exit-v4.webp", "classroom-reunion-v4": "reunion-v2.webp",
-  "office-copier-v4": "printer-v1.svg", "office-elevator-v4": "stairs-v1.svg", "office-stay-v4": "office-v1.svg",
+  "office-copier-v4": "printer-v2.webp", "office-elevator-v4": "stairs-v2.webp", "office-stay-v4": "office-v2.webp",
 };
 
 /** 固定素材を再利用する。表示のために画像生成APIは呼ばない。 */

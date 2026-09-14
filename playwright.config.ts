@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["mobile-game.spec.ts", "responsive.spec.ts"],
+  testMatch: ["mobile-game.spec.ts", "responsive.spec.ts", "quiz-result.spec.ts"],
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
