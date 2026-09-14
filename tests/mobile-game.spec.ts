@@ -15,6 +15,17 @@ async function openIllustratedQuestion(page: Page, number = 28) {
   await expect(page.getByRole("button",{name:"判断を始める",exact:true})).toBeEnabled();
 }
 
+test("電線の問題に太線のローカル画像４枚を表示する", async ({page}) => {
+  await openIllustratedQuestion(page, 18);
+  const images = page.getByRole("region",{name:/判断ポイント/}).locator("img");
+  await expect(images).toHaveCount(4);
+  for (const img of await images.all()) {
+    await img.scrollIntoViewIfNeeded();
+    await expect(img).toHaveAttribute("src", /walk-case-18\/.*-v2\.webp$/);
+    await expect.poll(()=>img.evaluate((el: HTMLImageElement)=>el.naturalWidth)).toBe(960);
+  }
+});
+
 test("イラストを読む間は時計が止まり、開始と再確認を自分で選べる", async ({page},testInfo) => {
   await openIllustratedQuestion(page);
   const card = page.getByRole("region",{name:/判断ポイント/});

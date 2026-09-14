@@ -30,7 +30,7 @@ if (process.env.WALK_ILLUSTRATION_QA) {
   const sharp = require("sharp");
   Promise.all([0,1,2].map(async page=>{
     const input = await Promise.all(WALK_SCENARIOS.slice(page*10,page*10+10).flatMap(({event},row)=>[undefined,...event.choices].map(async (choice,col)=>({
-      input:Buffer.from(renderToStaticMarkup(React.createElement(WalkIllustration,{event,choice})).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="155" ')),
+      input:event.id === "walk-case-18" ? await sharp(path.join("public/illustrations/evac/walk-case-18", `${choice?.id ?? "situation"}-v2.webp`)).resize(280,155,{fit:"contain"}).toBuffer() : Buffer.from(renderToStaticMarkup(React.createElement(WalkIllustration,{event,choice})).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="155" ')),
       top:row*155,left:col*280,
     }))));
     await sharp({create:{width:1120,height:1550,channels:4,background:"#fff"}}).composite(input).png().toFile(`/private/tmp/walk-illustrations-${page}.png`);
