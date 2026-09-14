@@ -32,7 +32,12 @@ function sanitize(value: unknown): Risk[] {
       const y = Math.max(0, Math.min(99, Number(box.y)));
       bounds = { x, y, w: Math.min(100 - x, Number(box.w)), h: Math.min(100 - y, Number(box.h)) };
     }
-    return [{ id: `ai-${index}-${objectType}`, name: row.name.replaceAll("テレビ受像機", "テレビ").slice(0, 30), adultName: typeof row.adultName === "string" && row.adultName.trim() ? row.adultName.trim().replaceAll("テレビ受像機", "テレビ").slice(0, 60) : undefined, kind, objectType, confidence, bounds, x: bounds ? bounds.x + bounds.w / 2 : clamp(row.x, 50), y: bounds ? bounds.y + bounds.h / 2 : clamp(row.y, 50), confirmed: false }];
+    const normalizeName = (name: string) => name
+      .replaceAll("テレビ受像機", "テレビ")
+      .replaceAll("背高食器棚", "背の高い食器棚")
+      .replaceAll("背高収納家具", "背の高い収納家具")
+      .replaceAll("高層収納家具", "背の高い収納家具");
+    return [{ id: `ai-${index}-${objectType}`, name: normalizeName(row.name).slice(0, 30), adultName: typeof row.adultName === "string" && row.adultName.trim() ? normalizeName(row.adultName.trim()).slice(0, 60) : undefined, kind, objectType, confidence, bounds, x: bounds ? bounds.x + bounds.w / 2 : clamp(row.x, 50), y: bounds ? bounds.y + bounds.h / 2 : clamp(row.y, 50), confirmed: false }];
   });
 }
 

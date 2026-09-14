@@ -179,7 +179,7 @@ function GoogleMapView({
       livePins.add(id);
       const options: google.maps.MarkerOptions = {
         position, title, clickable: !!onClick,
-        label: { text: label, color: "#1a202c", fontSize: "11px", fontWeight: "700" },
+        label: { text: label, color: "#1a202c", fontSize: "0.6875rem", fontWeight: "700" },
         icon: { path: maps.SymbolPath.CIRCLE, scale: 13, fillColor: color, fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 },
       };
       const signature = JSON.stringify(options);
@@ -469,7 +469,7 @@ function DemoMapView({
                 x={x}
                 y={y + 4}
                 textAnchor="middle"
-                fontSize="11"
+                fontSize="0.6875rem"
                 fontWeight="700"
                 fill="#1a202c"
               >
@@ -489,7 +489,7 @@ function DemoMapView({
                 x={x}
                 y={y + 4}
                 textAnchor="middle"
-                fontSize="11"
+                fontSize="0.6875rem"
                 fontWeight="700"
                 fill="#1a202c"
               >
@@ -509,7 +509,7 @@ function DemoMapView({
                     x={x}
                     y={y + 4}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="0.6875rem"
                     fontWeight="700"
                     fill="#1a202c"
                   >
@@ -536,7 +536,7 @@ function DemoMapView({
         {loading ? "地図を読み込み中…" : "模式図 · 練習用"}
       </span>
       <span aria-hidden="true" className="absolute top-3 right-3 flex flex-col items-center text-11 font-bold text-ink-soft">N<span className="text-base">↑</span></span>
-      <p className="bg-canvas px-3 py-1.5 text-[10px] text-ink-muted">模式図の街区・道路は実際の地図とは異なります。</p>
+      <p className="bg-canvas px-3 py-1.5 text-[0.625rem] text-ink-muted">模式図の街区・道路は実際の地図とは異なります。</p>
     </div>
   );
 }

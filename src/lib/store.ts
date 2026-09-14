@@ -9,6 +9,13 @@ type Store<T> = {
   serverSnapshot: () => T;
 };
 
+// 開発中のモジュール差し替えでも写真を含むメモリ上の状態を失わない。
+// ページを閉じる・再読み込みするまでの保持で、Web Storageには追加保存しない。
+const browserStores = typeof window === "undefined" ? null : (() => {
+  const scope = globalThis as typeof globalThis & { __jishingotoStores?: Map<string, unknown> };
+  return scope.__jishingotoStores ??= new Map<string, unknown>();
+})();
+
 /**
  * localStorage / sessionStorage を React の外部ストアとして扱う。
  *
@@ -24,6 +31,9 @@ export function createPersistentStore<T extends object>(
   /** 保存するときに落とすキー（blob URL など、次回使えない値） */
   omit: (keyof T)[] = [],
 ): Store<T> {
+  const storeKey = `${area}:${key}`;
+  const existing = browserStores?.get(storeKey) as Store<T> | undefined;
+  if (existing) return existing;
   let cached: T = initial;
   let loaded = false;
   const listeners = new Set<() => void>();
@@ -67,7 +77,7 @@ export function createPersistentStore<T extends object>(
     listeners.forEach((fn) => fn());
   };
 
-  return {
+  const store: Store<T> = {
     get,
     set,
     subscribe: (fn) => {
@@ -77,6 +87,8 @@ export function createPersistentStore<T extends object>(
     // SSR では常に既定値。hydration のずれを防ぐ。
     serverSnapshot: () => initial,
   };
+  browserStores?.set(storeKey, store);
+  return store;
 }
 
 export function useStore<T extends object>(store: Store<T>): [T, Store<T>["set"]] {

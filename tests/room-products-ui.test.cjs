@@ -32,7 +32,7 @@ const risks = ['bookshelf', 'tv', 'window', 'cupboard', 'hanging_object'].map((o
 test('children see product illustrations and advice without any outbound product links', () => {
   audience = 'child';
   const html = renderToStaticMarkup(React.createElement(SafetyProducts, { risks }));
-  assert.doesNotMatch(html, /<a\b|amazon\.co\.jp|メーカー仕様/);
+  assert.doesNotMatch(html, /<a\b|amazon\.co\.jp|メーカーのサイトへ/);
   assert.match(html, /お家/);
   for (const image of ['furniture-anchor', 'tv-belt', 'safety-film', 'cupboard-film', 'hanging-wire']) {
     assert(html.includes(`/illustrations/products/${image}.png`));
@@ -44,7 +44,7 @@ test('adults retain manufacturer and shopping links next to illustrated advice',
   const html = renderToStaticMarkup(React.createElement(SafetyProducts, { risks }));
   assert.match(html, /<a\b/);
   assert.match(html, /amazon\.co\.jp/);
-  assert.match(html, /メーカー仕様/);
+  assert.match(html, /メーカーサイト/);
 });
 
 const { ActionReview } = load('src/components/ActionReview.tsx');
@@ -55,27 +55,39 @@ test('action review distinguishes safe, risky and timed-out answers without righ
   const risky = question.choices.find(c => c.safety < 0.4);
   const render = (choice, timedOut = false) => renderToStaticMarkup(React.createElement(ActionReview, { question, choice, timedOut, number: 1 }));
   assert.match(render(safe), /安全につながる行動を選べました/);
+  assert.match(render(safe), /text-green-700/);
   assert.match(render(risky), /けがにつながるおそれがある行動/);
+  assert.match(render(risky), /text-amber-900/);
+  assert.match(render(safe), /あなたが選んだ行動[\s\S]*?<p class="mt-1 text-13 font-bold[^"]*text-green-700[^"]*"[^>]*>[\s\S]*?安全につながる行動を選べました[\s\S]*?<\/p><\/div>/);
   const timed = render(safe, true);
   assert.match(timed, /時間内に選べませんでした/);
   assert.doesNotMatch(timed, /安全につながる行動を選べました|あなたが選んだ行動/);
   for (const html of [render(safe), render(risky), timed]) {
     assert.doesNotMatch(html, /正解|不正解|AI生成の説明用イラスト/);
+    assert(html.includes(question.situation));
+    assert(html.indexOf(question.situation) < html.indexOf("理由・注意点を読む"));
   }
 });
 
 
 const { default: SharePage } = load('src/app/share/page.tsx');
-test('child results offer LINE and saving while adult results also offer X', () => {
+test('共有ページはLINEと成人用Xを表示し、保存用プレビューとボタンは出さない', () => {
   audience = 'child';
   const child = renderToStaticMarkup(React.createElement(SharePage));
   assert.doesNotMatch(child, /Xで共有|X・LINE|予想図を共有|SNS/);
   assert.match(child, /LINEで共有/);
-  assert.match(child, /結果サマリーを画像で保存/);
+  assert.doesNotMatch(child, /結果と予想図を1枚で保存|保存する画像|<img/);
+  assert.match(child, /予想図も共有する/);
+  assert.match(child, /jishingoto-rouge.vercel.app/);
+  assert.doesNotMatch(child, /type="checkbox"[^>]*checked/);
+  assert.match(child, /<button>.*?LINEで共有/);
   audience = 'adult';
   const adult = renderToStaticMarkup(React.createElement(SharePage));
   assert.match(adult, /Xで共有/);
   assert.match(adult, /LINEで共有/);
+  assert.match(adult, /SNSでの共有/);
+  assert.doesNotMatch(adult, /結果と予想図を1枚で保存|保存する画像|<img/);
+  assert.match(adult, /共有する内容/);
   assert.doesNotMatch(adult, /画像2枚を共有する|が見つからない場合|共有先でLINEを選んで/);
 });
 

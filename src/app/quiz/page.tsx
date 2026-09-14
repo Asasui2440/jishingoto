@@ -1,5 +1,6 @@
 "use client";
 
+import { questionRoomView } from "@/lib/room-views";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -215,7 +216,7 @@ function QuestionView({
 
 export default function QuizPage() {
   const router = useRouter();
-  const { answer, photoUrl, update } = useSession();
+  const { answer, photoUrl, risks, roomViews = [], update } = useSession();
   const { sound } = useSettings();
   const vibrate = useHaptics();
 
@@ -281,15 +282,16 @@ export default function QuizPage() {
     );
   }
 
+  const displayed = questionRoomView(questions[index], risks, roomViews, photoUrl);
   return (
     <QuestionView
       key={questions[index].id}
-      question={questions[index]}
+      question={displayed.question}
       index={index}
       total={total}
       shake={index === 0}
       onAnswer={onAnswer}
-      photoUrl={photoUrl}
+      photoUrl={displayed.photo}
     />
   );
 }

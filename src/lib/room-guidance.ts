@@ -56,7 +56,7 @@ const ADVICE: Partial<Record<RoomObjectType, Advice>> = {
   tv: {
     headline: "テレビの設置方法に合う対策を",
     steps: ["台置きなら、テレビと台に合う固定器具を確認", "壁掛け・壁内設置なら、壁と金具の強度を施工業者に確認"],
-    detail: "テレビと設置面に適合する器具を選び、台の固定も確認します。一般的な滑り止めだけでは転倒を防げるとは限りません。",
+    detail: "",
   },
   bookshelf: {
     headline: "本棚を固定し、本の飛び出しも防ぐ",
@@ -125,7 +125,7 @@ export const EXIT_EXPLANATION = [
 /** 手元の教材イラストから、その対象の備えに合うものだけを選ぶ。 */
 export function roomAdviceImage(risk: Risk): { src: string; alt: string } | null {
   const type = roomObjectType(risk);
-  if (isCooktop(risk)) return { src: "/illustrations/actions/kitchen-question-v8.png", alt: "コンロとその周囲を確認するキッチンのイラスト" };
+  if (isCooktop(risk)) return { src: "/illustrations/actions/cooktop-storage-v20.png", alt: "大人がふきんや袋をコンロから離れた上部収納や引き出しに片づける様子" };
   if (type === "cupboard") return { src: "/illustrations/actions/cupboard-v13.png", alt: "男性がお皿を食器棚の低い段へしまう様子" };
   if (isGlassDoor(risk)) return { src: "/illustrations/actions/glass-film-v14.png", alt: "大人がガラスのドアに飛散防止フィルムを貼っている様子" };
   if (["bookshelf", "tall_furniture"].includes(type)) return { src: "/illustrations/actions/anchor-shelf-v14.png", alt: "棚本体を壁に金具で固定し、棚の中身に落下防止バーを設けた例" };

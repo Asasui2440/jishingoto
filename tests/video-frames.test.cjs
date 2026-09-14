@@ -120,3 +120,19 @@ test('同じ写真の1番と8番が隣り合い、写真ごとに連続した番
   assert.equal(groupRisksByView(risks,[]),risks);
   assert.equal(groupRisksByView(risks,[views[0]]),risks);
 });
+
+test('クイズと振り返りは該当家具の写真1枚へ枠を変換する', () => {
+  const { roomViewBounds, questionRoomView } = load('src/lib/room-views.ts');
+  const views = [0,1,2].map(i=>({url:`masked-${i}`,bounds:roomViewBounds(640,480,i,3)}));
+  const b=views[2].bounds;
+  const highlight={x:b.x+b.w*0.2,y:b.y+b.h*0.3,w:b.w*0.4,h:b.h*0.5,label:'テレビ'};
+  const risk={id:'tv',x:highlight.x,y:highlight.y,bounds:highlight};
+  const question={id:'tv-question',sourceRiskId:'tv',highlight};
+  const displayed=questionRoomView(question,[risk],views,'collage');
+  assert.equal(displayed.photo,'masked-2');
+  for(const [key,value] of Object.entries({x:20,y:30,w:40,h:50}))assert.ok(Math.abs(displayed.question.highlight[key]-value)<0.0001);
+  assert.equal(displayed.question.highlight.label,'テレビ');
+  assert.equal(question.highlight,highlight);
+  assert.deepEqual(questionRoomView(question,[risk],[],'single'),{question,photo:'single'});
+  assert.equal(questionRoomView({id:'general'},[],views,'collage').question.highlight,undefined);
+});

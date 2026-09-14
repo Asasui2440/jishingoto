@@ -1,152 +1,69 @@
 "use client";
-
 import { upperElementaryText } from "./reading-level";
 import { adultText, plain } from "./adult-copy";
 import type { Audience } from "./settings";
-import { AXIS_LABEL, safetyBand, type Axis } from "./content";
+import { AXIS_LABEL, type Axis } from "./content";
+import { MOCK_NOTE, MOCK_NOTE_CHILD } from "./aftermath-display";
 
-export type ShareRow = { label: string; score: number };
-
-const W = 1080;
-const H = 1350;
-
-// globals.css の @theme と同じ値。Canvas は CSS 変数を読めないので写している。
-const COLORS = {
-  bg: "#ffffff",
-  canvas: "#f4f6f9",
-  ink: "#1a202c",
-  inkMuted: "#4a5568",
-  inkSoft: "#718096",
-  primary: "#ffcc00",
-  primaryMid: "#b87d00",
-  primaryInk: "#8a5a00",
-  primarySoft: "#fff6d6",
+export type ShareRow = { label: string; score: number | null };
+export const SUMMARY_COPY = {
+  title: "あなたの防災4つのチカラ",
+  description: "選んだ行動を振り返り、次の備えにつなげよう。",
+  adultDescription: "今回の判断を振り返り、次の備えにつなげましょう。",
+  prediction: "地震後の部屋の予想図",
+  note: "写真をもとにAIが描いた想像図です。実際の被害を断定するものではありません。",
+  childNote: "写真をもとにAIが考えた予想図だよ。本当にこの通りになるとは限らないよ。",
 };
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-}
-
-/**
- * シェア用のカード画像を Canvas で作る。
- *
- * 部屋の写真は載せない。載せるのは軸ごとの評価だけなので、
- * 個人が特定できる情報はこの画像に一切入らない。
- */
-export function drawShareCard(
-  canvas: HTMLCanvasElement,
-  { rows, date, audience = "child" }: { rows: ShareRow[]; date: Date; audience?: Audience },
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const copy = audience === "adult" ? adultText : (text: string) => plain(upperElementaryText(text));
-
-  canvas.width = W;
-  canvas.height = H;
-
-  ctx.fillStyle = COLORS.canvas;
-  ctx.fillRect(0, 0, W, H);
-
-  // 白いカード＋青いふち
-  ctx.fillStyle = COLORS.bg;
-  roundRect(ctx, 48, 48, W - 96, H - 96, 64);
-  ctx.fill();
-  ctx.strokeStyle = COLORS.primaryMid;
-  ctx.lineWidth = 8;
-  ctx.stroke();
-
-  const font = (size: number, weight = "700") =>
-    `${weight} ${size}px "Gabarito", "Noto Sans JP", system-ui, sans-serif`;
-
-  // ヘッダー
-  ctx.fillStyle = COLORS.primarySoft;
-  roundRect(ctx, 104, 128, 250, 68, 24);
-  ctx.fill();
-  ctx.fillStyle = COLORS.primaryInk;
-  ctx.font = font(40, "900");
-  ctx.textBaseline = "middle";
-  ctx.fillText("ジシンゴト", 128, 163);
-
-  ctx.fillStyle = COLORS.inkSoft;
-  ctx.font = font(30, "400");
-  ctx.textAlign = "right";
-  ctx.fillText(
-    `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${copy("挑戦！")}`,
-    W - 104,
-    163,
-  );
-
-  // 見出し
-  ctx.textAlign = "center";
-  ctx.fillStyle = COLORS.primaryInk;
-  ctx.font = font(60, "900");
-  ctx.fillText(copy("じぶんの部屋の安全チェック、"), W / 2, 300);
-  ctx.fillText(copy("したよ！"), W / 2, 380);
-
-  ctx.fillStyle = COLORS.inkMuted;
-  ctx.font = font(32, "400");
-  ctx.fillText("シミュレーション結果サマリー", W / 2, 450);
-
-  // 軸ごとの評価
-  const boxTop = 520;
-  const rowH = 108;
-  ctx.fillStyle = COLORS.canvas;
-  roundRect(ctx, 104, boxTop, W - 208, rows.length * rowH + 48, 40);
-  ctx.fill();
-
-  rows.forEach((row, i) => {
-    const y = boxTop + 48 + i * rowH + 30;
-    const band = safetyBand(row.score / 5);
-
-    ctx.textAlign = "left";
-    ctx.fillStyle = COLORS.inkMuted;
-    ctx.font = font(38, "700");
-    ctx.fillText(copy(row.label), 152, y);
-
-    // 評価バッジ
-    const label = copy(band.label);
-    ctx.font = font(30, "700");
-    const badgeW = ctx.measureText(label).width + 56;
-    // safetyBand は CSS 変数を返すので、描画用に実際の色へ置き換える
-    const fill =
-      row.score / 5 >= 0.6 ? "#2ec4b6" : row.score / 5 >= 0.4 ? "#ff9f1c" : "#e53e3e";
-    ctx.fillStyle = fill;
-    roundRect(ctx, W - 152 - badgeW, y - 28, badgeW, 56, 18);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.fillText(label, W - 152 - badgeW / 2, y + 2);
-  });
-
-  // フッター
-  ctx.textAlign = "center";
-  ctx.fillStyle = COLORS.primaryInk;
-  ctx.font = font(34, "700");
-  ctx.fillText(copy("みんなもスマホで「ジシンゴト」を"), W / 2, H - 230);
-  ctx.fillText(copy("検索してみてね！"), W / 2, H - 180);
-
-  ctx.fillStyle = COLORS.primary;
-  roundRect(ctx, W / 2 - 120, H - 140, 240, 12, 6);
-  ctx.fill();
-
-  ctx.fillStyle = COLORS.inkSoft;
-  ctx.font = font(24, "400");
-  ctx.fillText("学習用シミュレーションの結果です", W / 2, H - 96);
-}
-
-/** 出題されなかった軸（null）はシェアカードに載せない */
+/** 未出題の項目も、画面と同じく「今回はなし／対象なし」で表示する。 */
 export function axisRows(scores: Record<Axis, number | null>): ShareRow[] {
-  return (["initial", "judgement", "room", "evacuation"] as Axis[]).flatMap((a) => {
-    const score = scores[a];
-    return score === null ? [] : [{ label: AXIS_LABEL[a], score }];
+  return (["initial", "judgement", "room", "evacuation"] as Axis[]).map(a => ({ label: AXIS_LABEL[a], score: scores[a] }));
+}
+
+/** リザルトのまとめ画面と同じ順序・バー・予想図で、1枚のPNGを作る。 */
+export async function createResultSummaryFile({ rows, audience, imageUrl, mock = false }: { rows: ShareRow[]; audience: Audience; imageUrl: string; mock?: boolean }): Promise<File> {
+  await document.fonts.ready;
+  const image = new Image();
+  image.src = imageUrl;
+  await image.decode();
+  if (!image.naturalWidth || !image.naturalHeight) throw new Error("prediction unavailable");
+  const canvas = document.createElement("canvas");
+  const w = 1080, pictureW = 968;
+  const pictureH = Math.round(pictureW * image.naturalHeight / image.naturalWidth);
+  canvas.width = w;
+  canvas.height = 920 + pictureH + 40;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas unavailable");
+  const copy = (value: string) => audience === "adult" ? adultText(value) : plain(upperElementaryText(value));
+  const rect = (x: number, y: number, width: number, height: number, radius: number, color: string) => {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fill();
+  };
+  const text = (value: string, x: number, y: number, size = 30, color = "#1a202c", weight = 700) => {
+    ctx.font = `${weight} ${size}px "Noto Sans JP", system-ui, sans-serif`;
+    ctx.fillStyle = color; ctx.fillText(copy(value), x, y);
+  };
+  ctx.fillStyle = "#f4f6f9"; ctx.fillRect(0, 0, w, canvas.height);
+  rect(40, 28, 220, 60, 28, "#fff6d6");
+  text("ジシンゴト", 62, 68, 32, "#8a5a00");
+  text("防災シミュレーション結果", 284, 70, 40);
+  text("今回のまとめ", 48, 156, 36, "#8a5a00");
+  rect(48, 202, 984, 18, 9, "#ffcc00");
+  rect(48, 260, 984, 446, 48, "#ffffff");
+  text(SUMMARY_COPY.title, 88, 330, 34);
+  text(audience === "adult" ? SUMMARY_COPY.adultDescription : SUMMARY_COPY.description, 88, 386, 28, "#4a5568", 400);
+  rows.forEach((row, i) => {
+    const y = 455 + i * 66;
+    text(row.label, 88, y, 28, "#4a5568");
+    rect(342, y - 22, 500, 20, 10, "#f4f6f9");
+    if (row.score !== null && row.score > 0) rect(342, y - 22, 500 * Math.max(0, Math.min(5, row.score)) / 5, 20, 10, "#ffcc00");
+    text(row.score === null ? audience === "adult" ? "対象なし" : "今回はなし" : `${row.score}/5`, 866, y, 25, row.score === null ? "#718096" : "#8a5a00");
   });
+  rect(16, 746, 1048, canvas.height - 762, 44, "#ffffff");
+  text(mock ? "地震後の部屋の予想図（サンプル）" : SUMMARY_COPY.prediction, 56, 806, 34);
+  rect(16, 836, 1048, 64, 0, "#f4f6f9");
+  text(mock ? audience === "adult" ? MOCK_NOTE : MOCK_NOTE_CHILD : audience === "adult" ? SUMMARY_COPY.note : SUMMARY_COPY.childNote, 32, 876, mock ? 21 : 23, "#4a5568");
+  ctx.save(); ctx.beginPath(); ctx.roundRect(56, 920, pictureW, pictureH, 32); ctx.clip();
+  ctx.drawImage(image, 56, 920, pictureW, pictureH); ctx.restore();
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error("export failed")), "image/png"));
+  return new File([blob], mock ? "jishingoto-result-sample.png" : "jishingoto-result-and-room.png", { type: "image/png" });
 }

@@ -143,7 +143,7 @@ export default function AnalysisLoadingPage() {
           {(trivia.note || trivia.adultNote) && <p className="mt-2 text-base leading-relaxed text-ink-muted"><Furigana text={trivia.note} adult={trivia.adultNote} /></p>}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline"><Furigana text={trivia.source.title} /></a>
-            <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="min-h-11 rounded-pill bg-surface px-4 text-base font-bold"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>
+            <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="ml-auto min-h-11 rounded-pill border-2 border-white bg-surface px-4 text-base font-bold shadow-sm"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>
           </div>
         </div>
       </div>

@@ -44,7 +44,13 @@ test('aftermath uses the submitted photo in an anime edit and handles generation
     const response = await aftermath(request({ image: 'data:image/png;base64,AA==' }));
     assert.equal(response.status, 200);
     assert.equal((await response.json()).imageUrl, 'data:image/png;base64,YW5pbWU=');
-    assert.equal(sent.get('image').type, 'image/png');
+    const images = sent.getAll('image[]');
+    assert.equal(images.length, 2);
+    assert.equal(images[0].type, 'image/png');
+    assert.deepEqual(Buffer.from(await images[0].arrayBuffer()), Buffer.from([0]));
+    assert.equal(images[1].type, 'image/jpeg');
+    assert.deepEqual(Buffer.from(await images[1].arrayBuffer()), fs.readFileSync('public/illustrations/room-style-reference.jpeg'));
+    assert.match(sent.get('prompt'), /2枚目は画風だけ/);
     assert.match(sent.get('prompt'), /アニメ調を強く/);
     assert.match(sent.get('prompt'), /同じ視点/);
     assert.match(sent.get('prompt'), /推測・復元しない/);
