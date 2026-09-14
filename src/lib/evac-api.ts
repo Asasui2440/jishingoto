@@ -515,6 +515,7 @@ export async function fetchDetourFrom(
   shelter: Shelter,
   mode: EvacMode,
   scenario: EvacScenario = "earthquake",
+  previousPath?: LatLng[],
 ): Promise<RouteOption | null> {
   if (mode === "mock") {
     const route = demoRoutes(from, shelter)[1];
@@ -522,6 +523,15 @@ export async function fetchDetourFrom(
   }
   if (!hasMapsKey()) return null;
   try {
+    if (previousPath) {
+      const candidates = await fetchRoutes(from, shelter, mode, scenario);
+      for (const candidate of candidates) {
+        const connection = distanceM(from, candidate.path[0]);
+        const path = connection < .01 ? candidate.path : [from,...candidate.path];
+        if (connection > 50 || hasRouteBacktracking(path) || similarRoutePaths(path,previousPath)) continue;
+        return {...candidate,path,distanceM:candidate.distanceM+connection,durationS:candidate.durationS+connection/WALK_SPEED,id:`detour-${Date.now()}-${candidate.id}`,label:"見直した道[みち]"};
+      }
+    }
     const [found] = await requestWalkingRoutes(
       from,
       shelter.position,
@@ -534,7 +544,7 @@ export async function fetchDetourFrom(
     // 大きく離れた道路へ補正された場合は、移動を捏造せず再選択を案内する。
     if (connectionM > 50) return null;
     const connectedPath = connectionM < 0.01 ? path : [from, ...path];
-    if (hasRouteBacktracking(connectedPath)) return null;
+    if (hasRouteBacktracking(connectedPath) || (previousPath && similarRoutePaths(connectedPath, previousPath))) return null;
     const meters = found.distanceM + connectionM;
     const seconds = found.durationS + connectionM / WALK_SPEED;
     const turns = found.segments;
@@ -578,7 +588,32 @@ export type DecisionPoint = {
  * geo-aiは別途取り込んだ地形データをAIで分析する。sampleは固定の練習用配置。
  * Googleの地図画像やStreet ViewはAIへ送らない。
  */
-export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "sample"; scenario?: EvacScenario; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+export async function fetchDecisionPoints(route: RouteOption, options?: { source: "geo-ai" | "context" | "sample"; scenario?: EvacScenario; signal?: AbortSignal; excludedEventIds?: string[]; maxPoints?: number }): Promise<DecisionPoint[]> {
+  if (options?.source === "context") {
+    const commercial: LatLng[] = [];
+    try {
+      const searches = (async () => {
+        const maps = await loadMaps();
+        const { Place } = await maps.importLibrary("places") as google.maps.PlacesLibrary;
+        options.signal?.throwIfAborted();
+        return Promise.all([.2,.5,.8].map(async t => {
+        const result = await Place.searchNearby({fields:["location"], locationRestriction:{center:pointAt(route.path,t),radius:150},includedPrimaryTypes:["shopping_mall","department_store","supermarket"],maxResultCount:4});
+        return result.places.flatMap(p => p.location ? [p.location.toJSON()] : []);
+        }));
+      })();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try { commercial.push(...await Promise.race([searches,new Promise<LatLng[]>(resolve => {timer=setTimeout(() => resolve([]),4000);})]).then(results => results.flat())); }
+      finally { if (timer) clearTimeout(timer); }
+    } catch { /* Places is optional: unconfirmed commercial areas are not inferred. */ }
+    options.signal?.throwIfAborted();
+    const response = await fetch("/api/evac/scenarios", {
+      method:"POST",headers:{"Content-Type":"application/json"}, signal:options.signal ? AbortSignal.any([options.signal,AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+      body:JSON.stringify({scenario:options.scenario ?? "earthquake",route:{id:route.id,path:route.path,durationS:route.durationS},excludedEventIds:options.excludedEventIds ?? [],maxPoints:options.maxPoints ?? 3,commercial}),
+    });
+    const result = await response.json();
+    if (!response.ok || result.source !== "context" || !Array.isArray(result.points)) throw new Error(result.message ?? "想定問題の準備に失敗しました。再試行してください。");
+    return result.points as DecisionPoint[];
+  }
   if (options?.source === "geo-ai") {
     const response = await fetch("/api/evac/analyze", {
       method: "POST", headers: { "Content-Type": "application/json" }, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(55000)]) : AbortSignal.timeout(55000),
@@ -669,18 +704,20 @@ export function buildWalkSteps(route: RouteOption, points: DecisionPoint[]): Wal
   for (let i = 0; i <= count; i++) ts.add(i / count);
   for (const p of points) ts.add(p.t);
   const sorted = [...ts].sort((a, b) => a - b);
-  return sorted.map((t, i): WalkStep => {
-    const point = points.find((p) => p.t === t);
-    return {
+  return sorted.flatMap((t, i): WalkStep[] => {
+    const matches = points.filter((p) => p.t === t);
+    const base: WalkStep = {
       id: `${route.id}:${t}`,
       t,
-      position: point?.position ?? positions.get(t) ?? pointAt(route.path, t),
-      heading: point?.heading ?? headingAt(route.path, t),
+      position: positions.get(t) ?? pointAt(route.path, t),
+      heading: headingAt(route.path, t),
       remainingM: Math.round(total * (1 - t)),
       remainingS: Math.round(route.durationS * (1 - t)),
       travelSeconds: (t - (sorted[i - 1] ?? 0)) * route.durationS,
-      event: point?.event,
-      pointId: point?.id,
     };
+    if (!matches.length) return [base];
+    const events = matches.map((point,j) => ({...base,id:`${route.id}:${t}:${j}`,position:point.position,heading:point.heading,event:point.event,pointId:point.id,travelSeconds:j === 0 ? base.travelSeconds : 0}));
+    // Keep the origin record even when several exercises are queued before the first move.
+    return t === 0 ? [base,...events] : events;
   });
 }

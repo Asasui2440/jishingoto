@@ -81,7 +81,14 @@
   }
   window.google = { maps: {
     Map: MapView, StreetViewPanorama: Panorama,
-    importLibrary: async () => ({ Route: { computeRoutes: async request => ({ routes: [{ path: [request.origin, request.destination], distanceMeters: 200, durationMillis: 180000 }] }) } }),
+    importLibrary: async () => ({ Route: { computeRoutes: async request => {
+      (test.routeRequests ??= []).push(request);
+      if (params.has("contextDetour")) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return {routes:[{path:[request.origin, nodes.D.position, request.destination],distanceMeters:120,durationMillis:100000}]};
+      }
+      return {routes:[{path:[request.origin,request.destination],distanceMeters:200,durationMillis:180000}]};
+    } } }),
     StreetViewService: class { async getPanorama(request) {
       test.lookups++;
       const isArrival = request.radius === 150;

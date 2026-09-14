@@ -642,3 +642,86 @@ test("flood comparison never treats failed lookup as zero exposure and uses dept
   assert(floodConfig.compareFloodRoutes(deep,missing)<0);
   assert(floodConfig.compareFloodRoutes(missing,shallow)>0);
 });
+
+const walkCases = load("src/lib/walk-scenarios.ts");
+const scenarioPlanner = load("src/lib/server/walk-scenarios.ts");
+const urban = load("src/lib/server/urban-landuse.ts");
+const scenarioEndpoint = load("src/app/api/evac/scenarios/route.ts");
+const contextsFor = areas => geo.sampleRoute(request.route.path).map(() => ({areas, year:"2021"}));
+const scenarioNumbers = points => points.map(p => Number(p.event.id.replace("walk-case-", "")));
+
+test("common exercises fill three slots without requiring land-use coverage or off-route quizzes", () => {
+  const points = scenarioPlanner.selectWalkScenarios(request, contextsFor([]), 3, () => .4);
+  assert.equal(points.length,3);
+  assert.equal(new Set(points.map(p => p.event.id)).size,3);
+  assert(scenarioNumbers(points).every(n => n >= 21 && n <= 30 && n !== 23));
+  assert(points.every(p => p.t >= .15 && p.t <= .85 && p.event.situation.includes("想定問題")));
+  assert(scenarioNumbers(scenarioPlanner.selectWalkScenarios(request,contextsFor([]),3,() => .8)).join() !== scenarioNumbers(points).join());
+});
+
+test("flood walk uses cases 8–10; residential earthquake uses 11–20", () => {
+  const flood = scenarioPlanner.selectWalkScenarios({...request,scenario:"flood"},contextsFor(["residential"]),3,() => .4);
+  assert.deepEqual(scenarioNumbers(flood).sort((a,b) => a-b),[8,9,10]);
+  const quake = scenarioPlanner.selectWalkScenarios(request,contextsFor(["residential"]),3,() => .4);
+  assert.equal(quake.length,3);
+  assert(scenarioNumbers(quake).every(n => n >= 11 && n <= 20));
+  assert(walkCases.WALK_SCENARIOS.find(c => c.number === 10).event.choices.some(c => c.reroute));
+});
+
+test("industrial, tall-building and commercial problems require matching context and scenario", () => {
+  for (const area of ["industrial","highrise","commercial"]) {
+    const points = scenarioPlanner.selectWalkScenarios(request,contextsFor([area]),3,() => .4);
+    assert(points.some(p => walkCases.WALK_SCENARIOS.find(c => c.event.id === p.event.id).area === area));
+    assert(points.every(p => [area,"common"].includes(walkCases.WALK_SCENARIOS.find(c => c.event.id === p.event.id).area)));
+  }
+  const flood = scenarioPlanner.selectWalkScenarios({...request,scenario:"flood"},contextsFor(["industrial","highrise","commercial"]),3,() => .9);
+  assert(scenarioNumbers(flood).every(n => ![31,34,38].includes(n)));
+});
+
+test("rerouting respects remaining budget and excludes previously answered cases", () => {
+  const excluded = walkCases.WALK_SCENARIOS.filter(c => c.area !== "common").map(c => c.event.id);
+  excluded.push("walk-case-21","walk-case-22");
+  const points = scenarioPlanner.selectWalkScenarios({...request,excludedEventIds:excluded},contextsFor(["residential"]),1,() => .4);
+  assert.equal(points.length,1);
+  assert(!excluded.includes(points[0].event.id));
+  assert.equal(scenarioPlanner.selectWalkScenarios(request,contextsFor([]),0).length,0);
+});
+
+test("bundled official land-use meshes resolve Tokyo and Osaka and do not invent coverage", async () => {
+  assert.equal(urban.meshCell({lat:35.7186,lng:139.7237}).primary,"5339");
+  assert.equal(urban.meshCell({lat:34.702,lng:135.495}).primary,"5235");
+  const result = await urban.classifyLanduse([{lat:35.7186,lng:139.7237},{lat:34.702,lng:135.495},{lat:0,lng:0}]);
+  assert(result[0].available && result[1].available);
+  assert.equal(result[0].year,"2021");
+  assert.equal(result[2].available,false);
+  assert.deepEqual(result[2].areas,[]);
+});
+
+test("scenario endpoint works without AI key and limits the exercise budget", async () => {
+  const result = await scenarioEndpoint.POST(new Request("http://localhost/api/evac/scenarios", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...request,maxPoints:1})}));
+  assert.equal(result.status,200);
+  const body = await result.json();
+  assert.equal(body.source,"context");
+  assert.equal(body.points.length,1);
+  const bad = await scenarioEndpoint.POST(new Request("http://localhost/api/evac/scenarios",{method:"POST",headers:{origin:"https://other.test"},body:JSON.stringify(request)}));
+  assert.equal(bad.status,403);
+});
+
+test("land-use ZIP reader bounds and validates DBF and converts official mesh codes", () => {
+  const dbf=Buffer.alloc(153,0);dbf.writeUInt32LE(1,4);dbf.writeUInt16LE(129,8);dbf.writeUInt16LE(23,10);[32,64,96].forEach((at,i)=>{dbf.write(`L03b_u_00${i+1}`,at,"ascii");dbf[at+11]=67;dbf[at+16]=[10,4,8][i];});
+  dbf.write(" 5339452513070320210101",129,"ascii");
+  const name=Buffer.from("mesh.dbf"), local=Buffer.alloc(30), central=Buffer.alloc(46), end=Buffer.alloc(22);
+  local.writeUInt32LE(0x04034b50);local.writeUInt16LE(name.length,26);
+  central.writeUInt32LE(0x02014b50);central.writeUInt32LE(dbf.length,20);central.writeUInt32LE(dbf.length,24);central.writeUInt16LE(name.length,28);
+  end.writeUInt32LE(0x06054b50);end.writeUInt16LE(1,10);end.writeUInt32LE(local.length+name.length+dbf.length,16);
+  const zip=Buffer.concat([local,name,dbf,central,name,end]);
+  const grid=urban.decodeLanduseZip(zip,"5339");
+  assert.equal(grid[421*800+553],3);
+  assert.equal(grid[0],0);
+  const legacy=Buffer.from(zip);
+  ["8381836283568385", "9379926e979897708eed", "8e428965944e8c8e93fa"].forEach((hex,i)=>{const at=30+name.length+32+i*32;legacy.fill(0,at,at+11);Buffer.from(hex,"hex").copy(legacy,at);});
+  assert.equal(urban.decodeLanduseZip(legacy,"5339")[421*800+553],3);
+  assert.throws(()=>urban.decodeLanduseZip(Buffer.alloc(3),"5339"));
+  const corrupt=Buffer.from(zip);corrupt.writeUInt32LE(99_000_000,local.length+name.length+dbf.length+24);
+  assert.throws(()=>urban.decodeLanduseZip(corrupt,"5339"),/dbf size/);
+});
