@@ -87,10 +87,10 @@ function show(route){
 }
 async function prepareShell() {
   await prepareOfflineEntry();
-  $('shell-status').textContent='✓ いつもの入口からもオフラインで開く準備ができています';connection();
+  document.documentElement.dataset.offlineEntryReady='true';connection();
 }
 
-const shellPreparation=prepareShell().then(()=>true).catch(e=>{$('shell-status').textContent=e.message;connection();return false;});
+const shellPreparation=prepareShell().then(()=>true).catch(e=>{document.documentElement.dataset.offlineEntryReady='false';message(e.message,true);connection();return false;});
 const params=new URLSearchParams(location.search);
 if(params.get('from')==='report'&&parent!==window)initReport(map,shellPreparation);
 else void list().then(()=>{const id=params.get('route');if(id){const route=routes.find(r=>r.id===id||r.aliases?.includes(id));if(route)show(route);else message('この端末には指定されたマップがありません。',true);}else if(params.get('entry')==='offline'&&routes.length===1)show(routes[0]);}).catch(e=>message(e.message,true));

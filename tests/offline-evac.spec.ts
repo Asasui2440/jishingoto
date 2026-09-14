@@ -82,7 +82,7 @@ test('保存領域の不足を成功扱いにせず、再試行できる',async(
   await frame.getByRole('button',{name:'もう一度保存する'}).click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
 });
 test('保存マップはゲームへの導線を出さず、オフラインの地図と現在地を強調する',async({page})=>{
-  await page.goto('/offline-evac/index.html');await expect(page.locator('#shell-status')).toContainText('準備ができています');
+  await page.goto('/offline-evac/index.html');await expect(page.locator('html')).toHaveAttribute('data-offline-entry-ready','true');
   await expect(page.locator('#editor')).toHaveCount(0);
   await expect(page.getByRole('link',{name:'避難先を選ぶ'})).toHaveCount(0);
   await expect(page.locator('.offline-benefit')).toContainText('地図と現在地を確認');
@@ -137,7 +137,7 @@ test('いつもの入口を圏外で開くと保存地図へ移り、復帰後�
     await expect(offline.locator('#workspace-title')).toHaveText('リザルト小学校');
     await expect(offline.locator('#map')).toHaveAttribute('data-map-ready','true');
     await expect(offline.locator('#connection')).toHaveText('オフライン');
-    await expect(offline.locator('#shell-status')).toContainText('準備ができています');
+    await expect(offline.locator('html')).toHaveAttribute('data-offline-entry-ready','true');
     await offline.close();
   }
   expect(requests).toEqual([]);
