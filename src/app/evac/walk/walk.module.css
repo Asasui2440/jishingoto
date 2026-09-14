@@ -12,3 +12,4 @@
 @media (max-height: 650px) { .decisionSlot { bottom: 12px; max-height: calc(100% - 40px); } }
 
 .navigationAlert { position: absolute; z-index: 10; bottom: 78px; left: 20px; right: 20px; border-radius: 12px; background: #fff4dd; padding: 12px; font-size: 12px; }
+.illustratedSlot { position: fixed; inset: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); width: min(560px, calc(100% - 16px)); max-height: none; margin-inline: auto; background: var(--color-surface); }

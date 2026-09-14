@@ -1,6 +1,61 @@
 import { WALK_SCENARIOS } from "../src/lib/walk-scenarios";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
+async function openIllustratedQuestion(page: Page, number = 28) {
+  await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  await page.addInitScript((event) => {
+    const saved = JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!);
+    saved.timerSeconds = 3;
+    saved.walk.steps[1].event = event;
+    saved.walk.steps[1].pointId = "illustrated-question";
+    sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify(saved));
+  }, WALK_SCENARIOS.find(c=>c.number===number)!.event);
+  await page.goto("/evac/walk?decision=1");
+  await page.getByRole("button",{name:"自動で歩く",exact:true}).click();
+  await expect(page.getByRole("button",{name:"判断を始める",exact:true})).toBeEnabled();
+}
+
+test("イラストを読む間は時計が止まり、開始と再確認を自分で選べる", async ({page},testInfo) => {
+  await openIllustratedQuestion(page);
+  const card = page.getByRole("region",{name:/判断ポイント/});
+  await expect(card.getByRole("img",{name:/状況のイラスト/})).toHaveCount(1);
+  await expect(card.getByRole("img",{name:/行動のイラスト/})).toHaveCount(3);
+  const timer = card.getByTestId("decision-timer");
+  await page.waitForTimeout(4100);
+  await expect(timer).toHaveText("3秒");
+  const choices = card.locator("li button");
+  await expect(choices.first()).toBeDisabled();
+  for(const choice of await choices.all()) {
+    await choice.scrollIntoViewIfNeeded();
+    await expect(choice).toBeInViewport({ratio:0.99});
+  }
+  await page.screenshot({path:`/private/tmp/walk-illustrated-review-${testInfo.project.name}.png`});
+  await card.getByRole("button",{name:"判断を始める",exact:true}).click();
+  await expect(timer).toHaveText("2秒");
+  await card.getByRole("button",{name:"時計を止めて、もう一度確認する"}).click();
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(3100);
+  await expect(timer).toHaveText(frozen!);
+  await card.getByRole("button",{name:"時間制限なしで選ぶ",exact:true}).click();
+  await expect(timer).toHaveText("制限なし");
+  await choices.first().click();
+  await expect(card).toHaveCount(0);
+  const saved = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(saved.decisions).toHaveLength(1);
+  expect(saved.decisions[0].timedOut).toBe(false);
+});
+
+test("イラスト確認後に時間切れになっても自分で回答できる", async ({page}) => {
+  await openIllustratedQuestion(page);
+  const card = page.getByRole("region",{name:/判断ポイント/});
+  await card.getByRole("button",{name:"判断を始める",exact:true}).click();
+  await expect(card.getByTestId("decision-timer")).toHaveText("0秒");
+  await card.locator("li button").last().click();
+  await expect(card).toHaveCount(0);
+  const saved = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(saved.decisions[0].timedOut).toBe(true);
+});
+
 async function capture(page: Page, testInfo: TestInfo, name: string) {
   if (testInfo.project.name !== "mobile-390") return;
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "disabled" });
@@ -89,6 +144,8 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
     await expect(decision).toBeVisible();
     const choices = decision.getByRole("list").getByRole("button");
     await expect(choices).toHaveCount(3);
+    await page.getByRole("button",{name:"判断を始める",exact:true}).click();
+    await choices.last().scrollIntoViewIfNeeded();
     await noPageOverflow(page, choices.last());
     if (number === 1) await capture(page, testInfo, "street-view-decision");
     await choices.first().click();
@@ -126,6 +183,7 @@ test("一歩進んだ位置を再読込後も保持する", async ({ page }) => 
   await expect(scene).toHaveAttribute("data-scene-state", "sketch");
   await jumpToNextDecision(page);
   const point = page.getByRole("region", { name: /^判断ポイント 1 / });
+  await page.getByRole("button",{name:"判断を始める",exact:true}).click();
   await point.getByRole("list").getByRole("button").first().click();
   await expect(point).not.toBeVisible();
   const stored = await page.evaluate(() => sessionStorage.getItem("jishingoto.evac.v2"));
@@ -432,11 +490,13 @@ test("共通問題をノードで出題し回答後は自動歩行を再開す�
   expect(before).toBe(8);
   const buttons = page.getByRole("region",{name:/判断ポイント/}).locator("li button");
   for (const button of await buttons.all()) {
+    await button.scrollIntoViewIfNeeded();
     const bounds = await button.boundingBox();
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   }
   const situation = page.getByRole("region",{name:/判断ポイント/}).getByText(/スマートフォンの電池は残りわずか/);
+  await situation.scrollIntoViewIfNeeded();
   await expect(situation).toBeVisible();
   const textBounds = await situation.boundingBox();
   const firstChoiceBounds = await buttons.first().boundingBox();
