@@ -63,7 +63,7 @@ export default function EvacSummaryPage() {
     </BottomSheet>
     <BottomSheet open={!!row} title={row ? `判断 ${index! + 1} / ${rows.length}` : "判断の振り返り"} onClose={() => setIndex(null)} footer={row ? <nav aria-label="判断の切り替え" className="flex gap-2">
       <Button size="md" variant="quiet" disabled={index === 0} onClick={() => setIndex(index! - 1)}>前の判断</Button>
-      <Button size="md" onClick={() => index! < rows.length - 1 ? setIndex(index! + 1) : setIndex(null)}>{index! < rows.length - 1 ? "次の判断" : "一覧に戻る"}</Button>
+      <Button size="md" onClick={() => index! < rows.length - 1 ? setIndex(index! + 1) : setIndex(null)}>{index! < rows.length - 1 ? "次の判断" : "判断を閉じる"}</Button>
     </nav> : undefined}>
       {row ? <section aria-label="判断の詳細" className="space-y-2">
         <h2 className="text-15 font-bold"><Furigana text={eventTitle(row.event.title)} /></h2>

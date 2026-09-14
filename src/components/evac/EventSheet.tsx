@@ -1,6 +1,6 @@
 "use client";
 
-import { eventTitle } from "@/lib/evac-display";
+import { eventCondition, eventTitle } from "@/lib/evac-display";
 import { useEffect, useState } from "react";
 import { WalkIllustration } from "./WalkIllustration";
 import styles from "./EventSheet.module.css";
@@ -74,7 +74,7 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
         <div className={styles.intro}>
           <p className={styles.title}><Furigana text={eventTitle(event.title)} /></p>
           <WalkIllustration event={event} className={styles.situationImage} />
-          <p className={styles.description}><Furigana text={event.situation.split("\n")[0].replace("【想定問題】", "")} /></p>
+          <p className={styles.description}><Furigana text={eventCondition(event.situation).split("\n")[0]} /></p>
           <button type="button" className={styles.details} onClick={() => setDetails(true)} aria-label="状況と行動の詳しい説明を見る"><GameIcon name="info" className="size-4" />状況を大きく見る</button>
         </div>
         <p className="mb-2 text-11 font-bold text-ink-muted">この条件なら、まずどうする？</p>
@@ -97,7 +97,7 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
       <div className="flex flex-col gap-4 pb-2">
         <div className="overflow-hidden rounded-2xl bg-canvas"><WalkIllustration event={event} className="h-[180px] w-full" /></div>
         <p className="font-display text-15 font-bold text-ink"><Furigana text={eventTitle(event.title)} /></p>
-        <p className="text-13 leading-relaxed text-ink-muted"><Furigana text={event.situation.replace("【想定問題】", "")} /></p>
+        <p className="text-13 leading-relaxed text-ink-muted"><Furigana text={eventCondition(event.situation)} /></p>
         {event.locationReference ? <a className="text-11 text-primary-ink underline" href={event.locationReference.url} target="_blank" rel="noreferrer">{event.locationReference.label}</a> : null}
         <div className="space-y-3">{choices.map((choice, i) => <div key={choice.id} className="flex flex-wrap gap-3"><WalkIllustration event={event} choice={choice} className="w-full h-[150px]" /><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-11 font-bold text-primary-ink">{i + 1}</span><div><p className="text-13 font-bold text-ink"><Furigana text={choice.label} /></p>{!event.id.startsWith("walk-case-") ? <p className="mt-1 text-13 leading-relaxed text-ink-muted"><Furigana text={choice.detail} /></p> : null}</div></div>)}</div>
         <p className="text-11 leading-relaxed text-ink-muted"><Furigana text={SCENARIO_NOTE} /><br /><Furigana text={MAP_NOTE} /></p>

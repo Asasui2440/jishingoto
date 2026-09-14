@@ -680,7 +680,13 @@ for (const perfect of [true, false]) {
     await expect(dialog.locator('img[src$="walk-case-18/situation-v2.webp"]')).toBeVisible();
     await dialog.getByRole("button",{name:"次の判断"}).click();
     await expect(page.getByRole("dialog").locator('img[src$="walk-case-38/situation-v2.webp"]')).toBeVisible();
+    if (!perfect) await expect(page.getByRole("dialog").getByRole("figure",{name:"次に意識したい行動",exact:true}).locator('img[src$="distance-v2.webp"]')).toBeVisible();
+    const closeReport = page.getByRole("dialog").getByRole("button",{name:"判断を閉じる"});
+    await noPageOverflow(page, closeReport);
     await page.screenshot({path:testInfo.outputPath(`report-${perfect}.png`)});
+    await closeReport.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(buttons.first()).toBeFocused();
     await page.goto("/evac/summary");
     await expect(page.getByRole("region",{name:"判断スコア"})).toContainText(perfect ? "100" : "50");
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -703,7 +709,7 @@ for (const perfect of [true, false]) {
       await expect(review.locator('img[src$="walk-case-38/go-v2.webp"]')).toHaveCount(1);
       await expect(review.locator('img[src$="walk-case-38/distance-v2.webp"]')).toHaveCount(1);
     }
-    await noPageOverflow(page, page.getByRole("button",{name:"一覧に戻る"}));
+    await noPageOverflow(page, page.getByRole("button",{name:"判断を閉じる"}));
     const condition = review.getByRole("figure",{name:"問題の条件",exact:true});
     await expect(condition).toContainText(WALK_SCENARIOS.find(item=>item.number===38)!.event.situation.replace("【想定問題】", "").split("\n")[0]);
     if (!perfect) {
@@ -735,7 +741,7 @@ for (const perfect of [true, false]) {
     await expect(tradeoffs).toHaveAttribute("data-transition","idle");
     await expect(tradeoffs.getByRole("tabpanel")).toHaveCSS("animation-name","none");
     await page.screenshot({path:testInfo.outputPath(`tradeoff-${perfect}.png`)});
-    await page.getByRole("button",{name:"一覧に戻る"}).click();
+    await page.getByRole("button",{name:"判断を閉じる"}).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await page.getByRole("button",{name:/^判断2：/}).click();

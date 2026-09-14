@@ -122,7 +122,10 @@ export default function EvacReportPage() {
         <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>
       </main>
 
-      <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)} footer={sheet === "decision" && selected ? <nav aria-label="判断の切り替え" className="flex gap-2">
+        <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}>前の判断</Button>
+        <Button size="md" onClick={() => selectedIndex < rows.length - 1 ? setSelectedId(rows[selectedIndex + 1].d.pointId) : setSheet(null)}>{selectedIndex < rows.length - 1 ? "次の判断" : "判断を閉じる"}</Button>
+      </nav> : undefined}>
         {sheet === "decision" && selected ? <div className="space-y-4">
           <div>
             <p className="text-15 font-bold text-ink"><Furigana text={eventTitle(selected.event.title)} /></p>
@@ -132,14 +135,9 @@ export default function EvacReportPage() {
             </div>
           </div>
           <ReviewIllustrations event={selected.event} choice={selected.choice} />
-          {rows.length > 1 ? <div className="flex gap-2">
-            <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}><GameIcon name="back" className="size-4" />前の判断</Button>
-            <Button size="md" variant="quiet" disabled={selectedIndex === rows.length - 1} onClick={() => setSelectedId(rows[selectedIndex + 1].d.pointId)}>次の判断<GameIcon name="chevron" className="size-4" /></Button>
-          </div> : null}
           <ChoiceTradeoffs key={selected.d.pointId} event={selected.event} choice={selected.choice} />
           <details key={`sources-${selected.d.pointId}`} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">
-            <summary className="cursor-pointer font-bold text-primary-ink">場面・判断のヒント・出典</summary>
-            <p className="mt-3 text-13"><Furigana text={selected.event.situation} /></p>
+            <summary className="cursor-pointer font-bold text-primary-ink">判断のヒント・出典</summary>
             <p className="mt-3 rounded-field bg-canvas p-3 text-13"><Furigana text={selected.event.hint} /></p>
             {selected.event.evidence ? <div className="mt-2 space-y-1">
               <p>地理データの分類：{selected.event.evidence.classification}</p>
