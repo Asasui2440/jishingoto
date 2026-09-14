@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 import { DetailSheet } from "@/components/ui/DetailSheet";
+import { SaveResultImage } from "@/components/SaveResultImage";
 import { AftermathCard } from "@/components/AftermathCard";
 import { ActionReview } from "@/components/ActionReview";
 import { EvacuationGuide } from "@/components/EvacuationGuide";
@@ -12,6 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { withAdultSituation } from "@/lib/api";
+import { SUMMARY_COPY } from "@/lib/share-card";
 import { AXIS_LABEL, type Axis } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
 import { getSession, scoreByAxis, strengths, useSession } from "@/lib/session";
@@ -20,7 +22,7 @@ const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 
 export default function ResultPage() {
   const router = useRouter();
-  const { answers, risks, questions, photoUrl, checked, toggleChecked, reset, resultStep, update } = useSession();
+  const { answers, risks, questions, photoUrl, aftermathPhotoUrl, checked, toggleChecked, reset, resultStep, update } = useSession();
   const { audience } = useSettings();
   const adult = audience === "adult";
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -77,12 +79,11 @@ export default function ResultPage() {
         <p role="status" className="font-display text-sm font-bold text-primary-ink">{stepLabel} <span className="text-11 text-ink-soft">({step + 1} / {lastStep + 1})</span></p>
         <Meter color="var(--color-primary)" value={(step + 1) / (lastStep + 1)} />
         {step === summaryStep && <>
-        <div className="-mx-6"><AftermathCard photoUrl={photoUrl} risks={risks} /></div>
         <Card>
           <p className="font-display text-sm font-bold text-ink">
-            <Furigana text="あなたの防災[ぼうさい]4つのチカラ" />
+            <Furigana text={SUMMARY_COPY.title} />
           </p>
-          <p className="mt-1 text-13 text-ink-muted"><Furigana text={"今回の判断を振り返り、次の備えにつなげましょう。"} /></p>
+          <p className="mt-1 text-13 text-ink-muted"><Furigana text={SUMMARY_COPY.description} adult={SUMMARY_COPY.adultDescription} /></p>
           <div className="mt-3 flex flex-col gap-2">
             {AXES.map((axis) => {
               const score = scores[axis];
@@ -112,8 +113,9 @@ export default function ResultPage() {
             })}
           </div>
         </Card>
+        <div className="-mx-6"><AftermathCard photoUrl={aftermathPhotoUrl ?? photoUrl} risks={aftermathPhotoUrl ? [] : risks} /></div>
 
-
+        <SaveResultImage />
         {wins.length > 0 ? (
           <DetailSheet title={`できたことを見る（${wins.length}件）`}><div className="rounded-tile bg-safe-soft p-4">
             <p className="font-display text-sm font-bold text-safe">✓ {adult ? "適切に判断できたこと" : "できたこと"} <span className="ml-2 rounded-full bg-safe px-2 py-1 text-white">{wins.length}件達成</span></p>
@@ -160,7 +162,7 @@ export default function ResultPage() {
         </>}
         <nav aria-label="結果のページ切り替え" className="phase-one-actions flex gap-3 border-t border-border py-3">
           <Button variant="outline" size="md" disabled={step === 0} onClick={() => moveStep(step - 1)}>戻る</Button>
-          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果を共有" adult="結果を保存・共有" />}</Button>
+          <Button size="md" onClick={() => step < lastStep ? moveStep(step + 1) : router.push("/share")}>{step < lastStep ? "次へ" : <Furigana text="結果を共有" />}</Button>
         </nav>
       </div>
 

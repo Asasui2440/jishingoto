@@ -20,7 +20,7 @@ import { roomAdviceImages, roomAdvice } from "@/lib/room-guidance";
 function AdviceIllustration({ risk }: { risk: Risk }) {
   const [variant] = useState(() => Math.random());
   const image = roomAdviceImages(risk, variant)[0];
-  return image ? <Image src={image.src} alt={image.alt} width={1536} height={1024} className="mt-3 h-auto w-full rounded-field" /> : null;
+  return image ? <Image src={image.src} alt={image.alt} width={1536} height={1024} className="mx-auto mt-3 h-auto max-h-56 w-auto max-w-[88%] rounded-field object-contain" /> : null;
 }
 
 const DANGER_TEXT: Record<RiskKind, { child: string; adult: string }> = {
@@ -53,6 +53,8 @@ export default function RoomRecognitionPage() {
   const { audience } = useSettings();
   const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
   const risks = groupRisksByView(sessionRisks, roomViews);
+  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const allReviewed = risks.every(risk => reviewedIds.includes(risk.id));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = risks.find((risk) => risk.id === selectedId) ?? risks[0];
   const selectedIndex = selected ? risks.indexOf(selected) : -1;
@@ -68,10 +70,16 @@ export default function RoomRecognitionPage() {
   const beginEdit = (risk: Risk) => {
     setEditing(risk.id);
     setSelectedId(risk.id);
+    setReviewedIds((ids) => ids.includes(risk.id) ? ids : [...ids, risk.id]);
     setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other" });
     setEditNotice("");
   };
   const [draft, setDraft] = useState({ name: "", objectType: "other" as RoomObjectType });
+  const selectRisk = (riskId: string) => {
+    setEditing(null);
+    setSelectedId(riskId);
+    setReviewedIds((ids) => ids.includes(riskId) ? ids : [...ids, riskId]);
+  };
 
   useEffect(() => {
     if (!getSession().analysisSource) router.replace("/analyzing");
@@ -93,6 +101,7 @@ export default function RoomRecognitionPage() {
         confidence: undefined,
       } : risk),
     }));
+    setReviewedIds(ids => ids.filter(id => id !== editing));
     setEditNotice(`「${name}」に修正しました。`);
   };
 
@@ -173,14 +182,15 @@ export default function RoomRecognitionPage() {
             const nearby = visibleRisks.slice(0, index).map(item => item.risk).filter((other) => Math.hypot(other.x - risk.x, other.y - risk.y) < 12).length;
             const offsets = [[0, 0], [24, -24], [-24, 24], [24, 24], [-24, -24]];
             const [dx, dy] = offsets[nearby % offsets.length];
-            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${number + 1}番・${plain(risk.name)}の説明を表示`} onClick={() => { setEditing(null); setSelectedId(risk.id); }} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{number + 1}</button>;
+            const reviewed = reviewedIds.includes(risk.id);
+            return <button key={risk.id} type="button" aria-pressed={active} aria-label={`${number + 1}番・${plain(risk.name)}の説明を表示${reviewed ? "・確認済み" : ""}`} onClick={() => selectRisk(risk.id)} className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white font-bold text-ink shadow ${active ? "z-20 bg-primary" : reviewed ? "z-10 bg-safe-soft" : "z-10 bg-surface"}`} style={{ left: `clamp(24px, calc(${risk.x}% + ${dx}px), calc(100% - 24px))`, top: `clamp(24px, calc(${risk.y}% + ${dy}px), calc(100% - 24px))` }}>{number + 1}{reviewed && <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-safe text-[0.625rem] text-white">✓</span>}</button>;
           })}
+          {roomViews.length > 1 && <p className="absolute left-2 top-2 rounded-chip bg-black/70 px-2 py-1 text-xs font-bold text-white"><Furigana text={`写真 ${viewIndex + 1} / ${roomViews.length}`} /></p>}
         </div>
-        {roomViews.length > 1 && <p className="bg-ink px-3 pt-2 text-center text-sm text-white"><Furigana text={`写真 ${viewIndex + 1} / ${roomViews.length}`} /></p>}
-        {selected && <div className="relative flex items-center gap-2 bg-ink p-3 text-white">
-          <button type="button" aria-label="前の物体を表示" disabled={selectedIndex === 0} onClick={() => { setEditing(null); setSelectedId(risks[selectedIndex - 1].id); }} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">←</button>
-          <p aria-live="polite" className="min-w-0 flex-1 text-center text-sm font-bold">{selectedIndex + 1} / {risks.length} · <Furigana text={selected.name} adult={selected.adultName} /></p>
-          <button type="button" aria-label="次の物体を表示" disabled={selectedIndex === risks.length - 1} onClick={() => { setEditing(null); setSelectedId(risks[selectedIndex + 1].id); }} className="size-11 shrink-0 rounded-full border border-white/50 disabled:opacity-30">→</button>
+        {selected && <div className="relative flex items-center gap-2 bg-ink px-2 py-0 text-white">
+          <button type="button" aria-label="前の物体を表示" disabled={selectedIndex === 0} onClick={() => selectRisk(risks[selectedIndex - 1].id)} className="size-11 shrink-0 disabled:opacity-30">←</button>
+          <p aria-live="polite" className="min-w-0 flex-1 truncate text-center text-sm font-bold">{selectedIndex + 1} / {risks.length} · <Furigana text={selected.name} adult={selected.adultName} /></p>
+          <button type="button" aria-label="次の物体を表示" disabled={selectedIndex === risks.length - 1} onClick={() => selectRisk(risks[selectedIndex + 1].id)} className="size-11 shrink-0 disabled:opacity-30">→</button>
         </div>}
         </div>
         {selected && selectedAdvice && <article className="rounded-panel bg-surface p-4" aria-live="polite">
@@ -199,7 +209,7 @@ export default function RoomRecognitionPage() {
           </div>
           {selectedAdvice.detail && <div className="mt-3 rounded-field bg-canvas p-3">
             <h3 className="min-h-8 text-13 font-bold"><Furigana text="対策[たいさく]のポイント" adult="対策の詳細・注意点" /></h3>
-            <p className="mt-2 text-base leading-relaxed"><Furigana text={selectedAdvice.detail} /></p>
+            {selectedAdvice.detail && <p className="mt-2 text-base leading-relaxed"><Furigana text={selectedAdvice.detail} /></p>}
           </div>}
           <SafetyProducts risks={[{ ...selected, confirmed: true }]} />
           </DetailSheet></div>
@@ -208,18 +218,21 @@ export default function RoomRecognitionPage() {
             <Furigana text="この家具・場所は対策[たいさく]済[ず]み" adult="この家具・場所は対策済み" />
           </label>
         </article>}
-        <DetailSheet title="次の行動クイズで体験すること">
-        <section className="rounded-panel bg-secondary-soft p-5">
-          <p className="text-sm font-bold text-secondary-ink">備えを確認したら、次は行動の体験へ</p>
-          <h2 className="mt-2 text-xl font-bold"><Furigana text="この部屋で、地震が起きたら？" /></h2>
-          <p className="mt-2 text-base leading-relaxed"><Furigana text="今見た家具や場所のそばで揺れが始まったとき、どう動くかを選んでみよう。" adult="確認した家具や場所をもとに、揺れている間と収まった後の行動をシミュレーションします。" /></p>
-        </section>
-        </DetailSheet>
-        <div className="phase-one-actions mt-auto flex flex-col gap-2 py-3">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="md" disabled={risks.length < 2} onClick={() => { setSelectedId(risks[(selectedIndex + 1) % risks.length].id); focusDescription("selected-room-photo"); }}><Furigana text={selectedIndex === risks.length - 1 ? "最初の家具へ" : "次の家具へ"} /></Button>
-            <Button size="md" onClick={start}><Furigana text="行動クイズへ" /></Button>
-          </div>
+        {!allReviewed && selected && <div className="space-y-2 py-3">
+          <p className="text-center text-sm text-ink-muted"><Furigana text={`確認済み ${risks.filter(r => reviewedIds.includes(r.id)).length} / ${risks.length}`} /></p>
+          <Button size="md" onClick={() => {
+            const nextReviewed = [...new Set([...reviewedIds, selected.id])];
+            setReviewedIds(nextReviewed);
+            const next = risks.find(r => !nextReviewed.includes(r.id));
+            if (next) { setSelectedId(next.id); focusDescription("selected-room-photo"); }
+          }}><Furigana text={risks.filter(r => !reviewedIds.includes(r.id) && r.id !== selected.id).length ? "次の家具を確認" : "確認を終える"} /></Button>
+        </div>}
+        {allReviewed && <section className="space-y-3 rounded-panel bg-secondary-soft p-4">
+          <h2 className="text-lg font-bold"><Furigana text="この部屋で、地震が起きたら？" /></h2>
+          <p className="text-base leading-relaxed"><Furigana text="部屋の備えを確認できました。次は、揺れている間と収まった後の行動を体験しよう。" /></p>
+          <Button size="md" onClick={start}><Furigana text="行動クイズへ" /></Button>
+        </section>}
+        <div className="flex flex-col py-2">
           <button type="button" onClick={() => router.push("/camera")} className="min-h-11 text-13 text-ink-muted underline">写真を撮り直す</button>
         </div>
       </main>

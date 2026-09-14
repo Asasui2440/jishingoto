@@ -48,14 +48,14 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
     <section className="flex w-full min-h-0 max-h-[56dvh] shrink flex-col gap-2 overflow-hidden rounded-[24px] border border-border bg-surface px-4 pt-3 pb-3 shadow-[0_-4px_18px_rgba(91,66,11,0.04)]" aria-label={`判断ポイント ${index + 1} / ${total}`}>
       <div className="flex min-h-0 shrink flex-col gap-2 overflow-y-auto overscroll-contain">
       <div className="flex items-center justify-between gap-2">
-        <p className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold tracking-wide text-blue-800">POINT {index + 1} / {total} ・ 想定</p>
+        <p className="rounded-md bg-blue-50 px-2 py-1 text-[0.625rem] font-bold tracking-wide text-blue-800">POINT {index + 1} / {total} ・ 想定</p>
         <button type="button" disabled={busy} onClick={() => setTimerSettings(true)} className={`inline-flex min-h-8 items-center gap-1 rounded-full bg-canvas px-2.5 text-11 font-bold tabular-nums ${remaining !== null && remaining <= 3 ? "text-danger" : "text-ink-muted"}`} aria-label="制限時間の設定">
           <GameIcon name={paused ? "pause" : "clock"} className="size-3.5" />{remaining === null ? "制限なし" : `${remaining}秒`}
         </button>
       </div>
       {remaining !== null ? <Meter value={seconds > 0 ? remaining / seconds : 0} color={remaining <= 3 ? "var(--color-danger)" : "var(--color-primary-mid)"} height={3} track="var(--color-border)" /> : null}
       <button type="button" onClick={() => setDetails(true)} className="flex min-h-14 items-center gap-3 rounded-xl text-left" aria-label="状況と行動の詳しい説明を見る">
-        <span className="relative w-[68px] shrink-0 overflow-hidden rounded-xl"><HazardSketch kind={event.kind} className="h-[52px] w-full" /><span className="absolute bottom-0 inset-x-0 bg-surface/90 text-center text-[8px] text-ink-muted">想定図</span></span>
+        <span className="relative w-[68px] shrink-0 overflow-hidden rounded-xl"><HazardSketch kind={event.kind} className="h-[52px] w-full" /><span className="absolute bottom-0 inset-x-0 bg-surface/90 text-center text-[0.5rem] text-ink-muted">想定図</span></span>
         <span className="min-w-0 flex-1 font-display text-13 leading-relaxed font-bold text-ink"><Furigana text={event.title} /></span>
         <GameIcon name="info" className="size-4 shrink-0 text-primary-ink" />
       </button>

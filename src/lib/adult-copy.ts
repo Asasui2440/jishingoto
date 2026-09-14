@@ -267,7 +267,7 @@ export const ADULT_COPY: Readonly<Record<string, string>> = {
 };
 
 export function plain(text: string): string {
-  return text.replace(/\[[^\]]*\]/g, "").replaceAll("テレビ受像機", "テレビ").replaceAll("高層収納家具", "背の高い収納家具").replaceAll("背高収納家具", "背の高い収納家具");
+  return text.replace(/\[[^\]]*\]/g, "").replaceAll("テレビ受像機", "テレビ").replaceAll("背高食器棚", "背の高い食器棚").replaceAll("高層収納家具", "背の高い収納家具").replaceAll("背高収納家具", "背の高い収納家具");
 }
 
 /** 未登録の文章は標準表記の共通文、または利用者・外部データ由来の固有名詞。 */

@@ -9,7 +9,8 @@ import {
 } from "./content";
 import { adultText } from "./adult-copy";
 import { roomObjectType, isCooktop, EXIT_EXPLANATION } from "./room-guidance";
-import { HOME_KITCHEN_AFTER, shuffleChoices, type RoomSetting } from "./scenarios";
+import { HOME_KITCHEN_AFTER, SCENARIOS, shuffleChoices, type RoomSetting } from "./scenarios";
+import { AFTER_SHAKING_QUESTIONS } from "./after-shaking-questions";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -115,14 +116,28 @@ function pickMany<T>(items: T[], count: number, random: () => number): T[] {
 export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "home", random = Math.random): Promise<Question[]> {
   const roomQuestions = risks.filter((risk) => risk.confirmed).map((risk, index) => withAdultSituation(questionForRisk(risk, index), risk));
   const desk = roomQuestions.find((q) => q.choices.some((choice) => choice.id === "under-desk"));
-  const duringPool = roomQuestions.filter((q) => q.axis === "initial" && q.id !== desk?.id);
-  const during: Question[] = [...(desk ? [desk] : []), ...pickMany(duringPool, desk ? 1 : 2, random)];
+  // 確認した別の家具でも身の守り方を考えられるよう、最大2問にする。
+  const duringPool = roomQuestions.filter((q) => q.axis === "initial");
+  const during: Question[] = desk
+    ? [desk, ...pickMany(duringPool.filter(q => q.sourceRiskId !== desk.sourceRiskId), 1, random)]
+    : pickMany(duringPool, 2, random);
   if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
   const kitchen = roomQuestions.find(q => q.id === HOME_KITCHEN_AFTER.id);
   const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial" && q.id !== HOME_KITCHEN_AFTER.id), 1, random);
   const information = QUESTIONS.find((q) => q.id === "q5")!;
+  const after = [...afterRoom, ...(kitchen ? [kitchen] : [])];
+  const shelter = pickMany(SCENARIOS.filter(q => q.id === "shelter-home" || q.id === "shelter-damaged"), 1, random)
+    .map(q => ({ ...q, seconds: 15,
+      situation: q.id === "shelter-home" ? "家と周りの安全は確認できました。水と食べ物があり、トイレも使えます。避難の指示はありません。どうする？" : q.situation,
+      adultSituation: q.id === "shelter-damaged" ? "揺れが収まり、現在いる建物が傾いています。避難所は未開設です。まずどのように行動しますか。" : q.adultSituation,
+    }));
+  const floor: Question = { id: "floor-common", axis: "evacuation", category: "足元の確認", situation: "揺れが収まり、床にガラスや物が散らばっています。玄関へ行く前に、どうする？", adultSituation: "揺れが収まり、床にガラス片や物が散乱しています。玄関に向かう前に、どのように行動しますか。", seconds: 12, choices: SIMPLE_CHOICES.exit };
+  const pool = [...AFTER_SHAKING_QUESTIONS, ...shelter, ...(afterRoom.length ? [] : [floor]), information];
+  after.push(...pickMany(pool, 5 - during.length - after.length, random));
+  // 情報確認は、身を守る行動の後に振り返る最後の問題にする。
+  after.sort((a, b) => Number(a.id === information.id) - Number(b.id === information.id));
   return during.map((q): Question => ({ ...q, phase: "during" }))
-    .concat([...afterRoom, ...(kitchen ? [kitchen] : []), information].map((q): Question => ({ ...q, phase: "after" })))
+    .concat(after.map((q): Question => ({ ...q, phase: "after" })))
     .map((q) => shuffleChoices(q, random));
 }
 
