@@ -127,7 +127,7 @@ export default function EvacWalkPage() {
       </div>
       {mode === "api" && (preparation?.status === "error" || connectionChanged || street?.error) ? <p role="alert" className={styles.navigationAlert}>{street?.error ?? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"}</p> : null}
       {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
-      {decisionBlocking ? <div className={styles.decisionSlot}>
+      {decisionBlocking ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot}`}>
         <div aria-hidden={!decisionVisible} className={`${styles.decisionContent} ${decisionVisible ? "" : styles.decisionHidden}`}>
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
             seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !ready || announcingPoint} busy={busy}
