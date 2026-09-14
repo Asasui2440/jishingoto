@@ -244,6 +244,6 @@ export async function fetchDecisionPoints(route: RouteOption): Promise<DecisionP
 
 出題時の時計は確認中として停止し、時間制限ありでは「判断を始める」で計測を始める。「時計を止めて、もう一度確認する」は残り時間を保持して停止し、「時間制限なしで選ぶ」で計測を解除する。時間切れで自動回答しない。イラスト付きカードの本文と選択肢はスクロール可能、時計と開始操作は固定表示にする。
 
-電線の問題（walk-case-18）は、内蔵画像生成で事前作成した太線・人物拡大版WebP４枚を使用する試作。保存先は `public/illustrations/evac/walk-case-18/*-v2.webp`、生成指示は `docs/wire-illustration-prompts-v2.json`。他の問題はSVGを使用する。実行時の画像生成は行わない。SVG一覧のモックページは削除した。
+通常の歩行問題30問は、内蔵画像生成で事前作成したV2のWebP120枚（各問の状況＋3選択肢）を使用する。保存先は `public/illustrations/evac/walk-case-番号/*-v2.webp`。問題IDと選択肢IDを使って対応させ、選択肢の表示順には依存しない。固定練習用の4問・対象外の問題はSVGを使用する。実行時の画像生成は行わない。SVG一覧のモックページは削除済み。
 
-画像素材は通常問題の全30問120枚をV2方針で作成済み。電線の1問4枚のみ組み込み済みで、他29問116枚は素材保存済み・未組み込み。固定練習用の4問は対象外。全30問の構図と選択肢ID対応、スマホ相当の縮小比較、生成指示は `docs/illustrations/` に保存している。[残り20問の制作結果](illustrations/remaining-review-v2.md)に確認結果と組み込み時の注意点を記録した。
+全30問の構図と選択肢ID対応、スマホ相当の縮小比較、生成指示は `docs/illustrations/` に保存している。[残り20問の制作結果](illustrations/remaining-review-v2.md)に制作時の確認結果と制約を記録した。

@@ -68,10 +68,15 @@ function Environment({scene}: {scene:Scene}) {
 
 /** The same place, with different people, tools and movement for each proposed action. */
 export function WalkIllustration({event, choice, className=""}: {event:HazardEvent;choice?:EvacChoice;className?:string}) {
-  if (event.id === "walk-case-18") {
-    const variant = !choice ? "situation" : choice.id === "go" ? "go" : choice.id === "consider" ? "consider" : "distance";
+  const number = Number(event.id.replace("walk-case-", ""));
+  const variant = choice?.id ?? "situation";
+  const firstChoiceId = [9, 10, 21].includes(number) ? "detour" : "distance";
+  // Match canonical event/choice IDs, including after the UI shuffles choices.
+  // Practice and unknown events keep their SVG illustrations.
+  if (event.id === `walk-case-${number}` && Object.hasOwn(scenes, number)
+      && ["situation", firstChoiceId, "go", "consider"].includes(variant)) {
     const description = choice ? `行動のイラスト：${choice.label}` : `状況のイラスト：${event.situation}`;
-    return <Image src={`/illustrations/evac/walk-case-18/${variant}-v2.webp`} width={960} height={640} alt={description} aria-label={description} role="img" className={className} style={{objectFit:"contain"}} unoptimized />;
+    return <Image src={`/illustrations/evac/${event.id}/${variant}-v2.webp`} width={960} height={640} alt={description} aria-label={description} role="img" className={className} style={{objectFit:"contain"}} unoptimized />;
   }
   const fallback: Scene = event.id === "practice-flood" ? "water" : event.kind === "wall" ? "wall" : event.kind === "fall" ? "glass" : event.kind === "closed" ? "barrier" : "route";
   const definition = scenes[Number(event.id.replace("walk-case-",""))] ?? [fallback, choice?.id === "detour" ? "back" : "side", "forward", "wait"] as const;
