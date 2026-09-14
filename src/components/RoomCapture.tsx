@@ -170,7 +170,7 @@ export default function RoomCapture() {
       </>}
       {busy && <div role="status" className="rounded-panel bg-secondary-soft p-4"><Furigana text={busy} />{busy === "動画から画像を取り出しています…" && <progress value={progress} max={1} aria-label="動画の読み込み" className="mt-3 w-full" />}</div>}
       {error && <p role="alert" className="text-base text-danger"><Furigana text={error} /></p>}
-      <button type="button" className="min-h-11 text-base underline" onClick={() => { operation.current?.abort(); router.push("/"); }}><Furigana text="戻る" /></button>
+      <button type="button" className="min-h-11 text-base underline" onClick={() => { operation.current?.abort(); router.push("/home"); }}><Furigana text="戻る" /></button>
     </main><DisclaimerFooter />
   </div>;
 }
