@@ -45,7 +45,7 @@
     addListener(name, fn) { (this.listeners[name] ??= new Set()).add(fn); return { remove: () => this.listeners[name].delete(fn) }; }
     emit(name, value) { this.listeners[name]?.forEach(fn => fn(value)); }
   }
-  const test = window.streetTest = { moves: [], lookups: 0, positionCommands: 0, walker: null, pano: null, map: null, failNext: false };
+  const test = window.streetTest = { moves: [], lookups: 0, positionCommands: 0, initialLoadError:params.get("initialLoadError"), walker: null, pano: null, map: null, failNext: false };
   class Panorama extends Events {
     constructor(box, options) {
       super(); this.id = options.pano; this.pov = options.pov; test.options = options; test.pano = this;
@@ -54,7 +54,7 @@
       setTimeout(() => this.emit("links_changed"), 0);
     }
     getPano() { return this.id; }
-    getPosition() { return { lat: () => nodes[this.id].position.lat, lng: () => nodes[this.id].position.lng }; }
+    getPosition() { return { lat: () => nodes[this.id].position.lat + (params.has("coordinateDrift") ? .00004 : 0), lng: () => nodes[this.id].position.lng }; }
     getLinks() { return nodes[this.id].links; }
     getPov() { return this.pov; }
     setPov(pov) { this.pov = pov; this.emit("pov_changed"); }
@@ -92,6 +92,7 @@
     StreetViewService: class { async getPanorama(request) {
       test.lookups++;
       const isArrival = request.radius === 150;
+      if (!isArrival && !request.pano && test.initialLoadError) throw new Error(test.initialLoadError);
       if (isArrival && params.has("missingArrival")) throw new Error("no outdoor node");
       if (request.pano && params.has("slowPlan")) await new Promise(resolve => setTimeout(resolve, 200));
       const id = request.pano ?? (isArrival ? params.has("courtyard") ? "G" : "C" : params.has("startAtB") ? "B" : "A");

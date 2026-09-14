@@ -1,32 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
-import { BottomSheet, GameHeader, GameIcon, GameShell, Toast } from "@/components/evac/GameUI";
+import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/GameUI";
 import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
 import { RouteLegend } from "@/components/evac/RouteLegend";
 import { EvacModeBadge } from "@/components/evac/EvacMode";
 import { EvacMap } from "@/components/evac/EvacMap";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { findChoice, findEvent } from "@/lib/evac-content";
+import { reviewDecisions } from "@/lib/evac-review";
 import { formatDistance, formatDuration, getEvac, totalSeconds, useEvac } from "@/lib/evac";
 import { walkedPath, walkDistance } from "@/lib/evac-walk";
 import { useSession } from "@/lib/session";
 
-type Sheet = "decision" | "followUp" | "route" | "help" | "room" | null;
+type Sheet = "decision" | "route" | "help" | "room" | null;
 
 /** 記録は地図で一覧し、選択の理由と次の行動はその場で開いて確かめる。 */
 export default function EvacReportPage() {
   const router = useRouter();
   const evac = useEvac();
   const room = useSession();
-  const { mode, home, shelter, routes, startRouteId, takenRouteIds, decisions, walk, followUp, update, reset } = evac;
+  const { mode, home, shelter, routes, startRouteId, takenRouteIds, decisions, walk } = evac;
   const [sheet, setSheet] = useState<Sheet>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [mapHeight, setMapHeight] = useState(200);
   const mapBox = useRef<HTMLDivElement>(null);
 
@@ -46,18 +44,7 @@ export default function EvacReportPage() {
   }, [mode]);
 
   const startRoute = routes.find((route) => route.id === startRouteId) ?? null;
-  const rows = useMemo(
-    () => decisions.flatMap((d) => {
-      const event = walk?.steps.find((step) => step.pointId === d.pointId)?.event ?? findEvent(d.eventId);
-      const choice = event?.choices.find((candidate) => candidate.id === d.choiceId) ?? findChoice(d.eventId, d.choiceId);
-      return event && choice ? [{ d, event, choice }] : [];
-    }),
-    [decisions, walk],
-  );
-  const followUps = useMemo(
-    () => rows.length ? Array.from(new Set(rows.map((row) => row.event.followUp))) : ["自治体の防災マップで、この経路と避難先の指定を平常時に確認する"],
-    [rows],
-  );
+  const rows = useMemo(() => reviewDecisions({decisions,walk}), [decisions,walk]);
   const selectedIndex = rows.findIndex(({ d }) => d.pointId === selectedId);
   const selected = rows[selectedIndex];
   const connectedRoom = !!room.finishedAt && evac.roomFinishedAt === room.finishedAt;
@@ -67,13 +54,7 @@ export default function EvacReportPage() {
     setSelectedId(id);
     setSheet("decision");
   };
-  const chooseFollowUp = (value: string) => {
-    update({ followUp: value });
-    setSheet(null);
-    setToast("次に確かめることを選びました");
-  };
   const sheetTitle = sheet === "decision" ? `判断 ${selectedIndex + 1} / ${rows.length}`
-    : sheet === "followUp" ? "次に確かめること"
     : sheet === "route" ? "通った道の記録"
     : sheet === "room" ? "部屋から避難まで"
     : "この記録について";
@@ -132,21 +113,7 @@ export default function EvacReportPage() {
           </div> : <button type="button" onClick={() => setSheet("help")} className="flex min-h-11 w-full items-center gap-2 rounded-field bg-primary-soft px-3 py-2 text-left text-11 text-primary-ink"><GameIcon name="info" className="size-4 shrink-0" /><span>今回は出題なし。経路の安全を示すものではありません。</span></button>}
         </section>
 
-        <button type="button" onClick={() => setSheet("followUp")} className={`flex min-h-14 shrink-0 items-center gap-3 rounded-tile px-3 py-2 text-left ${followUp ? "border border-amber-200 bg-amber-50" : "bg-primary-soft"}`}>
-          <span className={`grid size-9 shrink-0 place-items-center rounded-full ${followUp ? "bg-amber-200 text-amber-900" : "bg-primary text-ink"}`}><GameIcon name={followUp ? "check" : "flag"} className="size-5" /></span>
-          <span className="min-w-0 flex-1"><span className="block text-13 font-bold">{followUp ? "次に確かめること" : "次に確かめることを、ひとつ"}</span><span className="mt-0.5 block truncate text-11 text-ink-muted">{followUp ? <Furigana text={followUp} /> : "平常時にできることを選ぼう"}</span></span>
-          <GameIcon name="chevron" className="size-4 shrink-0" />
-        </button>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <Button size="md" onClick={() => {
-            const { homeLabel, timerSeconds } = evac;
-            reset();
-            update({ home, homeLabel, shelter, timerSeconds });
-            router.push("/evac/routes");
-          }}><GameIcon name="route" className="size-5" /><Furigana text="別[べつ]ルートで試[ため]す" /></Button>
-          <Link href="/" className="flex min-h-12 shrink-0 items-center justify-center rounded-full px-3 text-13 font-bold text-ink-muted">ホーム</Link>
-        </div>
+        <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>
       </main>
 
       <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)}>
@@ -184,18 +151,6 @@ export default function EvacReportPage() {
             </div> : null}
             <a href={selected.event.reference.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-primary-ink underline underline-offset-2">{selected.event.reference.label}</a>
           </details>
-          <button type="button" onClick={() => chooseFollowUp(selected.event.followUp)} className="flex min-h-14 w-full items-center gap-3 rounded-tile bg-primary-soft p-3 text-left">
-            <GameIcon name={followUp === selected.event.followUp ? "check" : "flag"} className="size-5 shrink-0 text-primary-ink" />
-            <span><span className="mb-1 block text-11 font-bold text-primary-ink">{followUp === selected.event.followUp ? "次に確かめることに選択中" : "これを次に確かめる"}</span><span className="text-13"><Furigana text={selected.event.followUp} /></span></span>
-          </button>
-        </div> : null}
-
-        {sheet === "followUp" ? <div className="space-y-3">
-          <p className="text-13 text-ink-muted">次にこの道を通るとき、確かめたいことをひとつ。</p>
-          {followUps.map((value) => <button key={value} type="button" aria-pressed={followUp === value} onClick={() => chooseFollowUp(value)} className={`flex min-h-14 w-full items-center gap-3 rounded-tile border p-3 text-left text-13 ${followUp === value ? "border-primary-mid bg-primary-soft" : "border-border bg-surface"}`}>
-            <span className={`grid size-6 shrink-0 place-items-center rounded-full border ${followUp === value ? "border-primary-mid bg-primary" : "border-border"}`}>{followUp === value ? <GameIcon name="check" className="size-4" /> : null}</span><Furigana text={value} />
-          </button>)}
-          {followUp ? <button type="button" className="min-h-11 w-full text-11 text-ink-muted underline" onClick={() => { update({ followUp: null }); setSheet(null); setToast("選択を解除しました"); }}>選択を解除する</button> : null}
         </div> : null}
 
         {sheet === "route" ? <div className="space-y-4 text-13 text-ink-muted">
@@ -210,12 +165,11 @@ export default function EvacReportPage() {
 
         {sheet === "help" ? <div className="space-y-4 text-13 leading-relaxed text-ink-muted">
           <EvacModeBadge mode={mode} />
-          <p>地図と番号から、通った道と選んだ行動をふりかえれます。利点と注意点を読み、平常時に確かめることをひとつ選んでみましょう。</p>
+          <p>地図と番号から、通った道と選んだ行動をふりかえれます。次の画面で判断のスコアと改善のヒントを確認できます。</p>
           {walk?.source === "geo-ai" && rows.length === 0 ? <p className="rounded-field bg-primary-soft p-3">今回の地形データから出題できる候補は見つかりませんでした。危険がないことや、この経路の安全を確認した意味ではありません。</p> : null}
           <p><Furigana text="これは地図[ちず]の上[うえ]で体験[たいけん]した記録[きろく]です。危険[きけん]はすべて想定[そうてい]で、実在[じつざい]の建物[たてもの]・塀[へい]・道路[どうろ]が壊[こわ]れると判定[はんてい]したものではありません。実際[じっさい]の避難[ひなん]では、自治体[じちたい]や気象庁[きしょうちょう]の情報[じょうほう]に従[したが]ってください。" /></p>
         </div> : null}
       </BottomSheet>
-      <Toast message={toast} onDismiss={() => setToast(null)} />
     </GameShell>
   );
 }

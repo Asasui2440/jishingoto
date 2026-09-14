@@ -70,6 +70,7 @@ export type StreetProgress = {
   remainingS: number;
   arrived: boolean;
   atArrivalNode?: boolean;
+  questionPointIds?: string[];
 };
 const MATCH_M = 20;
 /** Project onto the selected route and look along its geometry. Guidance only. */
@@ -100,7 +101,7 @@ export function streetRouteGuidance(path: LatLng[], position: LatLng) {
 }
 
 /** Actual position drives progress; missed questions cannot prevent arrival. */
-export function observeStreetPosition(walk: WalkProgress, position: LatLng, heading: number, answered: string[], arrivalConfirmed = false): WalkProgress {
+export function observeStreetPosition(walk: WalkProgress, position: LatLng, heading: number, answered: string[], arrivalConfirmed = false, questionPointIds?: string[]): WalkProgress {
   const prior = walk.street;
   const moved = prior ? distanceM(prior.position, position) : 0;
   const path = prior ? (moved > 0.1 ? [...prior.path, position] : prior.path) : [position];
@@ -108,7 +109,7 @@ export function observeStreetPosition(walk: WalkProgress, position: LatLng, head
   const routeStart = Math.max(0, start - (start > 0 ? 1 : 0));
   const guide = streetRouteGuidance(walk.steps.slice(routeStart).map(step => step.position), position);
   let matchedIndex = guide && guide.distanceFromRoute <= MATCH_M ? routeStart + guide.segment : walk.index;
-  const nearby = walk.steps.map((step, i) => ({ step, i, distance: distanceM(position, step.position) }))
+  const nearby = walk.steps.map((step, i) => ({ step, i, distance: questionPointIds?.includes(step.pointId ?? "") ? 0 : distanceM(position, step.position) }))
     .filter(({ step, i, distance }) => i >= routeStart && step.pointId && !answered.includes(step.pointId) && distance <= (walk.questionsAligned ? 2 : MATCH_M))
     .sort((a, b) => a.distance - b.distance)[0];
   if (nearby) matchedIndex = nearby.i;
@@ -119,7 +120,7 @@ export function observeStreetPosition(walk: WalkProgress, position: LatLng, head
   const duration = walk.steps.slice(routeStart + 1).reduce((sum, step) => sum + step.travelSeconds, 0);
   const total = guide?.total ?? 0;
   return { ...walk, index: matchedIndex, street: { position, heading, path, routeM: guide?.routeM ?? prior?.routeM ?? 0,
-    remainingM, elapsedS: (prior?.elapsedS ?? 0) + (total > 0 ? moved / total * duration : 0), remainingS: total > 0 ? remainingM / total * duration : 0, atArrivalNode:arrivalConfirmed, arrived } };
+    remainingM, elapsedS: (prior?.elapsedS ?? 0) + (total > 0 ? moved / total * duration : 0), remainingS: total > 0 ? remainingM / total * duration : 0, questionPointIds, atArrivalNode:arrivalConfirmed, arrived } };
 }
 
 /** Schedule by actual node hops: at least three answers and no gap longer than 20 moves. */
@@ -159,4 +160,9 @@ export function alignWalkQuestions(walk: WalkProgress, route: RouteOption, nodes
   const aligned: WalkProgress = {...walk,steps:[...history,...next.slice(1)],index:history.length-1,questionsAligned:true,questionSpacingVersion:2};
   return aligned.street ? observeStreetPosition(aligned,aligned.street.position,aligned.street.heading,
     history.flatMap(step => step.pointId ? [step.pointId] : []),aligned.street.arrived) : aligned;
+}
+
+/** Bind questions to a confirmed panorama's planned position, independent of SDK coordinate drift. */
+export function questionIdsAtNode(walk: Pick<WalkProgress, "steps"> | null, position: LatLng) {
+  return walk?.steps.flatMap(step => step.pointId && distanceM(step.position,position) < .1 ? [step.pointId] : []) ?? [];
 }

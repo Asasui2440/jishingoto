@@ -10,7 +10,7 @@ import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/
 import { Button } from "@/components/ui/Button";
 import { plain } from "@/components/ui/Furigana";
 import { formatDistance, formatDuration, getEvac } from "@/lib/evac";
-import { alignWalkQuestions, walkedPath } from "@/lib/evac-walk";
+import { alignWalkQuestions, questionIdsAtNode, walkedPath } from "@/lib/evac-walk";
 import { useEvacWalk } from "@/lib/use-evac-walk";
 import { angleDifference, type StreetControls, type StreetSnapshot } from "@/lib/street-navigation";
 import { useStreetRoutePlan } from "@/lib/use-street-route-plan";
@@ -39,10 +39,12 @@ export default function EvacWalkPage() {
   }, [plan,route,update]);
   const arrivalNode = plan?.nodes.at(-1) ?? street?.arrivalNode;
   const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 2) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  const questionSteps = walk?.steps;
   const onNavigation = useCallback((snapshot: StreetSnapshot) => {
     setStreet(snapshot);
-    observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode });
-  }, [observeStreet, plan]);
+    const node = plan?.nodes.find(node => node.pano === snapshot.pano);
+    observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode }, node ? questionIdsAtNode(questionSteps ? {steps:questionSteps} : null, node.position) : undefined);
+  }, [observeStreet, plan, questionSteps]);
   const offRoute = !!plan && !!street && !plan.nodes.some(node => node.pano === street.pano);
   const returnPano = !arrived ? plannedReturnLink(street, plan)?.pano ?? null : null;
   const automaticPano = !arrived ? plannedStreetLink(street, plan)?.pano ?? null : null;
@@ -109,17 +111,21 @@ export default function EvacWalkPage() {
       </div>
       <div className={styles.scene}>
         <StreetStage initialPosition={walk.street?.position ?? walk.steps[0].position} demoPosition={step.position}
-          navigationRef={navigation} onNavigation={onNavigation} recommendedPano={automaticPano} returnPano={returnPano} heading={step.heading} destination={shelter.position} arrivalEndpoint={route.path[route.path.length - 1]} kind={pending?.kind ?? null}
+          navigationRef={navigation} onNavigation={onNavigation} onChangeStart={() => { setWalking(false); router.push("/evac"); }} recommendedPano={automaticPano} returnPano={returnPano} heading={step.heading} destination={shelter.position} arrivalEndpoint={route.path[route.path.length - 1]} kind={pending?.kind ?? null}
           zone={ready ? pending?.zone : null} zoneNumber={decisionIndex + 1} height="100%" demo={mode === "mock"}
           sceneKey={step.id} onSettled={setReadyStepId} showArrow={ready && !pending && !arrived && !sheet}
           walking={moving} onAdvance={(!walking || !automaticPano) && ready && !pending && !arrived && !sheet ? forward : undefined}
-          arrived={arrived && ready} turn={Math.abs(turn) >= 25 ? turn : null}>
+          arrived={arrived && ready} onReflect={() => { update({finishedAt:Date.now()}); router.push("/evac/report"); }} turn={Math.abs(turn) >= 25 ? turn : null}>
           <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
-            <span className="rounded-xl bg-black/70 px-3 py-2 text-11 font-bold text-white">{remainingLabel}<br />{timeLabel}</span>
+            <div className="flex flex-col items-start gap-2">
+              <span className="rounded-xl bg-black/70 px-3 py-2 text-11 font-bold text-white">{remainingLabel}<br />{timeLabel}</span>
+              {walking && !arrived ? <span role="status" className="inline-flex items-center gap-1 rounded-full bg-black/70 px-3 py-1.5 text-11 font-bold text-white"><GameIcon name="walk" className="size-4" />自動走行中</span> : null}
+            </div>
             <button type="button" onClick={() => showSheet("map")} className="pointer-events-auto inline-flex min-h-11 items-center gap-1 rounded-xl border border-border bg-white px-3 text-11 font-bold text-ink"><GameIcon name="map" className="size-4" />地図</button>
           </div>
         </StreetStage>
       </div>
+      {mode === "api" && (preparation?.status === "error" || connectionChanged || street?.error) ? <p role="alert" className={styles.navigationAlert}>{street?.error ?? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"}</p> : null}
       {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
       {decisionBlocking ? <div className={styles.decisionSlot}>
         <div aria-hidden={!decisionVisible} className={`${styles.decisionContent} ${decisionVisible ? "" : styles.decisionHidden}`}>
@@ -132,13 +138,12 @@ export default function EvacWalkPage() {
         </div> : null}
       </div> : null}
         <section className={styles.actions} aria-label="歩行の操作" inert={decisionBlocking} style={{ visibility: decisionBlocking ? "hidden" : "visible" }}>
-          <p role="status" className="text-11 leading-relaxed text-ink-muted">{street?.error ? "移動を停止しました。地図で現在地を確認できます。" : mode === "api" && preparation?.status === "error" ? preparation.error : mode === "api" && preparation?.status === "loading" ? `道のつながりを確認しています（${preparation.count}地点）…` : !ready ? street?.arrivalError ?? "風景と道を準備しています…" : notice ?? (mode === "api" && !street?.arrivalNode ? street?.arrivalError ?? "避難先に隣接する到着地点を確認しています…" : returnPano ? "青い「ルートに戻る」を選ぶと、通った道をたどって戻れます。" : connectionChanged ? "道の接続が変わりました。道を再確認してください。" : offRoute && !arrived ? "選んだルートから外れています。地図で道を確認してください。" : arrived ? "通った道と選んだ行動をふりかえろう." : moving ? "選んだルートに沿って歩いています。判断地点と避難先付近で止まります。" : "ドラッグで周りを見回せます。")}</p>
+
           {mode === "api" && (preparation?.status === "error" || connectionChanged) ? <div className="flex gap-2"><Button size="md" onClick={retryPlan}>道を再確認する</Button><Button size="md" variant="outline" onClick={() => router.push("/evac/routes")}>ルートを選び直す</Button></div> : null}
-          {arrived ? <Button disabled={!ready} onClick={() => { update({ finishedAt: Date.now() }); router.push("/evac/report"); }}>ふりかえる</Button>
-            : <div className="flex gap-2">
+          {!arrived ? <div className="flex gap-2">
               <Button size="md" disabled={!ready || busy || !canForward} onClick={forward}><GameIcon name="walk" />{mode === "api" ? "向いている道へ進む" : notice ? "先へ進む" : "進む"}</Button>
               <Button size="md" variant="outline" disabled={!walking && (!ready || busy || (mode === "api" && !automaticPano))} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>
-            </div>}
+            </div> : null}
         </section>
     </main>
     <BottomSheet open={sheet === "map"} title="いまいる場所と通った道" onClose={() => setSheet(null)}>
