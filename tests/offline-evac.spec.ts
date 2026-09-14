@@ -191,3 +191,13 @@ test('場所登録は表示せず、選択した避難所のマップを一覧�
   await expect(page.locator('#map')).toHaveAttribute('data-map-ready','true');
   await expect(page.locator('#workspace-title')).toHaveText('リザルト小学校');
 });
+
+test('ホームから保存一覧を選び、戻るボタンで直前の画面へ戻れる',async({page})=>{
+  const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();
+  await page.getByRole('link',{name:'保存したマップを開く'}).click();
+  await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/evac\/report$/);
+  await expect(page.getByRole('heading',{name:'ふりかえり',exact:true})).toBeVisible();
+  await page.goto('/home');await page.getByRole('link',{name:'保存したマップを見る'}).click();await expect(page.locator('#saved-list')).toContainText('リザルト小学校');
+  await page.getByRole('link',{name:'避難先を選ぶ',exact:true}).click();await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/offline-evac\/index.html$/);
+  await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/home$/);
+});

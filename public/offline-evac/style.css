@@ -14,3 +14,5 @@ body.route-open .intro,body.route-open .saved-section{display:none}body.route-op
 body.report-embedded{height:100dvh;overflow:hidden}body.report-embedded main{height:100%;display:flex;flex-direction:column;gap:6px;padding:8px}body.report-embedded #report-save{flex:none;margin:0}body.report-embedded #workspace{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;background:white}body.report-embedded .section-heading{flex:none;margin:0}body.report-embedded .map-wrap{flex:1;min-height:120px}body.report-embedded .map{height:100%;min-height:0}body.report-embedded #report-actions{flex:none}body.report-embedded .save{margin-top:6px}body.report-embedded .attribution{font-size:8px}
 
 .places-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;font-size:13px}.map-pin.home{background:#ffe28b;color:#302c20;border:3px solid white;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:800;box-shadow:0 2px 6px #0003}#more-nearby{width:100%;margin-top:10px}body.report-embedded .places-bar{display:none}
+
+.return-nav{margin-bottom:12px}body.report-embedded .return-nav{display:none}

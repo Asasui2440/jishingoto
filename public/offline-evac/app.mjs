@@ -11,6 +11,9 @@ let nearbyLimit=5;
 let locationUpdatedAt=0,pendingLocationAction=null;
 const map=new RouteMap($('map'),()=>{});
 function message(text,error=false){$('message').hidden=false;$('message').textContent=text;$('message').classList.toggle('error',error);}
+// Standalone offline HTML has no Next.js router.
+// eslint-disable-next-line @next/next/no-location-assign-relative-destination
+$('go-back').onclick=()=>{if(history.length>1)history.back();else location.href='/home';};
 function connection(){ $('connection').textContent=networkAvailable?'オンライン':'オフライン';$('connection').classList.toggle('offline',!networkAvailable);$('new-route').setAttribute('aria-disabled',String(!networkAvailable)); }
 async function checkConnection(){
   try{if(!navigator.onLine)throw new Error();const r=await fetch('./ping.txt',{cache:'no-store',signal:AbortSignal.timeout(3000)});networkAvailable=r.ok&&(await r.text()).trim()==='offline-evac-online';}catch{networkAvailable=false;}connection();
