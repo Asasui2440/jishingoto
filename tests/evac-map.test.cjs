@@ -20,7 +20,7 @@ function modules(mapsEnabled = false, computeRoutes = async () => { throw new Er
     new Function("require", "module", "exports", code)((p) => p.startsWith(".") ? load(path.resolve(path.dirname(file), `${p}.ts`)) : require(p), mod, mod.exports);
     return mod.exports;
   };
-  return { shelterGroups: load("src/lib/shelter-groups.ts"), branches: load("src/lib/route-branches.ts"), plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
+  return { review: load("src/lib/evac-review.ts"), shelterGroups: load("src/lib/shelter-groups.ts"), branches: load("src/lib/route-branches.ts"), plan: load("src/lib/street-route-plan.ts"), navigation: load("src/lib/street-navigation.ts"), googleRoutes: load("src/lib/google-routes.ts"), api: load("src/lib/evac-api.ts"), walk: load("src/lib/evac-walk.ts"), content: load("src/lib/evac-content.ts"), state: load("src/lib/evac.ts") };
 }
 
 const { api, walk, content, state } = modules();
@@ -763,4 +763,46 @@ test("a route already at its arrival node still allows three queued exercises be
     current=walk.observeStreetPosition(current,position,0,answered,current.street.atArrivalNode);
   }
   assert.equal(current.street.arrived,true);
+});
+
+test("confirmed node identity triggers all questions despite SDK coordinate drift and leaves the schedule unchanged", () => {
+  const {api,walk}=modules();
+  const path=Array.from({length:81},(_,i)=>({lat:35+i*.0001,lng:139}));
+  const route={id:"drift",kind:"short",path,distanceM:880,durationS:800,notes:[]};
+  let current=walk.alignWalkQuestions({source:"context",routeId:route.id,index:0,steps:api.buildWalkSteps(route,[])},route,path.map(position=>({position})),[],()=>.5);
+  const originalSteps=current.steps, answered=[];
+  for(const position of path) {
+    const actual={lat:position.lat+.00004,lng:position.lng};
+    const matching=walk.questionIdsAtNode(current,position);
+    current=walk.observeStreetPosition(current,actual,0,answered,false,matching);
+    const step=current.steps[current.index];
+    if(step.pointId && matching.includes(step.pointId) && !answered.includes(step.pointId)) {
+      answered.push(step.pointId);
+      current=walk.observeStreetPosition(current,actual,0,answered,false,matching);
+      assert.equal(current.steps,originalSteps,"answering never resets the schedule");
+    }
+  }
+  assert.equal(answered.length,4);
+});
+
+test("judgment score averages the rubric and explains good and improvable choices without timing penalties", () => {
+  const {review,content}=modules();
+  const event={...content.HAZARD_EVENTS[0],id:"rubric",choices:[1,2,3].map((priority,i)=>({...content.HAZARD_EVENTS[0].choices[0],id:`c${i}`,priority}))};
+  const decisions=[0,1,2].map(i=>({pointId:`p${i}`,eventId:event.id,choiceId:`c${i}`,timedOut:true,extraSeconds:100}));
+  const walk={steps:decisions.map(d=>({pointId:d.pointId,event}))};
+  const result=review.scoreDecisions({decisions,walk});
+  assert.equal(result.score,50);assert.equal(result.count,3);
+  assert.equal(result.good.length,1);assert.equal(result.improvements.length,2);
+  assert(result.improvements.every(row=>row.recommended.id==="c2"));
+  assert.equal(review.scoreDecisions({decisions:decisions.map(d=>({...d,timedOut:false,extraSeconds:0})),walk}).score,50);
+  assert.equal(result.followUps.length,1);
+});
+
+test("judgment scoring cannot turn missing records into a perfect score and supports dynamic case IDs", () => {
+  const {review}=modules();
+  assert.equal(review.scoreDecisions({decisions:[],walk:null}).score,null);
+  const bad={pointId:"missing",eventId:"unknown",choiceId:"go"};
+  assert.equal(review.scoreDecisions({decisions:[bad],walk:null}).score,null);
+  const result=review.scoreDecisions({decisions:[bad,{pointId:"real",eventId:"walk-case-28",choiceId:"distance"}],walk:null});
+  assert.equal(result.score,100);assert.equal(result.count,1);assert.equal(result.total,2);
 });

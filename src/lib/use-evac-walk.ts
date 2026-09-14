@@ -42,7 +42,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
 
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
-  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && distanceM(walk.street.position, step.position) <= (walk.questionsAligned ? 2 : 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
+  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.street.questionPointIds?.includes(step.pointId ?? "") || distanceM(walk.street.position, step.position) <= (walk.questionsAligned ? 2 : 20))) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
   const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending;
 
   const advance = useCallback((jump = false) => {
@@ -70,7 +70,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     return () => clearTimeout(timer);
   }, [walking, notice, pending, busy, paused]);
 
-  const observeStreet = useCallback((state: StreetSnapshot) => {
+  const observeStreet = useCallback((state: StreetSnapshot, questionPointIds?: string[]) => {
     if (!state.ready || state.busy || !state.position) return;
     const position = state.position;
     const current = getEvac();
@@ -83,8 +83,8 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     update(prev => {
       if (prev.mode !== "api" || !prev.walk) return prev;
       const last = prev.walk.street?.position;
-      if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state)) return prev;
-      return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state)) };
+      if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state) && JSON.stringify(prev.walk.street?.questionPointIds) === JSON.stringify(questionPointIds)) return prev;
+      return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state), questionPointIds) };
     });
   }, [update]);
 
@@ -115,7 +115,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
         routes: detour ? [...prev.routes, { ...detour, eventCount: points.length }] : prev.routes,
         takenRouteIds: detour ? [...prev.takenRouteIds, detour.id] : prev.takenRouteIds,
         walk: current.mode === "api" && nextWalk.street
-          ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], detour ? false : nextWalk.street.atArrivalNode ?? false)
+          ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], detour ? false : nextWalk.street.atArrivalNode ?? false, detour ? undefined : nextWalk.street.questionPointIds)
           : nextWalk,
       }));
       setNotice(detour ? "ここから先の経路を更新しました。" : "選んだ行動を記録しました。");
