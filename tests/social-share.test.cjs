@@ -12,7 +12,7 @@ test('画像の有無によらずクイズの点数と公開アプリURLを共�
   for (const mock of [false, true]) {
     const text = quizShareText(scores, mock);
     assert(text.startsWith("「ジシンゴト」 で部屋の安全をチェックしました！\n【行動クイズの結果】\n"));
-    for (const value of ['初動対応：3/5点', '判断力：5/5点', '避難時の安全性：4/5点']) assert(text.includes(value));
+    for (const value of ['・初動対応：3/5点', '・判断力：5/5点', '・避難時の安全性：4/5点']) assert(text.split("\n").includes(value));
     assert(!text.includes('2/5点'));
     assert.equal(text.includes('サンプル'), mock);
     for (const platform of ['X', 'LINE']) {
