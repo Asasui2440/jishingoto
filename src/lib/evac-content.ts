@@ -42,6 +42,8 @@ export type LatLng = { lat: number; lng: number };
 
 /** 自治体オープンデータ由来の避難場所 */
 export type Shelter = {
+  purpose?: "home";
+  commuteFrom?: "work" | "school";
   supportedDisasters?: string[];
   id: string;
   name: string;

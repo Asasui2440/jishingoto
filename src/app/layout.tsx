@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Gabarito, Noto_Sans_JP, Rethink_Sans } from "next/font/google";
 import "./globals.css";
 import { PhaseOneNavigation } from "@/components/ui/PhaseOneNavigation";
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
   title: "ジシンゴト｜地震＋自分事",
   description:
     "部屋の写真から危ないところを見つけて、地震のときの動きを試せる防災シミュレーション。",
+  manifest: "/offline-evac/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "ジシンゴト" },
 };
 
@@ -52,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-audience="child"
     >
       <body className="min-h-full">
+        <Script src="/offline-evac/entry.mjs" type="module" strategy="afterInteractive" />
         <SettingsProvider>
           <SessionProvider>
             {/* スマホ幅が基準。PC で開いたときは中央に寄せる */}
