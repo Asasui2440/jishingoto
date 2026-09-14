@@ -52,7 +52,8 @@ export default function OnboardingPage() {
           <p className="font-display text-base font-bold text-ink"><Furigana text={"地震＋自分事"} /></p>
         </header>
 
-        <div className="flex justify-end text-sm">
+        <div className="flex items-center justify-end gap-3 text-sm">
+          <span className="text-xs text-ink-muted"><Furigana text={adult ? "大人向け" : "子供向け"} /></span>
           <Link href="/" className="py-2 font-bold text-ink-muted underline underline-offset-4">えらびなおす</Link>
         </div>
 
