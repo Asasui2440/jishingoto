@@ -111,7 +111,8 @@ function QuestionView({
         </div>
       </div>
 
-      <div className={["flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+      <div className={["quiz-content flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+        <div className="quiz-room flex flex-col gap-3">
         {/* 部屋で「あぶない」と確認した場所が、そのまま問題になる */}
         {kind && question.place ? (
           <div className="flex items-center gap-2">
@@ -129,7 +130,7 @@ function QuestionView({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
-            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 402px) 100vw, 402px" className="block h-auto w-full" priority />
+            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 639px) 100vw, 560px" className="block h-auto w-full" priority />
           )}
 
           {question.highlight ? (
@@ -173,6 +174,8 @@ function QuestionView({
           ) : null}
         </div></div>
 
+        </div>
+        <div className="quiz-question flex flex-col gap-3">
         <Card className="p-3">
           <p className="font-display text-lg font-bold text-ink">
             <Furigana text={question.situation} adult={question.adultSituation} />
@@ -207,6 +210,7 @@ function QuestionView({
             </li>
           ))}
         </ul>
+        </div>
       </div>
 
       <DisclaimerFooter />

@@ -35,8 +35,8 @@ test('children see product illustrations and advice without any outbound product
   assert.doesNotMatch(html, /<a\b|amazon\.co\.jp|メーカーのサイトへ/);
   assert.match(html, /お家/);
   for (const image of ['furniture-anchor', 'tv-belt', 'safety-film', 'cupboard-film', 'hanging-wire']) {
-    assert(html.includes(`/illustrations/products/${image}.png`));
-    assert(fs.existsSync(`public/illustrations/products/${image}.png`));
+    assert(html.includes(`/illustrations/textbook/products/${image}-v1.webp`));
+    assert(fs.existsSync(`public/illustrations/textbook/products/${image}-v1.webp`));
   }
 });
 test('adults retain manufacturer and shopping links next to illustrated advice', () => {
@@ -78,7 +78,7 @@ test('共有ページはLINEと成人用Xを表示し、保存用プレビュー
   assert.match(child, /LINEで共有/);
   assert.doesNotMatch(child, /結果と予想図を1枚で保存|保存する画像|<img/);
   assert.match(child, /予想図も共有する/);
-  assert.match(child, /jishingoto-rouge.vercel.app/);
+  assert.match(child, /jishingoto.vercel.app/);
   assert.doesNotMatch(child, /type="checkbox"[^>]*checked/);
   assert.match(child, /<button>.*?LINEで共有/);
   audience = 'adult';

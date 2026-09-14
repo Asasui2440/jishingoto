@@ -125,15 +125,15 @@ export const EXIT_EXPLANATION = [
 /** 手元の教材イラストから、その対象の備えに合うものだけを選ぶ。 */
 export function roomAdviceImage(risk: Risk): { src: string; alt: string } | null {
   const type = roomObjectType(risk);
-  if (isCooktop(risk)) return { src: "/illustrations/actions/cooktop-storage-v20.png", alt: "大人がふきんや袋をコンロから離れた上部収納や引き出しに片づける様子" };
-  if (type === "cupboard") return { src: "/illustrations/actions/cupboard-v13.png", alt: "男性がお皿を食器棚の低い段へしまう様子" };
-  if (isGlassDoor(risk)) return { src: "/illustrations/actions/glass-film-v14.png", alt: "大人がガラスのドアに飛散防止フィルムを貼っている様子" };
-  if (["bookshelf", "tall_furniture"].includes(type)) return { src: "/illustrations/actions/anchor-shelf-v14.png", alt: "棚本体を壁に金具で固定し、棚の中身に落下防止バーを設けた例" };
-  if (type === "elevated_objects") return { src: "/illustrations/actions/lower-items-v17.png", alt: "棚の上にあった厚い本を、大人が低い棚へ移す前後の様子" };
+  if (isCooktop(risk)) return { src: "/illustrations/textbook/actions/cooktop-storage-v2.webp", alt: "大人がふきんや袋をコンロから離れた上部収納や引き出しに片づける様子" };
+  if (type === "cupboard") return { src: "/illustrations/textbook/actions/cupboard-v2.webp", alt: "男性がお皿を食器棚の低い段へしまう様子" };
+  if (isGlassDoor(risk)) return { src: "/illustrations/textbook/actions/glass-film-v2.webp", alt: "大人がガラスのドアに飛散防止フィルムを貼っている様子" };
+  if (["bookshelf", "tall_furniture"].includes(type)) return { src: "/illustrations/textbook/actions/anchor-shelf-v2.webp", alt: "棚本体を壁に金具で固定し、棚の中身に落下防止バーを設けた例" };
+  if (type === "elevated_objects") return { src: "/illustrations/textbook/actions/lower-items-v2.webp", alt: "棚の上にあった厚い本を、大人が低い棚へ移す前後の様子" };
   if (isWallMountedTv(risk)) return null;
-  if (type === "tv") return { src: "/illustrations/products/tv-belt.png", alt: "テレビを台に固定するベルトの例" };
-  if (["doorway", "loose_objects"].includes(type) || risk.kind === "block") return { src: "/illustrations/actions/clear-floor-v20.png", alt: "床の段ボール箱やリュックを通り道から脇の収納場所へ移す様子" };
-  if (["window", "bed"].includes(type)) return { src: "/illustrations/actions/window-bed-v11.png", alt: "親子で割れるものと寝る場所の位置を確認する様子" };
+  if (type === "tv") return { src: "/illustrations/textbook/products/tv-belt-v1.webp", alt: "テレビを台に固定するベルトの例" };
+  if (["doorway", "loose_objects"].includes(type) || risk.kind === "block") return { src: "/illustrations/textbook/actions/clear-floor-v1.webp", alt: "床の段ボール箱やリュックを通り道から脇の収納場所へ移す様子" };
+  if (["window", "bed"].includes(type)) return { src: "/illustrations/textbook/actions/window-bed-v1.webp", alt: "親子で割れるものと寝る場所の位置を確認する様子" };
   return null;
 }
 
@@ -142,6 +142,6 @@ export function roomAdviceImages(risk: Risk, variant = 0): { src: string; alt: s
   const first = roomAdviceImage(risk);
   if (!first) return [];
   return roomObjectType(risk) === "elevated_objects"
-    ? [variant < 0.5 ? first : { src: "/illustrations/actions/lower-box-v21.png", alt: "同じ棚の上にあった収納箱を下段へ移す前後の例" }]
+    ? [variant < 0.5 ? first : { src: "/illustrations/textbook/actions/lower-box-v1.webp", alt: "同じ棚の上にあった収納箱を下段へ移す前後の例" }]
     : [first];
 }

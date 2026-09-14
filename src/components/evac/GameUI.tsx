@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { TopLink } from "@/components/ui/TopLink";
 import { Furigana } from "@/components/ui/Furigana";
 import styles from "./GameUI.module.css";
 
@@ -29,7 +30,10 @@ export function GameIcon({ name, className = "size-5" }: { name: IconName; class
 }
 
 export function GameShell({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`${styles.shell} ${className}`}>
+  return <div className={`game-shell ${styles.shell} ${className}`}>
+    <nav aria-label="フェーズ2の共通ナビゲーション" className="flex h-[52px] shrink-0 items-start px-3 pt-1">
+      <TopLink />
+    </nav>
     {children}
     <footer className={styles.footer}>練習用の想定です。災害時は公的情報に従ってください。</footer>
   </div>;

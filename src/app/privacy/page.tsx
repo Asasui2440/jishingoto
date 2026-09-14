@@ -71,7 +71,7 @@ export default function PrivacyBlurPage() {
       setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
       if (photoUrl) {
         const masked = await applyPrivacyMasks(photoUrl, blurRegions);
-        update({ photoUrl: masked, blurRegions: [] });
+        update({ photoUrl: masked, aftermathPhotoUrl: masked, roomViews: [], blurRegions: [] });
         void prepareMaskedRoom(masked);
       }
       router.push("/analyzing");

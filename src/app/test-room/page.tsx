@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { setRoomTestOptions } from "@/lib/room-test";
 import { clearRoomPreparation, prepareRoom } from "@/lib/room-preparation";
 import { useSession } from "@/lib/session";
+import { DETECTED_RISKS, QUESTIONS } from "@/lib/content";
 import { Button } from "@/components/ui/Button";
 
 export default function TestRoomPage() {
@@ -26,9 +27,20 @@ export default function TestRoomPage() {
     }}>APIなしでテスト開始</Button>
     <Button variant="outline" onClick={() => {
       reset();
+      setRoomTestOptions({ mode: "fixture", analysisMs: 0, imageMs: 0 });
+      const questions = [QUESTIONS[0], QUESTIONS.find(q => q.id === "q5")!];
+      update({ photoUrl: "/figma/img/room-risk.jpg", risks: DETECTED_RISKS.map(r => ({ ...r, confirmed: true })), questions,
+        answers: questions.map((q, i) => {
+          const c = q.choices.find(c => i === 0 ? c.safety < 0.4 : c.safety >= 0.7)!;
+          return { questionId: q.id, choiceId: c.id, safety: c.safety, axis: q.axis, timedOut: false };
+        }), analysisSource: "demo", analysisWarning: "結果ページの表示確認用の固定データです。", startedAt: Date.now(), finishedAt: Date.now(), resultStep: 0 });
+      router.push("/result");
+    }}>結果ページを試す（APIなし）</Button>
+    <Button variant="outline" onClick={() => {
+      reset();
       setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
       router.push("/camera");
     }}>実測するため写真を撮る（API課金あり）</Button>
-    <p className="text-11">実測はぼかし確認でOKを押した後、解析を1回呼びます。危険確認の画面では予想図の生成も行います。写真や解析結果をテスト用に保存しません。</p>
+    <p className="text-11">実測はぼかし確認でOKを押した後、解析を1回呼びます。家具の確認を終えてクイズへ進むと、想像図の生成と元写真との比較を各1回行います。写真や解析結果をテスト用に保存しません。</p>
   </main>;
 }

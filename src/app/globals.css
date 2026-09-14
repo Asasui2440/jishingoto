@@ -2,49 +2,43 @@
 
 /* ------------------------------------------------------------------
    デザイントークン
-   Figma「Codex祭」(rWWLKU9N8JD4mtaRojBL94) の値をそのまま写している。
+   青・緑・黄を基調に、白い面と濃い文字で輪郭をはっきりさせる。
 ------------------------------------------------------------------ */
 @theme {
   /* 面 */
-  --color-canvas: #f4f6f9;
+  --color-canvas: #f8f7f0;
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;
+  --color-border: #d9d7cc;
 
   /* 文字 */
-  --color-ink: #1a202c;
-  --color-ink-muted: #4a5568;
-  --color-ink-soft: #718096;
-  --color-ink-faint: #a0aec0;
+  --color-ink: #182d3b;
+  --color-ink-muted: #405868;
+  --color-ink-soft: #526775;
+  --color-ink-faint: #596b76;
 
-  /* プライマリ（黄）。Figma 変数 Accents/Yellow を基準にした4段階。
-     黄は明るいので、載せるものによって濃さを変えないと読めなくなる。
-     （#ffcc00 に白文字はコントラスト比 1.5:1 で、基準の 4.5:1 に遠く届かない）
-       primary      塗り。濃い文字（--color-ink, 10.8:1）を載せる
-       primary-mid  バー・枠線・アイコン。明るい面に対して 3.2:1
-       primary-ink  明るい面に置く文字。白地に対して 5.9:1
-       primary-soft 淡い面。上には primary-ink を載せる */
-  --color-primary: #ffcc00;
-  --color-primary-mid: #b87d00;
-  --color-primary-ink: #8a5a00;
-  --color-primary-soft: #fff6d6;
+  /* 元の黄色を主な操作に使い、明るい面の文字は落ち着いた濃色にする。 */
+  --color-primary: #ffcf3f;
+  --color-primary-mid: #967023;
+  --color-primary-ink: #5d4612;
+  --color-primary-soft: #fff3c8;
 
-  /* ロゴタイプ専用。Figma のブランド表現をそのまま残している */
-  --color-accent: #ffcc00;
+  /* 青いロゴと、黄色の主要操作。 */
+  --color-accent: #205f82;
 
   /* 補足・強調カード。黄色の操作ボタンと区別する。 */
-  --color-secondary: #2ec4b6;
-  --color-secondary-soft: #e6f9f7;
-  --color-secondary-ink: #11685f;
+  --color-secondary: #347b5d;
+  --color-secondary-soft: #e6f1ea;
+  --color-secondary-ink: #24563e;
 
   /* セマンティック */
-  --color-safe: #2ec4b6;
-  --color-safe-soft: #e6f9f7;
-  --color-warn: #ff9f1c;
-  --color-warn-soft: #fff5e6;
-  --color-danger: #e53e3e;
-  --color-danger-soft: #ffe3e3;
-  --color-glass: #4cc9f0;
-  --color-glass-soft: #eaf9ff;
+  --color-safe: #28704b;
+  --color-safe-soft: #e5f5e9;
+  --color-warn: #956017;
+  --color-warn-soft: #fff1d6;
+  --color-danger: #b44b43;
+  --color-danger-soft: #ffebe4;
+  --color-glass: #235f85;
+  --color-glass-soft: #e4eff7;
 
   /* SNS */
   --color-line: #06c755;
@@ -280,10 +274,73 @@ ruby > rt {
 }
 
 /* Phase 1: primary content stays visible; supporting detail opens separately. */
-.phase-one-navigation { position: fixed; top: max(4px, env(safe-area-inset-top)); left: max(12px, calc(50% - 189px)); z-index: 60; }
+.phase-one-navigation { position: fixed; top: max(4px, env(safe-area-inset-top)); left: max(12px, calc((100% - min(100%, 1120px)) / 2 + 12px)); z-index: 60; }
 .detail-sheet { position: fixed; inset: 0; margin: auto; padding: 0; width: min(100% - 24px, 440px); max-width: none; max-height: calc(100dvh - 24px); border: 0; border-radius: 20px; color: var(--color-ink); background: var(--color-canvas); }
 .detail-sheet::backdrop { background: rgb(15 23 42 / 55%); backdrop-filter: blur(3px); }
 .detail-sheet-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
 .detail-sheet-content { overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 .phase-one-actions { position: sticky; bottom: 0; z-index: 25; background: var(--color-canvas); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 html { scroll-padding-top: 60px; }
+
+.legacy-page { width: 100%; max-width: 1120px; margin: 0 auto; }
+@media (min-width: 640px) {
+  .legacy-page { width: calc(100% - 48px); margin: 24px auto; }
+  .phase-one-navigation { left: max(36px, calc((100% - 1120px) / 2 + 12px)); }
+}
+
+/* 本文の実際の幅に合わせる。横向き・分割画面も同じ規則を使う。 */
+.app-page { container-type: inline-size; min-width: 0; }
+.app-page img, .app-page video, .app-page canvas { max-width: 100%; }
+.settings-panel { width: min(100%, 720px); max-height: calc(100dvh - 16px); overflow-y: auto; }
+@media (min-width: 640px) {
+  .detail-sheet { width: min(100% - 48px, 760px); }
+}
+@container (min-width: 640px) {
+  .quiz-content { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; padding: 24px 32px 32px; }
+  .quiz-room, .quiz-question { min-width: 0; }
+  .quiz-question > ul { gap: 14px; }
+  .action-review { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .action-review > div:first-child { grid-column: 1 / -1; }
+  .action-review > figure { min-width: 0; }
+  .action-review > figure > div:not(.grid) img { height: clamp(210px, 28cqw, 290px); object-fit: contain; }
+  .review-copy { min-width: 0; padding: 24px; }
+  .action-review:not(:has(figure)) .review-copy { grid-column: 1 / -1; }
+  .home-hero { height: clamp(240px, 32cqw, 360px); }
+}
+
+.result-actions { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+@container (min-width: 640px) {
+  .result-page { justify-content: flex-start; }
+  .result-page > div:nth-child(2) { flex: 1; }
+}
+
+/* 避難体験は操作ボタンまでビューポート内に収める。 */
+.app-page:has(.game-shell) { margin-block: 0; min-height: 0; border: 0; box-shadow: none; }
+.book-shell:has(.game-shell) { display: block; padding: 0; }
+.book-shell:has(.game-shell) .book-index { display: none; }
+
+/* 元の画面構成を保ち、挿絵と補助的な装飾を整理する。 */
+.home-hero { background: white; border: 1px solid var(--color-border); }
+.home-hero img { padding: 5px 8px; }
+.review-figure { background: white; }
+.review-diagram { display: block; width: 100%; height: 210px; object-fit: contain; padding: 12px; }
+.review-figure .grid .review-diagram { height: 155px; padding: 6px; }
+.review-figure figcaption { background: var(--color-secondary-soft); }
+@container (min-width: 640px) {
+  .review-figure .grid .review-diagram { height: 185px; }
+}
+
+/* ロゴは読みやすい一続きの形を保ち、本文の文字拡大とは別に画面幅へ合わせる。 */
+.home-wordmark { font-size: min(2.5rem, 10cqw); }
+
+/* 色は見出しや小さな面に使い、本文と挿絵には白い余白を残す。 */
+.home-phase-two { border-color: #9fc9df; background: var(--color-glass-soft); color: var(--color-glass); }
+.home-phase-two:active { background: #d5eaf7; }
+.action-review > div:first-child { background: var(--color-glass-soft); color: var(--color-glass); }
+.detail-trigger { border-color: var(--color-border); color: var(--color-glass); }
+.detail-trigger:hover { background: var(--color-glass-soft); }
+.detail-trigger > span:first-child > span:first-child { color: var(--color-ink); }
+.detail-sheet-panel > header { background: var(--color-glass-soft); }
+.score-grid dt { min-height: 2.5em; }
+.score-grid { border-color: white; }
+.result-summary-card { border-color: var(--color-border); }

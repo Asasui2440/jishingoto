@@ -136,7 +136,7 @@ export async function composeRoomViews(frames: string[]): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-/** 表示用にはマスク済みの元画像を保持し、解析用一覧の座標と対応させる。 */
+/** 認識・個別表示用のマスク済み画像を、表示用一覧の座標と対応させる。 */
 export async function prepareRoomViews(frames: string[]): Promise<RoomView[]> {
   return Promise.all(frames.map(async (url, index) => {
     const image = new Image(); image.src = url; await image.decode();

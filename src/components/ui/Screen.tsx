@@ -10,17 +10,15 @@ export function StatusBar(_props: { tone?: "dark" | "light" }) {
   return null;
 }
 
-/** 全画面の下端にある注意書き＋ホームインジケータ */
+/** 全画面の下端にある注意書き。端末の操作表示はOSに任せる。 */
 export function DisclaimerFooter() {
   return (
     <div className="shrink-0 bg-surface">
-      <div className="flex items-center gap-2 border-y border-warn bg-warn-soft px-4 py-2.5">
+      <div className="flex items-start gap-2 border-t border-border bg-canvas px-4 py-3">
         <AlertCircleIcon className="size-4 shrink-0" />
         <p className="text-11 leading-[1.4] font-semibold text-ink-muted"><Furigana text={DISCLAIMER} /></p>
       </div>
-      <div className="safe-bottom flex justify-center pt-4">
-        <span className="h-[5px] w-[134px] rounded-[10px] bg-ink" />
-      </div>
+      <div className="safe-bottom" />
     </div>
   );
 }

@@ -41,19 +41,19 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
       {scene && <p className="mt-1 text-xs text-ink-muted">{scene.timing}</p>}
       <p className="mt-2 text-base leading-relaxed"><Furigana text={question.situation} adult={question.adultSituation} /></p>
     </section>
-  <article className="overflow-hidden rounded-panel bg-surface">
+  <article className="action-review overflow-hidden rounded-panel border border-border bg-surface">
     <div className="flex items-center justify-between gap-2 px-4 py-3 text-13 font-bold text-primary-ink">
       <p>Q{number} · <Furigana text={question.category} /></p>
     </div>
 
-    {scene && <figure className={scene.secondary ? "bg-secondary-soft p-3" : "bg-secondary-soft"}>
+    {scene && <figure className={scene.secondary ? "review-figure p-3" : "review-figure"}>
       <div className={scene.secondary ? "grid grid-cols-2 gap-2" : ""}>
         <div>
-          <Image src={reviewImagePath(scene.image)} alt={scene.alt} width={1536} height={1024} sizes={scene.secondary ? "(max-width: 480px) 44vw, 320px" : "(max-width: 480px) 100vw, 640px"} className={scene.secondary ? "h-auto w-full rounded-field object-contain" : "h-auto w-full"} loading="eager" />
+          <Image src={reviewImagePath(scene.image)} alt={scene.alt} width={1536} height={1024} sizes={scene.secondary ? "(max-width: 480px) 44vw, 320px" : "(max-width: 639px) 100vw, 540px"} className="review-diagram" loading="eager" />
           {scene.secondary && <p className="mt-2 text-center text-13 font-bold leading-relaxed"><Furigana text={scene.headline} /></p>}
         </div>
         {scene.secondary && <div>
-          <Image src={reviewImagePath(scene.secondary.image)} alt={scene.secondary.alt} width={1536} height={1024} sizes="(max-width: 480px) 44vw, 320px" className="mx-auto h-auto max-h-56 w-auto max-w-full rounded-field object-contain" loading="eager" />
+          <Image src={reviewImagePath(scene.secondary.image)} alt={scene.secondary.alt} width={1536} height={1024} sizes="(max-width: 480px) 44vw, 320px" className="review-diagram" loading="eager" />
           <p className="mt-2 text-center text-13 font-bold leading-relaxed"><Furigana text={scene.secondary.headline} /></p>
         </div>}
       </div>
@@ -67,8 +67,8 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
       <p className="text-sm font-bold text-secondary-ink">安全のために覚えておきたい行動</p>
       <p className="mt-1 text-15 font-bold"><Furigana text={best.label} /></p>
     </div>}
-    <div className="space-y-3 p-4">
-      <div className="border-l-[3px] border-border pl-3 text-ink">
+    <div className="review-copy space-y-3 p-4">
+      <div className="text-ink">
         {!timedOut && <>
         <p className="text-11 text-ink-muted">あなたが選んだ行動</p>
         <p className="mt-1 text-sm font-bold"><Furigana text={choice.label} /></p>

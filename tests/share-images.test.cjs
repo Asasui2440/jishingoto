@@ -15,8 +15,8 @@ test('shares both prepared images and text; unsupported and cancellation never c
     assert.equal(await mod.exports.shareImages(files, 'test'), 'shared');
     assert.deepEqual(sent, { files, text: 'test' });
     sent = null;
-    assert.equal(await mod.exports.shareImages([files[0]], '行動クイズ：5/5点\nhttps://jishingoto-rouge.vercel.app'), 'shared');
-    assert.deepEqual(sent, { files: [files[0]], text: '行動クイズ：5/5点\nhttps://jishingoto-rouge.vercel.app' });
+    assert.equal(await mod.exports.shareImages([files[0]], '行動クイズ：5/5点\nhttps://jishingoto.vercel.app'), 'shared');
+    assert.deepEqual(sent, { files: [files[0]], text: '行動クイズ：5/5点\nhttps://jishingoto.vercel.app' });
     sent = null;
     assert.equal(await mod.exports.shareImages([], 'test'), 'unsupported');
     assert.equal(sent, null);

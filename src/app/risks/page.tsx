@@ -12,6 +12,8 @@ import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { viewForRisk, riskOnView, groupRisksByView } from "@/lib/room-views";
 import { focusDescription } from "@/lib/focus-description";
+import { aftermathInput } from "@/lib/aftermath-plan";
+import { prepareAftermath } from "@/lib/room-preparation";
 import { SafetyProducts } from "@/components/SafetyProducts";
 import { RISK_KINDS } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
@@ -113,7 +115,11 @@ export default function RoomRecognitionPage() {
       questions: [],
       answers: [],
       finishedAt: null,
+      resultStep: 0,
     }));
+    const session = getSession();
+    const prediction = aftermathInput(session);
+    void prepareAftermath(prediction.photo, prediction.risks);
     router.push("/quiz");
   };
 

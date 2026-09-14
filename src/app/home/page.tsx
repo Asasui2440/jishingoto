@@ -5,7 +5,6 @@ import Link from "next/link";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import heroRoom from "@/../public/figma/img/hero-room.jpg";
 import { ArrowRightIcon, CameraBlueIcon, LogoCircleXIcon } from "@/components/icons";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { IconChip } from "@/components/ui/Bits";
@@ -48,7 +47,7 @@ export default function OnboardingPage() {
             <span className="grid size-14 place-items-center rounded-full bg-primary-soft">
               <LogoCircleXIcon className="size-6 text-primary-ink" />
             </span>
-            <p className="font-display text-40 leading-none font-black text-accent">ジシンゴト</p>
+            <p className="home-wordmark whitespace-nowrap font-display text-40 leading-none font-black text-primary-ink">ジシンゴト！</p>
           </div>
           <p className="font-display text-base font-bold text-ink"><Furigana text={"地震＋自分事"} /></p>
         </header>
@@ -58,9 +57,8 @@ export default function OnboardingPage() {
           <Link href="/" className="py-2 font-bold text-ink-muted underline underline-offset-4">えらびなおす</Link>
         </div>
 
-        <div className="relative h-[160px] w-full overflow-hidden rounded-panel shadow-[0_10px_24px_-8px_rgba(0,0,0,0.07)]">
-          <Image src={heroRoom} alt="部屋の家具を固定して安全対策をする様子" fill priority sizes="402px" className="object-cover" />
-          <span aria-hidden className="absolute inset-0 bg-white/[0.18]" />
+        <div className="home-hero relative h-[185px] w-full overflow-hidden rounded-panel">
+          <Image src="/illustrations/textbook/room-v3.webp" alt="親子が本棚や机、出入口を確かめる、淡い色の部屋のイラスト" fill priority sizes="(max-width: 639px) 100vw, 1000px" className="object-contain" />
         </div>
 
         <h1 className={`text-center text-balance font-display leading-[1.3] font-extrabold text-ink text-xl`}>
@@ -72,7 +70,7 @@ export default function OnboardingPage() {
           <Furigana text="体験[たいけん]を始[はじ]める" adult="体験を始める" />
         </Button>
 
-        <Button variant="outline" size="md" onClick={() => router.push("/evac")}>
+        <Button variant="outline" size="md" className="home-phase-two" onClick={() => router.push("/evac")}>
           <Furigana text="避難経路をためす（フェーズ2）" adult="避難経路をシミュレーション（フェーズ2）" />
         </Button>
 

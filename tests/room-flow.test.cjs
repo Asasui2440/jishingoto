@@ -60,13 +60,13 @@ test("glass doors and dish cupboards keep object-specific advice and illustratio
     }
   }
   const cupboard = { ...risk("other", "break"), name: "ガラス扉の食器棚" };
-  assert.match(roomAdviceImage(cupboard).src, /cupboard-v13/);
+  assert.match(roomAdviceImage(cupboard).src, /cupboard-v2/);
   assert.match(roomAdvice(cupboard, "child").headline, /食器/);
   assert.match(roomAdviceImage(risk("bookshelf")).src, /anchor-shelf/);
   assert.match(roomAdviceImage({ ...risk("doorway", "block"), name: "木のドア" }).src, /clear-floor/);
 });
 
-test("every correct action uses its corresponding generated illustration", async () => {
+test("every recommended action keeps its matching explanatory illustration", async () => {
   const { reviewIllustration, reviewImagePath } = load("src/lib/review-illustrations.ts");
   const { SCENARIOS } = load("src/lib/scenarios.ts");
   const { AFTER_SHAKING_QUESTIONS } = load("src/lib/after-shaking-questions.ts");
@@ -79,9 +79,12 @@ test("every correct action uses its corresponding generated illustration", async
     if (q.id === "home-kitchen-after") assert.equal(scene.image, "cooktop-off-v20");
     if (q.id === "home-kitchen-after") {
       assert.equal(scene.secondary?.image, "gas-shutoff-v21");
+      assert.match(reviewImagePath(scene.secondary.image), /^\/illustrations\/textbook\//);
+      assert.notEqual(reviewImagePath(scene.image), reviewImagePath(scene.secondary.image));
       assert(fs.existsSync(`public${reviewImagePath(scene.secondary.image)}`));
     }
     assert(scene, `missing illustration for ${q.id}`);
+    assert.match(reviewImagePath(scene.image), /^\/illustrations\/textbook\//, q.id);
     assert(fs.existsSync(`public${reviewImagePath(scene.image)}`), scene.image);
     if (SCENARIOS.some((scenario) => scenario.id === q.id)) assert.equal(scene.image, q.id === "shelter-tsunami" ? "coast-evacuate-v20" : q.id === "shelter-damaged" ? "damaged-exit-v22" : `${q.id}-v4`);
     if (q.phase === "after") assert.match(scene.timing, /収ま/);
@@ -107,7 +110,7 @@ test("fixture mode performs no API calls, measures simulated delays, and resets 
     assert.equal(calls, 0);
     assert.equal(analysis.source, "demo");
     assert.equal(image.source, "test");
-    assert.equal(image.imageUrl, photo);
+    assert.equal(image.imageUrl, "/figma/img/room-risk.jpg");
     const t = roomTimings();
     assert.equal(t.mode, "fixture");
     assert(t.analysis.end - t.analysis.start >= 5);
@@ -155,11 +158,11 @@ test("room analysis does not generate an unrelated image; an explicit preview ca
     const edited = [{ ...risk("window", "break"), name: "修正した窓" }];
     const result = prepareAftermath(photo, edited);
     assert.equal(requests.length, 2);
-    assert.deepEqual(requests[1].body, { image: photo });
+    assert.deepEqual(requests[1].body, { image: photo, objects: [{ name: edited[0].adultName || edited[0].name, type: "window", bounds: null, mounted: false }] });
     requests[1].resolve(Response.json({ imageUrl: "data:image/png;base64,aW1hZ2U=" }));
     assert.equal((await result).events[0].riskId, "window");
     assert.equal(preparedAftermath(photo, edited).events[0].riskId, "window");
-    assert.equal((await prepareAftermath(photo, [])).events.length, 0);
+    assert.equal((await prepareAftermath(photo, structuredClone(edited))).events.length, 1);
     assert.equal(requests.length, 2);
     clearRoomPreparation();
     assert.equal(preparedAftermath(photo, edited), null);
@@ -437,7 +440,7 @@ test("missing hydration photo cannot evict an image job, and failed generation c
     await prepareAftermath(null, []);
     const duplicate = prepareAftermath(photo, []);
     assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0].body, { image: photo });
+    assert.deepEqual(calls[0].body, { image: photo, objects: [] });
     calls[0].resolve(Response.json({ error: "openai-timeout" }, { status: 502 }));
     assert.match((await first).error, /時間/);
     await duplicate;
@@ -456,7 +459,7 @@ test("missing hydration photo cannot evict an image job, and failed generation c
 });
 
 
-test("masked submission starts analysis and prediction together with identical image bytes", async () => {
+test("masked photo waits for confirmed furniture before generating from the same masked image", async () => {
   const { prepareMaskedRoom, prepareAftermath, clearRoomPreparation } = load("src/lib/room-preparation.ts");
   const originalFetch = global.fetch;
   const calls = [];
@@ -465,16 +468,55 @@ test("masked submission starts analysis and prediction together with identical i
   clearRoomPreparation();
   try {
     const analysis = prepareMaskedRoom(masked);
-    assert.deepEqual(calls.map(c => c.url), ["/api/room/analyze", "/api/room/aftermath"]);
-    assert.ok(calls.every(c => c.body.image === masked));
+    assert.deepEqual(calls.map(c => c.url), ["/api/room/analyze"]);
     calls[0].resolve(Response.json({ risks: [] }));
-    calls[1].resolve(Response.json({ imageUrl: "generated" }));
     await analysis;
-    assert.equal((await prepareAftermath(masked, [])).imageUrl, "generated");
+    assert.equal(calls.length, 1, "recognition completion does not bypass furniture confirmation");
+    const image = prepareAftermath(masked, [risk("bookshelf")]);
+    assert.ok(calls.every(c => c.body.image === masked));
+    assert.equal(calls[1].body.objects[0].type, "bookshelf");
+    calls[1].resolve(Response.json({ imageUrl: "generated" }));
+    assert.equal((await image).imageUrl, "generated");
     assert.equal(calls.length, 2);
   } finally { global.fetch = originalFetch; clearRoomPreparation(); }
 });
 
+
+test("multi-view analysis preserves masked originals and only reuses a job for identical views", async () => {
+  const { prepareMaskedRoom, prepareRoom, clearRoomPreparation } = load("src/lib/room-preparation.ts");
+  const originalFetch = global.fetch;
+  const calls = [];
+  const photo = "data:image/jpeg;base64,Y29tcG9zaXRl";
+  const views = [0,1].map(i => ({url:`data:image/jpeg;base64,${Buffer.from(`masked-${i}`).toString('base64')}`,bounds:{x:i*50,y:10,w:50,h:80}}));
+  clearRoomPreparation();
+  global.fetch = (url, options) => {
+    calls.push({url,body:JSON.parse(options.body)});
+    return Promise.resolve(Response.json(url.endsWith('/analyze') ? {risks:[],source:'ai'} : {imageUrl:'generated'}));
+  };
+  try {
+    const first = prepareMaskedRoom(photo, views);
+    assert.deepEqual(calls.map(c => c.url), ['/api/room/analyze']);
+    assert.deepEqual(calls[0].body, {views});
+    assert.equal(prepareRoom(photo, structuredClone(views)), first, 'navigation reuses the same analysis');
+    assert.equal((await first).source,'ai');
+    assert.equal(calls.length,1);
+    views[0].url = 'data:image/jpeg;base64,bmV3LW1hc2s=';
+    const remasked = prepareRoom(photo, views);
+    assert.notEqual(remasked, first, 'a changed mask invalidates cached analysis even if the collage is unchanged');
+    await remasked;
+    assert.equal(calls.length,2);
+    assert.equal(calls[1].body.views[0].url, views[0].url);
+    views[0].bounds.y = 5;
+    const remapped = prepareRoom(photo, views);
+    assert.notEqual(remapped, remasked);
+    await remapped;
+    assert.equal(calls.length,3);
+    const single = prepareRoom(photo);
+    assert.notEqual(single, remapped);
+    await single;
+    assert.deepEqual(calls[3].body, {image:photo});
+  } finally { global.fetch = originalFetch; clearRoomPreparation(); }
+});
 
 test("tall shelves distinguish cabinet anchoring from falling contents and elevated objects", () => {
   const { roomAdvice, roomAdviceImage } = load("src/lib/room-guidance.ts");
@@ -525,7 +567,7 @@ test("cooktop preparation has fire precautions instead of furniture-moving advic
     assert.match(advice, /消火器/);
     assert.doesNotMatch(advice, /重.*低|寝る場所|転倒/);
   }
-  assert.match(roomAdviceImage(stove).src, /cooktop-storage-v20/);
+  assert.equal(roomAdviceImage(stove).src, "/illustrations/textbook/actions/cooktop-storage-v2.webp");
 });
 
 test("elevated object illustration selects exactly one of books or box", () => {
@@ -540,23 +582,40 @@ test("elevated object illustration selects exactly one of books or box", () => {
   assert.deepEqual(roomAdviceImages(risk("tv"), 0.2), roomAdviceImages(risk("tv"), 0.8));
 });
 
-test('動画の解析はマスク済み一覧、予想図はマスク済みの広い写真1枚を使い再利用する', async () => {
+test('動画は個別写真を解析し、家具確認後に代表写真の対象だけを生成して再利用する', async () => {
   const { prepareMaskedRoom, prepareAftermath, clearRoomPreparation } = load('src/lib/room-preparation.ts');
-  const originalFetch=global.fetch;
-  const calls=[];
-  global.fetch=async(url,options)=>{
-    calls.push({url,body:JSON.parse(options.body)});
-    return Response.json(url.endsWith('/analyze')?{risks:[]}:{imageUrl:'generated-wide'});
+  const { aftermathInput } = load('src/lib/aftermath-plan.ts');
+  const originalFetch = global.fetch, calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({url, body: JSON.parse(options.body)});
+    return Response.json(url.endsWith('/analyze') ? {risks: []} : {imageUrl: 'generated-wide'});
   };
   clearRoomPreparation();
   try {
-    const collage='data:image/png;base64,Y29sbGFnZQ==';
-    const wide='data:image/png;base64,bWFza2VkLXdpZGU=';
-    await prepareMaskedRoom(collage,wide);
-    assert.deepEqual(calls.map(c=>[c.url,c.body.image]),[['/api/room/analyze',collage],['/api/room/aftermath',wide]]);
-    assert.equal((await prepareAftermath(wide,[])).imageUrl,'generated-wide');
-    assert.equal(calls.length,2);
-  } finally {global.fetch=originalFetch;clearRoomPreparation();}
+    const collage = 'data:image/png;base64,Y29sbGFnZQ==';
+    const wide = 'data:image/png;base64,bWFza2VkLXdpZGU=';
+    const views = [wide, 'data:image/png;base64,c2Vjb25k', 'data:image/png;base64,dGhpcmQ=']
+      .map((url, i) => ({url, bounds: {x: i % 2 * 50, y: Math.floor(i / 2) * 50, w: 50, h: 50}}));
+    await prepareMaskedRoom(collage, views);
+    assert.deepEqual(calls, [{url: '/api/room/analyze', body: {views}}]);
+    const first = {...risk('bookshelf'), x: 15, y: 20, bounds: {x: 5, y: 10, w: 20, h: 20}};
+    const second = {...risk('window'), x: 75, y: 20, bounds: {x: 65, y: 10, w: 20, h: 20}};
+    const session = {photoUrl: collage, aftermathPhotoUrl: wide, roomViews: views, risks: [first, second, {...first, confirmed: false}]};
+    const input = aftermathInput(session);
+    assert.equal(input.photo, wide);
+    assert.equal(input.risks.length, 1);
+    assert.deepEqual(input.risks[0].bounds, {x: 10, y: 20, w: 40, h: 40});
+    assert.equal((await prepareAftermath(input.photo, input.risks)).imageUrl, 'generated-wide');
+    assert.equal(calls[1].body.image, wide);
+    assert.deepEqual(calls[1].body.objects.map(o => [o.type, o.bounds]), [['bookshelf', {x: 10, y: 20, w: 40, h: 40}]]);
+    const shared = aftermathInput(structuredClone(session));
+    await prepareAftermath(shared.photo, shared.risks);
+    assert.equal(calls.length, 2);
+    const otherView = aftermathInput({...session, aftermathPhotoUrl: views[1].url});
+    await prepareAftermath(otherView.photo, otherView.risks);
+    assert.equal(calls.length, 3);
+    assert.equal(calls[2].body.objects[0].type, 'window');
+  } finally {global.fetch = originalFetch; clearRoomPreparation();}
 });
 
 test("生成失敗と写真なしはサンプル、成功時は本人の予想図を表示する", () => {
@@ -581,4 +640,29 @@ test("サンプルを保存するPNGにもサンプル表示と4項目を含む"
     assert(labels.some(text => text.includes("あなたの部屋を再現した画像ではありません")));
     assert(labels.includes("3/5") && labels.includes("4/5"));
   } finally { global.Image = before.Image; global.document = before.document; }
+});
+
+test("changing confirmed furniture invalidates the generated image without accepting stale completions", async () => {
+  const { prepareAftermath, preparedAftermath, clearRoomPreparation } = load("src/lib/room-preparation.ts");
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = (_, init) => new Promise(resolve => calls.push({body:JSON.parse(init.body),resolve}));
+  clearRoomPreparation();
+  try {
+    const photo = 'data:image/png;base64,AA==';
+    const firstRisks = [{...risk('tv'),name:'壁掛けテレビ',adultName:'壁掛けテレビ',bounds:{x:10,y:20,w:30,h:40}}];
+    const first = prepareAftermath(photo, firstRisks);
+    assert.equal(calls[0].body.objects[0].mounted,true);
+    const edited = [{...risk('window','break'),name:'窓',bounds:{x:10,y:20,w:30,h:40}}];
+    const second = prepareAftermath(photo, edited);
+    assert.equal(calls.length,2);
+    calls[1].resolve(Response.json({imageUrl:'corrected'}));
+    await second;
+    calls[0].resolve(Response.json({imageUrl:'old'}));
+    await first;
+    assert.equal(preparedAftermath(photo, firstRisks),null);
+    assert.equal(preparedAftermath(photo, edited).imageUrl,'corrected');
+    await prepareAftermath(photo, structuredClone(edited));
+    assert.equal(calls.length,2);
+  } finally { global.fetch = originalFetch; clearRoomPreparation(); }
 });
