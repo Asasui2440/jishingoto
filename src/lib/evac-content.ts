@@ -127,6 +127,7 @@ export type EvacChoice = {
 };
 
 export type HazardEvent = {
+  locationReference?: { label: string; url: string };
   evidence?: import("./geo-types").GeoEvidence;
   id: string;
   kind: EventKind;

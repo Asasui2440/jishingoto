@@ -10,7 +10,7 @@ import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/
 import { Button } from "@/components/ui/Button";
 import { plain } from "@/components/ui/Furigana";
 import { formatDistance, formatDuration, getEvac } from "@/lib/evac";
-import { walkedPath } from "@/lib/evac-walk";
+import { alignWalkQuestions, walkedPath } from "@/lib/evac-walk";
 import { useEvacWalk } from "@/lib/use-evac-walk";
 import { angleDifference, type StreetControls, type StreetSnapshot } from "@/lib/street-navigation";
 import { useStreetRoutePlan } from "@/lib/use-street-route-plan";
@@ -29,8 +29,16 @@ export default function EvacWalkPage() {
   const { mode, home, shelter, walk, decisions, timerSeconds, update } = evac;
   const { preparation, retry: retryPlan } = useStreetRoutePlan(route, street, mode === "api");
   const plan = preparation?.plan ?? null;
+  useEffect(() => {
+    if (!plan || !route) return;
+    update(prev => {
+      if (!prev.walk || prev.walk.routeId !== route.id) return prev;
+      const aligned = alignWalkQuestions(prev.walk,route,plan.nodes,prev.decisions.map(d => d.eventId));
+      return aligned === prev.walk ? prev : {...prev,walk:aligned};
+    });
+  }, [plan,route,update]);
   const arrivalNode = plan?.nodes.at(-1) ?? street?.arrivalNode;
-  const ready = mode === "api" ? preparation?.status === "ready" && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
+  const ready = mode === "api" ? preparation?.status === "ready" && (walk?.source !== "context" || walk.questionSpacingVersion === 2) && !!street?.ready && !street.busy && !street.error : !!step && readyStepId === step.id;
   const onNavigation = useCallback((snapshot: StreetSnapshot) => {
     setStreet(snapshot);
     observeStreet({ ...snapshot, arrivalNode: plan?.nodes.at(-1) ?? snapshot.arrivalNode });

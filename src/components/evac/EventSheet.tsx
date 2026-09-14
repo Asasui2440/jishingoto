@@ -59,6 +59,7 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
         <span className="min-w-0 flex-1 font-display text-13 leading-relaxed font-bold text-ink"><Furigana text={event.title} /></span>
         <GameIcon name="info" className="size-4 shrink-0 text-primary-ink" />
       </button>
+      {event.id.startsWith("walk-case-") ? <p className="text-11 leading-relaxed text-ink-muted"><Furigana text={event.situation.split("\n")[0].replace("【想定問題】", "")} /></p> : null}
       {remaining === 0 ? <p role="status" className="text-11 text-primary-ink">時間です。あわてず、行動を選んでください。</p> : null}
       {busy ? <p role="status" className="text-11 text-primary-ink">迂回路を確認中…</p> : null}
       </div>
@@ -77,6 +78,7 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
         <div className="overflow-hidden rounded-2xl bg-canvas"><HazardSketch kind={event.kind} className="h-[150px] w-full" /><p className="px-3 py-2 text-11 text-ink-muted">想定を説明するイラストです。現地の被害ではありません。</p></div>
         <p className="font-display text-15 font-bold text-ink"><Furigana text={event.title} /></p>
         <p className="text-13 leading-relaxed text-ink-muted"><Furigana text={event.situation} /></p>
+        {event.locationReference ? <a className="text-11 text-primary-ink underline" href={event.locationReference.url} target="_blank" rel="noreferrer">{event.locationReference.label}</a> : null}
         <div className="space-y-3">{event.choices.map((choice, i) => <div key={choice.id} className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-11 font-bold text-primary-ink">{i + 1}</span><div><p className="text-13 font-bold text-ink"><Furigana text={choice.label} /></p><p className="mt-1 text-13 leading-relaxed text-ink-muted"><Furigana text={choice.detail} /></p></div></div>)}</div>
         <p className="text-11 leading-relaxed text-ink-muted"><Furigana text={SCENARIO_NOTE} /><br /><Furigana text={MAP_NOTE} /></p>
         <button type="button" onClick={() => setDetails(false)} className="min-h-12 rounded-full bg-primary font-bold text-ink">行動を選ぶ</button>
