@@ -13,6 +13,7 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES = {
+  sm: "min-h-10 px-2 py-1.5 text-sm rounded-pill",
   lg: "min-h-14 px-6 py-3 text-lg rounded-pill",
   md: "min-h-12 px-4 py-2 text-15 rounded-[24px]",
 } as const;

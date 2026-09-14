@@ -9,13 +9,16 @@ const files = [new File(['room'], 'room.png', { type: 'image/png' }), new File([
 test('shares both prepared images and text; unsupported and cancellation never claim success', async () => {
   const old = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   let sent;
-  const navigator = { canShare: ({ files: candidate }) => candidate.length === 2, share: async data => { sent = data; } };
+  const navigator = { canShare: ({ files: candidate, text }) => candidate.length >= 1 && typeof text === 'string', share: async data => { sent = data; } };
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: navigator });
   try {
     assert.equal(await mod.exports.shareImages(files, 'test'), 'shared');
     assert.deepEqual(sent, { files, text: 'test' });
     sent = null;
-    assert.equal(await mod.exports.shareImages([files[0]], 'test'), 'unsupported');
+    assert.equal(await mod.exports.shareImages([files[0]], '行動クイズ：5/5点\nhttps://jishingoto-rouge.vercel.app'), 'shared');
+    assert.deepEqual(sent, { files: [files[0]], text: '行動クイズ：5/5点\nhttps://jishingoto-rouge.vercel.app' });
+    sent = null;
+    assert.equal(await mod.exports.shareImages([], 'test'), 'unsupported');
     assert.equal(sent, null);
     navigator.canShare = () => false;
     assert.equal(await mod.exports.shareImages(files, 'test'), 'unsupported');

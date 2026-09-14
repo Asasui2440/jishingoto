@@ -27,6 +27,7 @@ export type Session = {
   /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
   roomViews: RoomView[];
+  aftermathPhotoUrl: string | null;
   blurRegions: BlurRegion[];
   risks: Risk[];
   /** この部屋の危険に合わせて選んだ設問 */
@@ -47,6 +48,7 @@ const EMPTY: Session = {
   resultStep: 0,
   photoUrl: null,
   roomViews: [],
+  aftermathPhotoUrl: null,
   blurRegions: [],
   risks: [],
   questions: [],
@@ -62,6 +64,7 @@ const EMPTY: Session = {
 const store = createPersistentStore<Session>("jishingoto.session.v1", EMPTY, "session", [
   "photoUrl",
   "roomViews",
+  "aftermathPhotoUrl",
 ]);
 
 /** 状態は外部ストアに持つので、Provider は木を素通りさせるだけ */
