@@ -1,4 +1,5 @@
 import type { HazardEvent, EvacChoice } from "@/lib/evac-content";
+import Image from "next/image";
 
 type Scene = "route" | "low" | "water" | "rain" | "wall" | "traffic" | "sign" | "glass" | "crack" | "sand" | "slope" | "wire" | "signal" | "quake" | "barrier" | "gate" | "stairs" | "tired" | "crowd" | "talk" | "battery" | "entrance" | "reception" | "smoke" | "emergency" | "alarm" | "tower" | "exit" | "parking" | "boxes" | "shops";
 type Action = "map" | "forward" | "wait" | "back" | "side" | "call" | "shelter" | "shield" | "look" | "cross" | "ask" | "carry" | "rest" | "slow" | "follow" | "note" | "phone" | "save" | "mask" | "alone";
@@ -67,6 +68,11 @@ function Environment({scene}: {scene:Scene}) {
 
 /** The same place, with different people, tools and movement for each proposed action. */
 export function WalkIllustration({event, choice, className=""}: {event:HazardEvent;choice?:EvacChoice;className?:string}) {
+  if (event.id === "walk-case-18") {
+    const variant = !choice ? "situation" : choice.id === "go" ? "go" : choice.id === "consider" ? "consider" : "distance";
+    const description = choice ? `行動のイラスト：${choice.label}` : `状況のイラスト：${event.situation}`;
+    return <Image src={`/illustrations/evac/walk-case-18/${variant}-v2.webp`} width={960} height={640} alt={description} aria-label={description} role="img" className={className} style={{objectFit:"contain"}} unoptimized />;
+  }
   const fallback: Scene = event.id === "practice-flood" ? "water" : event.kind === "wall" ? "wall" : event.kind === "fall" ? "glass" : event.kind === "closed" ? "barrier" : "route";
   const definition = scenes[Number(event.id.replace("walk-case-",""))] ?? [fallback, choice?.id === "detour" ? "back" : "side", "forward", "wait"] as const;
   const [scene, recommended, proceed, consider] = definition;
