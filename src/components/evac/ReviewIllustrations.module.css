@@ -1,7 +1,9 @@
 .review { display: grid; gap: 12px; }
-.scenario { display: grid; grid-template-columns: minmax(64px, 96px) minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px; border: 2px solid #80a8d5; border-left-width: 6px; border-radius: 16px; background: #eaf3ff; }
+.scenario { display: grid; gap: 12px; padding: 12px; border: 2px solid #80a8d5; border-left-width: 6px; border-radius: 16px; background: #eaf3ff; }
+.scenarioCaption { justify-self: start; }
+.scenarioContent { display: grid; grid-template-columns: minmax(64px, 96px) minmax(0, 1fr); align-items: center; gap: 12px; }
 .scenarioImage { display: block; width: 100%; height: 96px; object-fit: contain; border: 1px solid #c0d5ee; border-radius: 10px; background: white; }
-.conditionHeading { display: inline-block; margin-bottom: 8px; padding: 4px 8px; border-radius: 6px; background: #245a91; color: white; font-size: 12px; font-weight: 800; }
+.conditionHeading { display: inline-block; padding: 4px 8px; border-radius: 6px; background: #245a91; color: white; font-size: 12px; font-weight: 800; }
 .condition { font-size: 14px; font-weight: 700; line-height: 1.8; color: #163d64; white-space: pre-line; }
 .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .single { grid-template-columns: minmax(0, 1fr); }
@@ -9,4 +11,4 @@
 .actionHeading { font-size: 11px; font-weight: 800; line-height: 1.5; color: var(--color-ink); }
 .actionImage { display: block; width: 100%; height: clamp(64px, 10dvh, 90px); object-fit: contain; }
 .actionLabel { font-size: 13px; font-weight: 700; line-height: 1.8; color: var(--color-ink); }
-@media (max-width: 360px) { .scenario { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; padding: 10px; } .condition { font-size: 13px; } .action { padding: 10px; } }
+@media (max-width: 360px) { .scenario { gap: 10px; padding: 10px; } .scenarioContent { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; } .condition { font-size: 13px; } .action { padding: 10px; } }

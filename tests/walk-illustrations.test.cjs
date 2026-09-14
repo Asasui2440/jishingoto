@@ -76,3 +76,9 @@ test("保存するルートは迂回を含む通過記録で、GeoJSONは経度�
   assert.equal(exportEvacRoute({...session,walk:null}).features[0].properties.routeType,"選択した経路");
   assert.throws(()=>exportEvacRoute({...session,walk:null,routes:[]}),/保存できるルート/);
 });
+
+test("条件文の問いかけ以降は保存済みの補足も含めて表示しない", () => {
+  const {eventCondition} = load("src/lib/evac-display.ts");
+  assert.equal(eventCondition("【想定問題】道がふさがっています。\nこの条件では、まずどうしますか？\n後続の説明"), "道がふさがっています。");
+  assert.equal(eventCondition("条件だけの文章"), "条件だけの文章");
+});
