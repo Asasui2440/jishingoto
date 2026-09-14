@@ -54,7 +54,7 @@ export default function OnboardingPage() {
         </header>
 
         <div className="flex items-center justify-end gap-3 text-sm">
-          <span className="text-xs text-ink-muted"><Furigana text={adult ? "大人向け" : "子供向け"} /></span>
+          <span className="rounded-pill bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary-ink"><Furigana text={adult ? "大人向け" : "子供向け"} /></span>
           <Link href="/" className="py-2 font-bold text-ink-muted underline underline-offset-4">えらびなおす</Link>
         </div>
 
