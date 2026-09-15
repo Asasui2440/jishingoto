@@ -241,10 +241,10 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   expect(exported.features[0].geometry.coordinates.length).toBeGreaterThan(1);
   expect(exported.features[0].properties.followUp).toBe(selected);
   await expect(page.getByRole("status")).toContainText("ダウンロードしました");
-  await noPageOverflow(page, page.getByRole("button",{name:"トップに戻る",exact:true}));
+  await noPageOverflow(page, page.getByRole("link",{name:"トップページへ戻る",exact:true}));
   await noPageOverflow(page, page.getByRole("button",{name:"別のルートで試す",exact:true}));
   await page.screenshot({path:testInfo.outputPath("complete-options.png")});
-  await page.getByRole("button",{name:"トップに戻る",exact:true}).click();
+  await page.getByRole("link",{name:"トップページへ戻る",exact:true}).click();
   await expect(page).toHaveURL(/\/home$/);
   await page.goto("/evac/complete");
   await page.getByRole("button",{name:"別のルートで試す",exact:true}).click();
@@ -443,14 +443,35 @@ test("判断中は自動歩行を保持し回答後に再開する", async ({ pa
   expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual(["B", "C"]);
 });
 
-test("接続確認が終わるまで歩行を始めず接続のないルートは開始させない", async ({ page }) => {
+test("接続失敗は歩行ボタンを再試行に切り替え、Street View中央に表示する", async ({ page }, testInfo) => {
   await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
   await page.goto("/evac/walk?slowPlan=1&disconnected=1");
-  await expect(page.getByText(/道のつながりを確認しています/)).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "地点確認の進捗" })).toBeVisible();
   await expect(page.getByRole("button", { name: "向いている道へ進む" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "道を再確認する" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "自動で歩く" })).toBeDisabled();
+  const actions = page.getByRole("region", { name: "歩行の操作" });
+  await expect(actions.getByRole("button")).toHaveCount(2);
+  await expect(actions.getByRole("button", { name: "向いている道へ進む" })).toHaveCount(0);
+  await expect(actions.getByRole("button", { name: "自動で歩く" })).toHaveCount(0);
+  await expect(actions.getByRole("button", { name: "ルートを選び直す" })).toBeEnabled();
+  const scene = page.getByRole("region", { name: "Street Viewで進む体験" });
+  const alert = scene.getByRole("alert");
+  await expect(alert).toContainText("接続を確認できませんでした");
+  const sceneBox = (await scene.boundingBox())!;
+  const alertBox = (await alert.boundingBox())!;
+  const actionsBox = (await actions.boundingBox())!;
+  expect(Math.abs(alertBox.y + alertBox.height / 2 - (sceneBox.y + sceneBox.height / 2))).toBeLessThan(2);
+  expect(Math.abs(alertBox.x + alertBox.width / 2 - (sceneBox.x + sceneBox.width / 2))).toBeLessThan(2);
+  expect(alertBox.y + alertBox.height).toBeLessThan(actionsBox.y);
+  await noPageOverflow(page, actions.getByRole("button", { name: "道を再確認する" }));
+  await page.screenshot({ path: testInfo.outputPath("route-recovery.png") });
+  await actions.getByRole("button", { name: "道を再確認する" }).click();
+  await expect(actions.getByRole("button", { name: "向いている道へ進む" })).toBeDisabled();
+  await expect(actions.getByRole("button", { name: "道を再確認する" })).toBeEnabled();
+  await expect(actions.getByRole("button")).toHaveCount(2);
   expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual([]);
+  await actions.getByRole("button", { name: "ルートを選び直す" }).click();
+  await expect(page).toHaveURL(/\/evac\/routes$/);
 });
 
 test("地図表示中も自動歩行を保持し閉じると再開する", async ({ page }) => {
@@ -796,11 +817,37 @@ for (const perfect of [true, false]) {
       saved.decisions = events.map((event,i)=>({
         pointId:`review-${i}`, eventId:event.id,
         choiceId: perfect || i===0 ? event.choices.reduce((a,b)=>a.priority>b.priority?a:b).id : "go",
-        position:saved.home, extraSeconds:0, rerouted:false, timedOut:false,
+        position:saved.home, extraSeconds:perfect ? 55 : 0, rerouted:false, timedOut:false,
       }));
       sessionStorage.setItem("jishingoto.evac.v2",JSON.stringify(saved));
     },{events:[WALK_SCENARIOS.find(s=>s.number===18)!.event,WALK_SCENARIOS.find(s=>s.number===38)!.event],perfect});
     await page.goto("/evac/report");
+    const addedTime = page.getByLabel("選んだ行動による追加時間");
+    await expect(addedTime).toContainText(perfect ? "＋1分50秒" : "追加なし");
+    await expect(addedTime).not.toContainText("選んだ行動で");
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    if (perfect) {
+      await expect(addedTime.locator("..")).toContainText("約2分");
+    }
+    await page.screenshot({path:testInfo.outputPath(`choice-time-${perfect}.png`)});
+    const info = page.getByRole("button", { name: "追加時間の説明" });
+    await info.tap();
+    await expect(page.getByRole("tooltip")).toContainText("選んだ行動によって追加された想定時間");
+    await expect(page.getByRole("tooltip")).toContainText("合計に含まれています");
+    await expect(page.getByRole("tooltip")).toBeInViewport({ ratio: 1 });
+    await page.screenshot({path:testInfo.outputPath(`choice-time-info-${perfect}.png`)});
+    await info.tap();
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await info.hover();
+    await expect(page.getByRole("tooltip")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await info.tap();
+    await page.getByRole("heading", { name: "ふりかえり", exact: true }).tap();
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    const scoreButton = page.getByRole("button", { name: "判断のスコアを見る" });
+    await scoreButton.scrollIntoViewIfNeeded();
+    await expect(scoreButton).toBeInViewport({ ratio: 1 });
     await expect(page.getByText("番号のボタンを押すと、その場面と選んだ行動を見返せます。")).toBeVisible();
     const buttons = page.getByRole("button",{name:/^判断\d+：/});
     await expect(buttons).toHaveCount(2);
@@ -911,10 +958,10 @@ test("残り5秒で強調し3秒で赤くなり、風景確認中は演出も止
 
 test("mainの対象選択と避難体験のトップ導線を両立する", async ({page}) => {
   await page.goto("/");
-  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(0);
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
   await page.getByRole("button",{name:/子供/}).click();
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(0);
+  await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
   await page.goto("/evac?mode=mock&from=standalone");
   await expect(page.getByRole("navigation",{name:"共通ナビゲーション"})).toHaveCount(1);
   await page.getByRole("link",{name:"トップページへ戻る",exact:true}).click();
@@ -932,4 +979,37 @@ test("統合後も避難クイズの15秒・25秒設定を保存して再開す�
     await expect(timer).toHaveText(`${seconds}秒`);
     await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).timerSeconds)).toBe(seconds);
   }
+});
+
+test("全画面のホームアイコンを右上に揃え、文字のトップボタンを出さない", async ({ page }, testInfo) => {
+  await page.route("**/api/room/**", route => route.abort());
+  for (const path of ["/", "/home", "/camera", "/camera/video", "/privacy", "/places", "/test-room", "/offline-evac/index.html"]) {
+    await page.goto(path);
+    const home = page.getByRole("link", { name: "トップページへ戻る", exact: true });
+    await expect(home).toHaveCount(1);
+    await expect(home).toBeInViewport({ ratio: 1 });
+    await expect(home).toHaveText("");
+    await expect(home).toHaveAttribute("href", "/home");
+    const box = (await home.boundingBox())!;
+    const width = page.viewportSize()!.width;
+    expect(box.x).toBeGreaterThan(width / 2);
+    expect(box.y).toBeLessThan(40);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (path === "/camera" || path === "/offline-evac/index.html") await page.screenshot({ path: testInfo.outputPath(`home-icon-${path.includes("offline") ? "offline" : "camera"}.png`) });
+    await home.click();
+    await expect(page).toHaveURL(/\/home$/);
+  }
+  await page.goto("/test-room");
+  await page.getByRole("button", { name: "結果ページを試す（APIなし）", exact: true }).click();
+  await page.getByRole("button", { name: /理由・注意点を読む/ }).click();
+  const dialog = page.getByRole("dialog");
+  const home = dialog.getByRole("link", { name: "トップページへ戻る", exact: true });
+  const homeBox = (await home.boundingBox())!;
+  const dialogBox = (await dialog.boundingBox())!;
+  expect(homeBox.x).toBeGreaterThan(dialogBox.x + dialogBox.width / 2);
+  await home.click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
 });

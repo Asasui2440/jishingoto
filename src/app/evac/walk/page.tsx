@@ -86,6 +86,10 @@ export default function EvacWalkPage() {
   </GameShell>;
 
   const connectionChanged = ready && mode === "api" && !!plan && !offRoute && !arrived && !automaticPano;
+  const routeRecovery = mode === "api" && (preparation?.status === "error" || connectionChanged);
+  const navigationAlert = routeRecovery
+    ? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"
+    : error;
   const decisionBlocking = !!pending && preparation?.status !== "error";
   const moving = (mode === "mock" || !!automaticPano) && walking && ready && !pending && !notice && !arrived && !busy && !sheet;
   const events = walk.steps.filter(s => s.event);
@@ -129,10 +133,9 @@ export default function EvacWalkPage() {
             </div>
             <button type="button" onClick={() => showSheet("map")} className="pointer-events-auto inline-flex min-h-11 items-center gap-1 rounded-xl border border-border bg-white px-3 text-11 font-bold text-ink"><GameIcon name="map" className="size-4" />地図</button>
           </div>
+          {navigationAlert && !street?.error ? <p role="alert" className={styles.navigationAlert}>{navigationAlert}</p> : null}
         </StreetStage>
       </div>
-      {mode === "api" && (preparation?.status === "error" || connectionChanged || street?.error) ? <p role="alert" className={styles.navigationAlert}>{street?.error ?? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"}</p> : null}
-      {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
       {decisionBlocking ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot} ${decisionVisible ? "" : styles.decisionHidden}`}>
         <div aria-hidden={!decisionVisible} inert={!decisionVisible} className={styles.decisionContent}>
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
@@ -154,10 +157,14 @@ export default function EvacWalkPage() {
       </div> : null}
         <section className={styles.actions} aria-label="歩行の操作" inert={decisionBlocking} style={{ visibility: decisionBlocking ? "hidden" : "visible" }}>
 
-          {mode === "api" && (preparation?.status === "error" || connectionChanged) ? <div className="flex gap-2"><Button size="md" onClick={retryPlan}>道を再確認する</Button><Button size="md" variant="outline" onClick={() => router.push("/evac/routes")}>ルートを選び直す</Button></div> : null}
           {!arrived ? <div className="flex gap-2">
+            {routeRecovery ? <>
+              <Button size="md" onClick={() => { setWalking(false); retryPlan(); }}>道を再確認する</Button>
+              <Button size="md" variant="outline" onClick={() => { setWalking(false); router.push("/evac/routes"); }}>ルートを選び直す</Button>
+            </> : <>
               <Button size="md" disabled={!ready || busy || !canForward} onClick={forward}><GameIcon name="walk" />{mode === "api" ? "向いている道へ進む" : notice ? "先へ進む" : "進む"}</Button>
               <Button size="md" variant="outline" disabled={!walking && (!ready || busy || (mode === "api" && !automaticPano))} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>
+            </>}
             </div> : null}
         </section>
     </main>
