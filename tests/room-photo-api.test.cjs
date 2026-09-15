@@ -54,6 +54,7 @@ test('lightweight image settings reach the API and keep both references and veri
 });
 const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
+  needsReview: true, reviewReason: 'スタンドで立つテレビの転倒への備えを確認する',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',
   confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 }, ...overrides,
 });
@@ -72,6 +73,41 @@ test('photo analysis normalizes TV names and validates photo input', async () =>
     delete process.env.OPENAI_API_KEY;
     assert.equal((await POST(request({image:'data:image/jpeg;base64,AA=='}))).status,503);
   } finally { global.fetch = originalFetch; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; }
+});
+
+test('明らかに実害の乏しい小物を返さず、割れ物や家具は保持する', async () => {
+  const originalFetch = global.fetch;
+  const key = process.env.OPENAI_API_KEY;
+  try {
+    process.env.OPENAI_API_KEY = 'test-only';
+    const excluded = [
+      ['空の紙コップ', '机に小さな紙製の空容器がある', '少量の軽い紙製容器で、けがや閉塞につながる根拠がない'],
+      ['ぬいぐるみ', '棚に小さな柔らかいぬいぐるみがある', '柔らかい小物が一つで通路をふさぐ配置ではない'],
+    ].map(([name,evidence,reviewReason]) => detection({name,adultName:name,objectType:'elevated_objects',evidence,reviewReason,needsReview:false}));
+    const kept = [detection(), ...[
+      ['陶器のカップ', '机の端に陶器のカップがある', '落下して割れた破片への備えを確認する'],
+      ['包丁', '刃が露出した包丁が台の端にある', '露出した刃の落下によるけがへの備えを確認する'],
+      ['鉢植え', '背の高い棚の上に大きな鉢がある', '高い場所の鉢の落下への備えを確認する'],
+    ].map(([name,evidence,reviewReason]) => detection({name,adultName:name,objectType:'elevated_objects',evidence,reviewReason}))];
+    for (const rows of [[...excluded,...kept], excluded, []]) {
+      global.fetch = async (_url, init) => {
+        const body = JSON.parse(init.body);
+        const schema = body.text.format.schema.properties.risks.items;
+        assert.ok(schema.required.includes('needsReview'));
+        assert.ok(schema.required.includes('reviewReason'));
+        return Response.json({output_text:JSON.stringify({risks:rows})});
+      };
+      const response = await POST(request({image:'data:image/jpeg;base64,AA=='}));
+      assert.equal(response.status,200);
+      const {risks,source} = await response.json();
+      assert.equal(source,'ai');
+      assert.deepEqual(risks.map(r=>r.name), rows.length > 2 ? ['テレビ','陶器のカップ','包丁','鉢植え'] : []);
+      assert.ok(risks.every(r=>r.confirmed===false));
+    }
+  } finally {
+    global.fetch = originalFetch;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
 });
 
 test('masked full-size views reach the model separately and their local boxes round-trip to each photo', async () => {
@@ -151,7 +187,9 @@ test('unusable model output is not accepted as no objects or a made-up central m
     const reply = risks => ({status:'completed',output_text:JSON.stringify({risks})});
     const badRows = [null, detection({viewIndex:1}), detection({viewIndex:0.5}), detection({viewIndex:undefined}),
       detection({bounds:undefined}), detection({bounds:{x:110,y:20,w:10,h:10}}), detection({bounds:{x:20,y:30,w:0,h:10}}),
-      detection({name:' '}), detection({evidence:''}), detection({confidence:null}), detection({confidence:1.1}),
+      detection({name:' '}), detection({evidence:''}), detection({needsReview:undefined}),
+      detection({needsReview:'false'}), detection({reviewReason:''}), detection({reviewReason:undefined}),
+      detection({needsReview:false,bounds:{x:110,y:20,w:10,h:10}}), detection({confidence:null}), detection({confidence:1.1}),
       detection({objectType:'invented'}), detection({kind:'safe'})];
     for (const body of [null, {}, {output_text:'{}'}, {output_text:'null'},
       {...reply([]),status:'incomplete'}, {...reply([detection()]),status:'failed'},
