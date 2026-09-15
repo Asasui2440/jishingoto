@@ -37,6 +37,7 @@ type Props = {
   onSelectShelter?: (id: string) => void;
   onSelectRoute?: (id: string) => void;
   height?: number;
+  fill?: boolean;
   className?: string;
 };
 
@@ -86,6 +87,7 @@ function GoogleMapView({
   onSelectShelter,
   onSelectRoute,
   height = 240,
+  fill = false,
   className = "",
 }: Props) {
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -285,7 +287,7 @@ function GoogleMapView({
 
   return (
     <div className={["relative overflow-hidden rounded-panel", className].join(" ")}>
-      <div ref={boxRef} style={{ height }} className="w-full" />
+      <div ref={boxRef} style={{ height: fill ? "100%" : height }} className="w-full" />
       {floodHazard ? <div className="absolute left-2 top-2 max-w-[75%] rounded-lg bg-white/95 p-2 text-[10px] shadow"><details>
         <summary className="cursor-pointer font-bold">洪水浸水想定（想定最大規模）</summary>
         <ul>{FLOOD_BANDS.map(band => <li key={band.label}><span className="mr-1 inline-block h-2 w-3" style={{backgroundColor: `rgb(${band.rgb.join(",")})`}} />{band.label}</li>)}</ul>

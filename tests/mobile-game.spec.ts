@@ -1021,3 +1021,109 @@ test("mainの対象選択と避難体験のトップ導線を両立する", asyn
   await page.getByRole("link",{name:"トップページへ戻る",exact:true}).click();
   await expect(page).toHaveURL(/\/home$/);
 });
+
+test("画像のない区間をつなぐ：画像ゼロでも出発地点を変えずに終点まで進む", async ({ page }) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  await page.goto("/evac/walk?initialLoadError=ZERO_RESULTS&missingArrival=1");
+  await page.getByRole("button", { name: "画像のない区間もつないで歩く" }).click();
+  const scene = page.getByRole("region", { name: "地図とStreet Viewで進む体験" });
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  const initial = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.street.position);
+  expect(initial).toEqual({ lat: 35, lng: 139 });
+  for (let i = 0; i < 20 && !await page.getByRole("button", { name: "ふりかえる", exact: true }).isVisible(); i++) {
+    await page.getByRole("button", { name: "進む", exact: true }).click();
+  }
+  await expect(page.getByRole("button", { name: "ふりかえる", exact: true })).toBeVisible();
+  const result = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk);
+  expect(result.navigationMode).toBe("hybrid");
+  expect(result.street.position).toEqual({ lat: 35.0003, lng: 139.0006 });
+  expect(result.street.path).toContainEqual({ lat: 35.0003, lng: 139 });
+  expect(result.street.path.length).toBeGreaterThan(8);
+});
+
+test("画像のない区間をつなぐ：画像がない区間から地図表示を保って終点まで進む", async ({ page }, testInfo) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  await page.goto("/evac/walk?hybridCoverage=1&hybridDelayed=1&disconnected=1&decision=1");
+  await page.getByRole("button", { name: "画像のない区間もつないで歩く" }).click();
+  const scene = page.getByRole("region", { name: "地図とStreet Viewで進む体験" });
+  await expect(scene).toHaveAttribute("data-scene-state", "ready");
+  await page.getByRole("button", { name: "進む", exact: true }).click();
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  const lookupCount = await page.evaluate(() => (window as unknown as {streetTest:{hybridLookups:number}}).streetTest.hybridLookups);
+  const mapBounds = await page.getByTestId("map-surface").boundingBox();
+  const sceneBounds = await scene.boundingBox();
+  expect(mapBounds!.height).toBeGreaterThanOrEqual(sceneBounds!.height - 2);
+  await page.screenshot({ path: testInfo.outputPath("hybrid-map-gap.png") });
+  await page.getByRole("button", { name: "自動で歩く", exact: true }).click();
+  await expect(page.getByRole("button", { name: "地図・風景を確認する", exact: true })).toBeVisible();
+  const atQuestion = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.index);
+  await page.getByRole("button", { name: "地図・風景を確認する", exact: true }).click();
+  await page.waitForTimeout(1800);
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.index)).toBe(atQuestion);
+  await page.getByRole("button", { name: "クイズに戻る", exact: true }).click();
+  await page.getByRole("button", { name: /周囲を確認して進む/ }).click();
+  await page.getByRole("dialog", { name: "回答と解説" }).getByRole("button", { name: "歩行を続ける" }).click();
+  await expect(page.getByRole("button", { name: "ふりかえる", exact: true })).toBeVisible({ timeout: 25000 });
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{hybridLookups:number}}).streetTest.hybridLookups)).toBe(lookupCount);
+  const result = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
+  expect(result.decisions).toHaveLength(1);
+  expect(result.walk.street.position).toEqual({ lat: 35.0003, lng: 139.0006 });
+});
+
+test("画像のない区間をつなぐ：再読み込み後も地図の現在地から再開する", async ({ page }) => {
+  const fixture = await readFile("tests/fixtures/street-sdk.js", "utf8");
+  await page.addInitScript({ content: `${fixture}\nconst resumed = sessionStorage.getItem("hybrid-test-saved"); if (resumed) sessionStorage.setItem("jishingoto.evac.v2", resumed);` });
+  await page.goto("/evac/walk?initialLoadError=ZERO_RESULTS", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "画像のない区間もつないで歩く" }).click();
+  await page.getByRole("button", { name: "進む", exact: true }).click();
+  await page.getByRole("button", { name: "進む", exact: true }).click();
+  const saved = await page.evaluate(() => {
+    const value = sessionStorage.getItem("jishingoto.evac.v2")!;
+    sessionStorage.setItem("hybrid-test-saved", value);
+    return JSON.parse(value).walk;
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("region", { name: "地図とStreet Viewで進む体験" })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk)).toEqual(saved);
+  await page.getByRole("button", { name: "進む", exact: true }).click();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.index)).toBe(saved.index + 1);
+});
+
+
+test("風景の再取得で地図を挟まず、画像欠落後は手動の再確認まで地図を維持する", async ({ page }, testInfo) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  await page.goto("/evac/walk?hybridContinuous=1&disconnected=1");
+  await page.getByRole("button", { name: "画像のない区間もつないで歩く" }).click();
+  const scene = page.getByRole("region", { name: "地図とStreet Viewで進む体験" });
+  await expect(scene).toHaveAttribute("data-scene-state", "ready");
+  const forward = page.getByRole("button", { name: "進む", exact: true });
+  await scene.evaluate(element => {
+    const states: string[] = [];
+    (window as unknown as {hybridStates:string[]}).hybridStates = states;
+    new MutationObserver(records => { if (records.some(record => record.attributeName === "data-scene-state")) states.push(element.getAttribute("data-scene-state")!); }).observe(element, { attributes: true });
+  });
+  for (let step = 0; step < 2; step++) {
+    await forward.click();
+    await expect(scene).toHaveAttribute("data-checking-imagery", "true");
+    await expect(scene).toHaveAttribute("data-scene-state", "ready");
+    await expect(scene).toHaveAttribute("data-checking-imagery", "false");
+  }
+  expect(await page.evaluate(() => (window as unknown as {hybridStates:string[]}).hybridStates)).not.toContain("loading");
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{hybridPanoramas:number}}).streetTest.hybridPanoramas)).toBe(1);
+  await page.evaluate(() => { (window as unknown as {streetTest:{hybridMissing:boolean}}).streetTest.hybridMissing = true; });
+  await forward.click();
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  const queries = await page.evaluate(() => (window as unknown as {streetTest:{hybridLookups:number}}).streetTest.hybridLookups);
+  await page.evaluate(() => { (window as unknown as {streetTest:{hybridMissing:boolean}}).streetTest.hybridMissing = false; });
+  await forward.click();
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{hybridLookups:number}}).streetTest.hybridLookups)).toBe(queries);
+  const retry = scene.getByRole("button", { name: "Street Viewを再確認", exact: true });
+  await expect(retry).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: testInfo.outputPath("stable-map-fallback.png"), animations: "disabled" });
+  await retry.click();
+  await expect(scene).toHaveAttribute("data-scene-state", "missing");
+  await expect(scene).toHaveAttribute("data-scene-state", "ready");
+  expect(await page.evaluate(() => (window as unknown as {streetTest:{hybridPanoramas:number}}).streetTest.hybridPanoramas)).toBe(1);
+});

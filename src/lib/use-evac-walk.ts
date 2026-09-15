@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buildWalkSteps, distanceM, fetchDecisionPoints, fetchDetourFrom } from "./evac-api";
 import { getEvac, useEvac } from "./evac";
 import { nextWalkIndex, nextStreetIndex, rerouteWalk, observeStreetPosition, streetRouteGuidance } from "./evac-walk";
+import { advanceHybridWalk, prepareHybridWalk, recordHybridStep } from "./hybrid-walk";
 import { reachedStreetArrival, type StreetSnapshot } from "./street-navigation";
 import type { EvacChoice, HazardEvent } from "./evac-content";
 
@@ -41,9 +42,10 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     return () => { alive = false; controller.abort(); };
   }, [route, walk, update, source, scenario, attempt]);
 
+  const hybrid = walk?.navigationMode === "hybrid";
   const step = walk?.steps[walk.index];
-  const sceneReady = readyStepId === undefined || readyStepId === step?.id;
-  const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.questionsAligned ? walk.street.questionPointIds?.includes(step.pointId ?? "") : distanceM(walk.street.position, step.position) <= 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
+  const sceneReady = hybrid || readyStepId === undefined || readyStepId === step?.id;
+  const pending = !walk?.street?.arrived && (hybrid || evac.mode === "mock" || !!walk?.street) && step?.event && (hybrid || evac.mode === "mock" || !!walk?.street && (walk.questionsAligned ? walk.street.questionPointIds?.includes(step.pointId ?? "") : distanceM(walk.street.position, step.position) <= 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
   const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending && !feedback;
 
   const advance = useCallback((jump = false) => {
@@ -51,6 +53,10 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     setNotice(null);
     setError(null);
     setTimerOverride(null);
+    if (getEvac().walk?.navigationMode === "hybrid") {
+      update(prev => prev.walk ? { ...prev, walk: advanceHybridWalk(prev.walk, prev.decisions.map(d => d.pointId)) } : prev);
+      return;
+    }
     if (getEvac().mode === "api") return;
     update((prev) => prev.walk ? {
       ...prev,
@@ -59,10 +65,10 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   }, [update, feedback]);
 
   useEffect(() => {
-    if (evac.mode === "api" || !walking || !walk || pending || feedback || notice || arrived || busy || !sceneReady || paused) return;
+    if ((evac.mode === "api" && !hybrid) || !walking || !walk || pending || feedback || notice || arrived || busy || !sceneReady || paused) return;
     const timer = setTimeout(() => advance(), 1600);
     return () => clearTimeout(timer);
-  }, [evac.mode, walking, walk, pending, feedback, notice, arrived, busy, advance, sceneReady, paused]);
+  }, [evac.mode, hybrid, walking, walk, pending, feedback, notice, arrived, busy, advance, sceneReady, paused]);
 
   // Keep auto-walk enabled while a decision is shown; resume after its notice.
   useEffect(() => {
@@ -82,7 +88,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
       setTimerOverride(null);
     }
     update(prev => {
-      if (prev.mode !== "api" || !prev.walk) return prev;
+      if (prev.mode !== "api" || !prev.walk || prev.walk.navigationMode === "hybrid") return prev;
       const last = prev.walk.street?.position;
       if (last?.lat === position.lat && last?.lng === position.lng && prev.walk.street?.arrived === reachedStreetArrival(state) && JSON.stringify(prev.walk.street?.questionPointIds) === JSON.stringify(questionPointIds)) return prev;
       return { ...prev, walk: observeStreetPosition(prev.walk, position, state.heading, prev.decisions.map(d => d.pointId), reachedStreetArrival(state), questionPointIds) };
@@ -108,7 +114,8 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
       const excluded = [...new Set([...current.decisions.map((d) => d.eventId), step.event.id])];
       const points = detour ? await fetchDecisionPoints(detour, { source: walk.source ?? source, scenario, excludedEventIds: excluded }) : [];
       if (!mounted.current || getEvac().walk !== walk) return;
-      const nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
+      let nextWalk = detour ? rerouteWalk(walk, detour, points, [...current.decisions.map((d) => d.eventId), step.event.id]) : walk;
+      if (hybrid && detour) nextWalk = prepareHybridWalk(nextWalk, detour, [...current.decisions.map(d => d.pointId), step.pointId]);
       // 迂回の移動時間は新しい経路に含まれる。追加時間を二重に加算しない。
       const decision = { pointId: step.pointId, position: walk.street?.position ?? step.position, eventId: step.event.id, choiceId: choice.id, rerouted: !!detour, timedOut, extraSeconds: detour ? 0 : choice.extraSeconds };
       update((prev) => ({
@@ -116,7 +123,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
         decisions: [...prev.decisions, decision],
         routes: detour ? [...prev.routes, { ...detour, eventCount: points.length }] : prev.routes,
         takenRouteIds: detour ? [...prev.takenRouteIds, detour.id] : prev.takenRouteIds,
-        walk: current.mode === "api" && nextWalk.street
+        walk: hybrid ? recordHybridStep(nextWalk, nextWalk.index, [...current.decisions.map(d => d.pointId), step.pointId!]) : current.mode === "api" && nextWalk.street
           ? observeStreetPosition(nextWalk, nextWalk.street.position, nextWalk.street.heading, [...current.decisions.map(d => d.pointId), step.pointId!], detour ? false : nextWalk.street.atArrivalNode ?? false, detour ? undefined : nextWalk.street.questionPointIds)
           : nextWalk,
       }));
@@ -129,6 +136,15 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     }
   };
 
+  const startHybrid = () => {
+    if (!walk || !route || choosing.current || feedback) return;
+    try {
+      const next = prepareHybridWalk(walk, route, decisions.map(d => d.pointId));
+      setWalking(false); setError(null); setNotice(null); setTimerOverride(null);
+      update({ walk: next });
+    } catch (problem) { setError(problem instanceof Error ? problem.message : "地図のルートを確認できません。"); }
+  };
+
   const closeFeedback = () => {
     if (choosing.current) return;
     setFeedback(null);
@@ -136,5 +152,5 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     setTimerOverride(null);
   };
 
-  return { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, feedback, closeFeedback, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
+  return { startHybrid, observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, feedback, closeFeedback, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
 }

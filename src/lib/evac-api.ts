@@ -625,9 +625,9 @@ export type WalkStep = {
 const STEP_M = 45;
 
 /** 曲がり角も必ず含める。通った道が建物を横切る直線にならないようにする。 */
-export function buildWalkSteps(route: RouteOption, points: DecisionPoint[]): WalkStep[] {
+export function buildWalkSteps(route: RouteOption, points: DecisionPoint[], stepM?: number): WalkStep[] {
   const total = pathLengthM(route.path);
-  const count = Math.min(24, Math.max(5, Math.round(total / STEP_M)));
+  const count = stepM ? Math.max(1, Math.ceil(total / stepM)) : Math.min(24, Math.max(5, Math.round(total / STEP_M)));
   const positions = new Map<number, LatLng>();
   let traversed = 0;
   route.path.forEach((position, i) => {

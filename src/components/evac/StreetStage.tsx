@@ -147,7 +147,7 @@ export function StreetStage({
       controller?.dispose();
       alive = false;
       const code = error instanceof Error ? error.message : typeof error === "object" && error !== null && "code" in error ? String(error.code) : String(error ?? "");
-      const message = /ZERO_RESULTS|no-pano/.test(code) ? "出発地点の近くに屋外のStreet Viewが見つかりませんでした。出発地点を近くの道路に変更してください。"
+      const message = /ZERO_RESULTS|no-pano/.test(code) ? "出発地点の近くに屋外のStreet Viewが見つかりませんでした。「画像のない区間もつないで歩く」で、地図に沿って始められます。"
         : /missing-key|auth|REQUEST_DENIED/.test(code) ? "Google Mapsの認証を確認できませんでした。APIキーとこのサイトでの利用設定を確認してください。"
         : /timeout/.test(code) ? "Street Viewの読み込みがタイムアウトしました。通信を確認して再試行してください。"
         : "この地点のStreet Viewを取得できませんでした。";
@@ -234,7 +234,7 @@ export function StreetStage({
         <div role={loadError || snapshot?.error ? "alert" : "status"} className="absolute inset-x-3 top-1/3 rounded-xl bg-white/95 p-3 text-13 text-ink">
           {loadError ?? snapshot?.error ?? "Street Viewを読み込んでいます…"}
           {loadError || snapshot?.error ? <div className="mt-3 space-y-2">
-            {onChangeStart ? <><p>出発地点を、近くの道路上へ少しずらして試してみてください。</p><button type="button" onClick={onChangeStart} className="pointer-events-auto block min-h-11 rounded-full bg-primary px-4 font-bold text-ink">出発地点を少しずらす</button></> : null}
+            {onChangeStart ? <button type="button" onClick={onChangeStart} className="pointer-events-auto block min-h-11 rounded-full border border-border px-4 font-bold text-ink">出発地点を少しずらす</button> : null}
             <button type="button" onClick={retryLoad} className="pointer-events-auto block min-h-11 px-2 text-11 text-ink-muted underline">同じ地点で再試行</button>
           </div> : null}
         </div>

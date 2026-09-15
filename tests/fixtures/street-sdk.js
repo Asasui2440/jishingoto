@@ -56,7 +56,13 @@
   const test = window.streetTest = { moves: [], lookups: 0, positionCommands: 0, initialLoadError:params.get("initialLoadError"), walker: null, pano: null, map: null, failNext: false };
   class Panorama extends Events {
     constructor(box, options) {
-      super(); this.id = options.pano; this.pov = options.pov; test.options = options; test.pano = this;
+      super(); this.hybrid = !!box.closest('[aria-label="地図とStreet Viewで進む体験"]');
+      if (this.hybrid) test.hybridPanoramas = (test.hybridPanoramas ?? 0) + 1;
+      this.id = options.pano; this.pov = options.pov; test.options = options; test.pano = this;
+      if (params.has("hybridDelayed")) {
+        this.loading = true;
+        setTimeout(() => { this.loading = false; this.emit("status_changed"); }, 50);
+      }
       box.dataset.testid = "panorama-surface"; box.style.background = "#485d68"; box.tabIndex = 0;
       box.addEventListener("pointerdown", () => { this.pov = { heading: 90, pitch: 15 }; this.emit("pov_changed"); });
       setTimeout(() => this.emit("links_changed"), 0);
@@ -66,12 +72,12 @@
     getLinks() { return nodes[this.id].links; }
     getPov() { return this.pov; }
     setPov(pov) { this.pov = pov; this.emit("pov_changed"); }
-    getStatus() { return this.status ?? "OK"; }
+    getStatus() { return this.loading ? null : this.status ?? "OK"; }
     setPano(id) {
       test.moves.push(id);
       if (test.failNext) { this.status = "ZERO_RESULTS"; this.emit("status_changed"); return; }
-      if (!nodes[this.id].links.some(link => link.pano === id)) throw new Error("Nonadjacent move");
-      setTimeout(() => { this.id = id; this.emit("position_changed"); this.emit("links_changed"); }, 30);
+      if (!this.hybrid && !nodes[this.id].links.some(link => link.pano === id)) throw new Error("Nonadjacent move");
+      setTimeout(() => { this.id = id; this.emit("position_changed"); this.emit("links_changed"); this.emit("status_changed"); }, 30);
     }
     setPosition() { test.positionCommands++; throw new Error("Coordinate movement prohibited"); }
     setVisible() {}
@@ -99,6 +105,21 @@
     } } }),
     StreetViewService: class { async getPanorama(request) {
       test.lookups++;
+      if (request.radius === 15) {
+        test.hybridLookups = (test.hybridLookups ?? 0) + 1;
+        if (params.has("hybridContinuous")) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (test.hybridMissing) throw new Error("ZERO_RESULTS");
+          return { data: { location: { pano: request.location.lat < 35.0001 ? "A" : "B", latLng: { lat: () => request.location.lat, lng: () => request.location.lng } } } };
+        }
+      }
+      if (request.radius === 15 && params.has("hybridCoverage")) {
+        // Only the first and last route points have imagery; the middle is a gap.
+        const id = Math.abs(request.location.lat - C.lat) < .00001 && Math.abs(request.location.lng - C.lng) < .00001 ? "C"
+          : Math.abs(request.location.lat - A.lat) < .00001 && Math.abs(request.location.lng - A.lng) < .00001 ? "A" : null;
+        if (!id) throw new Error("ZERO_RESULTS");
+        return { data: { location: { pano: id, latLng: { lat: () => nodes[id].position.lat, lng: () => nodes[id].position.lng } } } };
+      }
       const isArrival = request.radius === 150;
       if (!isArrival && !request.pano && test.initialLoadError) throw new Error(test.initialLoadError);
       if (isArrival && params.has("missingArrival")) throw new Error("no outdoor node");
