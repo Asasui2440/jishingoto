@@ -5,7 +5,8 @@ import Link from "next/link";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRightIcon, CameraBlueIcon, LogoCircleXIcon } from "@/components/icons";
+import { ArrowRightIcon, CameraBlueIcon } from "@/components/icons";
+import { Brand } from "@/components/Brand";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { IconChip } from "@/components/ui/Bits";
 import { Button } from "@/components/ui/Button";
@@ -43,12 +44,7 @@ export default function OnboardingPage() {
     <Screen>
       <main className="flex flex-1 flex-col gap-3 px-6 pt-2 pb-4">
         <header className="flex flex-col items-center gap-2.5">
-          <div className="flex items-center gap-3">
-            <span className="grid size-14 place-items-center rounded-full bg-primary-soft">
-              <LogoCircleXIcon className="size-6 text-primary-ink" />
-            </span>
-            <p className="home-wordmark whitespace-nowrap font-display text-40 leading-none font-black text-primary-ink">ジシンゴト！</p>
-          </div>
+          <Brand eager />
           <p className="font-display text-base font-bold text-ink"><Furigana text={"地震＋自分事"} /></p>
         </header>
 

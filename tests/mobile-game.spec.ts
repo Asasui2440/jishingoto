@@ -672,7 +672,7 @@ test("危険確認は写真と下部のどちらのボタンでも確認して�
   const next = photo.getByRole("button", { name: "確認して次へ" });
   const previous = photo.getByRole("button", { name: "確認して前へ" });
   await expect(previous).toBeDisabled();
-  await page.getByRole("checkbox").check();
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(0);
   await expect(actions.getByText("確認済み 0 / 3")).toBeVisible();
   await next.scrollIntoViewIfNeeded();
   const image = await photo.locator("img").boundingBox();
@@ -703,7 +703,7 @@ test("危険確認は写真と下部のどちらのボタンでも確認して�
   await page.keyboard.press("Escape");
   await expect(complete).not.toBeVisible();
   await expect(actions.getByRole("button", { name: "行動クイズへ" })).toBeInViewport({ ratio: 1 });
-  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).checked)).toEqual([`prepared:${DETECTED_RISKS[0].id}`]);
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).checked)).toEqual([]);
   await actions.getByRole("button", { name: "行動クイズへ" }).click();
   await expect(page).toHaveURL(/\/quiz$/);
 });

@@ -12,9 +12,11 @@ import { Furigana } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
 import { fetchQuestions } from "@/lib/api";
 import { RISK_KINDS, type Choice, type Question } from "@/lib/content";
-import { useHaptics, useSettings } from "@/lib/settings";
+import { getSettings, useHaptics, useSettings } from "@/lib/settings";
 import { getSession, useSession } from "@/lib/session";
 import { playRumble, playTick } from "@/lib/audio";
+import { ChoiceArtwork } from "@/components/ChoiceArtwork";
+import { choiceIllustration } from "@/lib/choice-illustrations";
 
 /** 揺れの演出を出す長さ。最初の1問だけ鳴らす */
 const SHAKE_MS = 1600;
@@ -102,7 +104,7 @@ function QuestionView({
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
           <p className="mb-2 text-13 font-bold text-primary-ink" aria-live="polite">
-            <Furigana text={question.phase === "after" ? "② ゆれがおさまったあと → まわりを確認[かくにん]" : "① 地震[じしん]が発生[はっせい] → 身[み]を守[まも]る"} adult={question.phase === "after" ? "② 揺れが収まった後：周囲の確認・避難の判断" : "① 地震発生：揺れている間の初動"} />
+            <Furigana text={question.phase === "after" ? "② ゆれがおさまったあと → まわりを確認[かくにん]" : "① 地震[じしん]が発生[はっせい] → 身[み]を守[まも]る"} adult={question.phase === "after" ? "② 揺れが止まったあと" : "① 揺れているとき"} />
           </p>
           <Meter color="var(--color-primary)" value={(index + 1) / total} height={6} track="var(--color-border)" />
           <p className="mt-1 text-right text-11 text-ink-soft">
@@ -182,11 +184,13 @@ function QuestionView({
           </p>
         </Card>
 
-        {!question.sourceRiskId && <p className="text-xs text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
+        {!question.sourceRiskId && !question.challenge && <p className="text-xs text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
 
 
         <ul className="flex flex-col gap-2.5">
-          {question.choices.map((c, i) => (
+          {question.choices.map((c, i) => {
+            const illustration = choiceIllustration(question, c);
+            return (
             <li key={c.id}>
               <button
                 type="button"
@@ -194,21 +198,22 @@ function QuestionView({
                 onClick={() => onAnswer(c, false)}
                 className="flex w-full items-center gap-3 rounded-tile border border-border bg-surface p-3.5 text-left transition-colors active:border-primary-mid active:bg-primary-soft"
               >
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft font-display text-base font-bold text-primary-ink">
+                {illustration ? <ChoiceArtwork illustration={illustration} number={i + 1} /> : <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft font-display text-base font-bold text-primary-ink">
                   {i + 1}
-                </span>
+                </span>}
                 <span className="min-w-0 flex-1">
                   <span className="block font-display text-15 font-bold text-ink">
                     <Furigana text={c.label} />
                   </span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">
+                  {c.detail && <span className="mt-0.5 block text-xs text-ink-soft">
                     <Furigana text={c.detail} />
-                  </span>
+                  </span>}
                 </span>
                 <ChevronRightIcon className="size-4 shrink-0 text-ink-soft" />
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
         </div>
       </div>
@@ -236,7 +241,8 @@ export default function QuizPage() {
       return;
     }
     let alive = true;
-    void fetchQuestions(risks, getSession().roomSetting).then((qs) => {
+    // マウント後の実際の設定で出題し、途中の表示設定変更では問題を差し替えない。
+    void fetchQuestions(risks, getSession().roomSetting, Math.random, getSettings().audience).then((qs) => {
       if (alive) {
         setQuestions(qs);
         update({ questions: qs });

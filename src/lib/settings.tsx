@@ -9,7 +9,7 @@ export type Locale = "ja" | "easy" | "en";
 /** 年齢層に応じた UI スケール */
 export type UiScale = "normal" | "large" | "xlarge";
 
-/** 表示する文章の対象。adult は漢字中心の標準的な防災表現。 */
+/** 文章と室内クイズの対象。adult は条件を比較する4択。 */
 export type Audience = "child" | "adult";
 
 export type Settings = {
@@ -60,6 +60,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 export function useSettings() {
   const [settings, set] = useStore(store);
   return { ...settings, update: set };
+}
+
+/** 出題開始などのイベントでは、SSRの既定値でなく読み込み済みの設定を取得する。 */
+export function getSettings() {
+  return store.get();
 }
 
 /** 短い振動。設定が off のときと非対応端末では何もしない。 */
