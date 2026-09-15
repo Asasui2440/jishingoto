@@ -12,7 +12,7 @@ import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
 import { EvacModeBadge } from "@/components/evac/EvacMode";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
-import { reviewDecisions } from "@/lib/evac-review";
+import { reviewDecisions, scoreDecisions } from "@/lib/evac-review";
 import { formatDistance, formatDuration, getEvac, totalSeconds, useEvac } from "@/lib/evac";
 import { walkDistance } from "@/lib/evac-walk";
 import { useSession } from "@/lib/session";
@@ -24,7 +24,8 @@ export default function EvacReportPage() {
   const router = useRouter();
   const evac = useEvac();
   const room = useSession();
-  const { mode, home, shelter, routes, startRouteId, takenRouteIds, decisions, walk } = evac;
+  const { mode, home, shelter, routes, startRouteId, takenRouteIds, decisions, walk, followUp, update } = evac;
+  const [followOpen, setFollowOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -34,8 +35,11 @@ export default function EvacReportPage() {
 
   const startRoute = routes.find((route) => route.id === startRouteId) ?? null;
   const rows = useMemo(() => reviewDecisions({decisions,walk}), [decisions,walk]);
+  const result = useMemo(() => scoreDecisions({decisions,walk}), [decisions,walk]);
+  const followUps = result.followUps.length ? result.followUps : ["自治体の防災マップで、この経路と避難先の指定を平常時に確認する"];
   const selectedIndex = rows.findIndex(({ d }) => d.pointId === selectedId);
   const selected = rows[selectedIndex];
+  const scoredSelection = [...result.good, ...result.improvements].find(row => row.d.pointId === selectedId);
   const connectedRoom = !!room.finishedAt && evac.roomFinishedAt === room.finishedAt;
   const changed = takenRouteIds.length > 1;
   const selectDecision = (id: string) => {
@@ -60,6 +64,20 @@ export default function EvacReportPage() {
       />
 
       <main className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-3">
+        <section aria-label="判断スコア" className="shrink-0 rounded-panel border-2 border-primary bg-surface p-3 text-center">
+          <h2 className="text-13 font-bold">判断スコア</h2>
+          <div className="mt-2 flex items-center gap-3">
+          <div className="relative grid size-24 shrink-0 place-items-center">
+            <svg viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-border)" strokeWidth="9" />
+              <circle data-testid="score-ring" cx="60" cy="60" r="50" fill="none" stroke="var(--color-safe)" strokeWidth="9" pathLength="100" strokeDasharray={`${result.score ?? 0} 100`} strokeLinecap={result.score ? "round" : "butt"} />
+            </svg>
+            <p className="font-display text-3xl font-bold">{result.score ?? "—"}<span className="block text-11 font-medium">/ 100</span></p>
+          </div>
+          <p className="text-13">{result.count ? `${result.count}問中${result.good.length}問で、最も優先したい行動を選べました。` : "採点できる判断の記録がありません。"}</p>
+          </div>
+          <details className="mt-3 text-left text-11 text-ink-muted"><summary className="cursor-pointer">スコアの見方</summary><p className="mt-2">今回の問題での判断を振り返るスコアです。実際の避難の安全性や災害時の対応力を保証するものではありません。</p><p className="mt-2">各問題の行動の優先度をもとに、最も優先したい選択を満点として平均しています。回答にかかった時間やルートの短さでは減点しません。採点対象は回答記録{result.total}件のうち{result.count}件です。</p></details>
+        </section>
         <dl className="grid shrink-0 grid-cols-3 divide-x divide-border rounded-tile bg-canvas py-2.5 text-center">
           <div><dt className="text-11 text-ink-muted"><Furigana text="考[かんが]えた場面[ばめん]" /></dt><dd className="mt-0.5 font-display text-xl font-bold">{rows.length}<span className="ml-1 text-11 font-medium">地点</span></dd></div>
           <div><dt className="text-11 text-ink-muted"><Furigana text="歩[ある]いた距離[きょり]" /></dt><dd className="mt-1 font-display text-15 font-bold">{formatDistance(walk ? walkDistance(walk) : startRoute?.distanceM ?? 0)}</dd></div>
@@ -101,14 +119,22 @@ export default function EvacReportPage() {
           <p id="offline-save-description" className="text-11 leading-relaxed text-primary-ink">同じ出発地点・避難先で、保存用の地図と経路を別のページで作成します。</p>
         </div>
 
-        <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>
       </main>
+      <div className="shrink-0 border-t border-border bg-surface px-4 py-2"><Button onClick={() => setFollowOpen(true)}>振り返りを終わる</Button></div>
+      <BottomSheet open={followOpen} title="次に確かめること" onClose={() => setFollowOpen(false)} footer={<Button onClick={() => router.push("/evac/complete")}>次へ</Button>}>
+        <section className="space-y-2" aria-labelledby="followup-heading">
+          <h2 id="followup-heading" className="font-bold">次の備えをひとつ選ぼう</h2>
+          <p className="text-13 text-ink-muted">平常時に確かめたいことを、ひとつ選ぼう。</p>
+          {followUps.map(value => <button type="button" key={value} aria-pressed={followUp === value} onClick={() => update({followUp:value})} className={`flex min-h-14 w-full items-center gap-3 rounded-tile border p-3 text-left text-13 ${followUp === value ? "border-amber-300 bg-amber-50" : "border-border bg-surface"}`}><span className="grid size-6 shrink-0 place-items-center rounded-full border border-border">{followUp === value ? <GameIcon name="check" className="size-4" /> : null}</span><Furigana text={value} /></button>)}
+          {followUp ? <p role="status" className="text-11 text-amber-900">次に確かめることを保存しました。</p> : null}
+        </section>
+      </BottomSheet>
 
       <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)} footer={sheet === "decision" && selected ? <nav aria-label="判断の切り替え" className="flex gap-2">
         <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}>前の判断</Button>
         <Button size="md" onClick={() => selectedIndex < rows.length - 1 ? setSelectedId(rows[selectedIndex + 1].d.pointId) : setSheet(null)}>{selectedIndex < rows.length - 1 ? "次の判断" : "判断を閉じる"}</Button>
       </nav> : undefined}>
-        {sheet === "decision" && selected ? <div className="space-y-4">
+        {sheet === "decision" && selected ? <section aria-label="判断の詳細" className="space-y-4">
           <div>
             <p className="text-15 font-bold text-ink"><Furigana text={eventTitle(selected.event.title)} /></p>
             <div className="mt-2 flex flex-wrap gap-2 text-11 text-ink-muted">
@@ -116,7 +142,7 @@ export default function EvacReportPage() {
               {selected.d.timedOut ? <span className="rounded-full bg-canvas px-2 py-1">時間をかけて選択</span> : null}
             </div>
           </div>
-          <ReviewIllustrations event={selected.event} choice={selected.choice} />
+          <ReviewIllustrations event={selected.event} choice={selected.choice} recommended={scoredSelection && scoredSelection.value < 1 ? scoredSelection.recommended : undefined} />
           <ChoiceTradeoffs key={selected.d.pointId} event={selected.event} choice={selected.choice} />
           <details key={`sources-${selected.d.pointId}`} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">
             <summary className="cursor-pointer font-bold text-primary-ink">判断のヒント・出典</summary>
@@ -129,7 +155,7 @@ export default function EvacReportPage() {
             </div> : null}
             <a href={selected.event.reference.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-primary-ink underline underline-offset-2">{selected.event.reference.label}</a>
           </details>
-        </div> : null}
+        </section> : null}
 
         {sheet === "route" ? <div className="space-y-4 text-13 text-ink-muted">
           {mode === "api" && !startRoute?.demo && startRoute ? <p className="text-xs">距離・経路情報：<span translate="no" className="whitespace-nowrap font-normal not-italic tracking-normal text-[#5e5e5e]">Google Maps</span></p> : null}
@@ -144,7 +170,7 @@ export default function EvacReportPage() {
 
         {sheet === "help" ? <div className="space-y-4 text-13 leading-relaxed text-ink-muted">
           <EvacModeBadge mode={mode} />
-          <p>番号から、その場面と選んだ行動をふりかえれます。次の画面で判断のスコアと改善のヒントを確認できます。</p>
+          <p>上部で判断のスコアを確認できます。番号から場面・選んだ行動・改善のヒントをふりかえり、「振り返りを終わる」で次の備えを選べます。</p>
           {walk?.source === "geo-ai" && rows.length === 0 ? <p className="rounded-field bg-primary-soft p-3">今回の地形データから出題できる候補は見つかりませんでした。危険がないことや、この経路の安全を確認した意味ではありません。</p> : null}
           <p><Furigana text="これは地図[ちず]の上[うえ]で体験[たいけん]した記録[きろく]です。危険[きけん]はすべて想定[そうてい]で、実在[じつざい]の建物[たてもの]・塀[へい]・道路[どうろ]が壊[こわ]れると判定[はんてい]したものではありません。実際[じっさい]の避難[ひなん]では、自治体[じちたい]や気象庁[きしょうちょう]の情報[じょうほう]に従[したが]ってください。" /></p>
         </div> : null}

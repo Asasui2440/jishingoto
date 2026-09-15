@@ -8,13 +8,14 @@ import roomRisk from "@/../public/figma/img/room-risk.jpg";
 import { Button } from "@/components/ui/Button";
 import { Furigana, plain } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
+import { type Risk, type RiskKind, type RoomObjectType, type SupportSurface } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { viewForRisk, riskOnView, groupRisksByView } from "@/lib/room-views";
 import { focusDescription } from "@/lib/focus-description";
 import { aftermathInput } from "@/lib/aftermath-plan";
 import { prepareAftermath } from "@/lib/room-preparation";
 import { SafetyProducts } from "@/components/SafetyProducts";
+import { RoomReviewComplete } from "@/components/RoomReviewComplete";
 import { RISK_KINDS } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
 import { roomAdviceImages, roomAdvice } from "@/lib/room-guidance";
@@ -34,7 +35,7 @@ const DANGER_TEXT: Record<RiskKind, { child: string; adult: string }> = {
 const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
   { value: "bookshelf", label: "本棚", kind: "fall" },
   { value: "cupboard", label: "食器棚", kind: "fall" },
-  { value: "elevated_objects", label: "棚の上・高い所のもの", kind: "fall" },
+  { value: "elevated_objects", label: "机・棚・台の上のもの", kind: "fall" },
   { value: "tall_furniture", label: "背の高い家具・収納", kind: "fall" },
   { value: "tv", label: "テレビ", kind: "fall" },
   { value: "window", label: "窓・ガラス", kind: "break" },
@@ -53,10 +54,11 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
 export default function RoomRecognitionPage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, update } = useSession();
   const risks = groupRisksByView(sessionRisks, roomViews);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const allReviewed = risks.every(risk => reviewedIds.includes(risk.id));
+  const [completionDismissed, setCompletionDismissed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = risks.find((risk) => risk.id === selectedId) ?? risks[0];
   const selectedIndex = selected ? risks.indexOf(selected) : -1;
@@ -72,16 +74,25 @@ export default function RoomRecognitionPage() {
   const beginEdit = (risk: Risk) => {
     setEditing(risk.id);
     setSelectedId(risk.id);
-    setReviewedIds((ids) => ids.includes(risk.id) ? ids : [...ids, risk.id]);
-    setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other" });
+    setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other", supportSurface: risk.supportSurface ?? "unknown" });
     setEditNotice("");
   };
-  const [draft, setDraft] = useState({ name: "", objectType: "other" as RoomObjectType });
+  const [draft, setDraft] = useState({ name: "", objectType: "other" as RoomObjectType, supportSurface: "unknown" as SupportSurface });
   const selectRisk = (riskId: string) => {
     setEditing(null);
     setSelectedId(riskId);
-    setReviewedIds((ids) => ids.includes(riskId) ? ids : [...ids, riskId]);
   };
+
+  // 初期表示・番号・矢印・修正後も、説明が表示された時点で同じように記録する。
+  const displayedRiskId = !editing ? selected?.id : undefined;
+  useEffect(() => {
+    if (!displayedRiskId) return;
+    const frame = requestAnimationFrame(() => {
+      setReviewedIds(ids => ids.includes(displayedRiskId) ? ids : [...ids, displayedRiskId]);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [displayedRiskId]);
+  const nextUnreviewed = risks.find(risk => risk.id !== selected?.id && !reviewedIds.includes(risk.id));
 
   useEffect(() => {
     if (!getSession().analysisSource) router.replace("/analyzing");
@@ -99,15 +110,18 @@ export default function RoomRecognitionPage() {
         name,
         adultName: name,
         objectType: draft.objectType,
+        supportSurface: draft.objectType === "elevated_objects" ? draft.supportSurface : "unknown",
         kind: draft.objectType === risk.objectType ? risk.kind : OBJECTS.find((object) => object.value === draft.objectType)!.kind,
         confidence: undefined,
       } : risk),
     }));
     setReviewedIds(ids => ids.filter(id => id !== editing));
+    setCompletionDismissed(false);
     setEditNotice(`「${name}」に修正しました。`);
   };
 
   const start = () => {
+    if (!allReviewed || editing) return;
     // confirmed は既存の出題・結果の対象フラグ。危険性への同意は求めない。
     update((prev) => ({
       ...prev,
@@ -132,6 +146,7 @@ export default function RoomRecognitionPage() {
           <p className="text-11 font-bold text-primary-ink">体験の準備</p>
           <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1>
           <p className="mt-2 text-13 text-ink-muted"><Furigana text="写真[しゃしん]の番号[ばんごう]を押[お]して、危険[きけん]と備[そな]えを確認[かくにん]しよう。" adult="写真の番号を選ぶと、危険の理由と対策を確認できます。" /></p>
+          <p className="mt-1 text-13 text-ink-muted"><Furigana text="説明[せつめい]を表示[ひょうじ]した物体[ぶったい]は、確認済[かくにんず]みになるよ。" adult="説明を表示した物体は、確認済みになります。" /></p>
         </div>
         {analysisSource === "demo" && <p role="status" className="rounded-field bg-warn-soft p-3 text-11 text-warn">{analysisWarning ?? "サンプルの部屋で体験できます。"}</p>}
         <DetailSheet title="認識を修正する" onOpenChange={open => { if (open && selected) beginEdit(selected); else setEditing(null); }} summary={`写真の番号と見比べて、名前・種類を直す（${risks.length}か所）`}>
@@ -161,13 +176,19 @@ export default function RoomRecognitionPage() {
                     <select id="object-type" value={draft.objectType} onChange={(event) => setDraft({ ...draft, objectType: event.target.value as RoomObjectType })} className="min-h-11 rounded-field border border-border bg-surface px-3">
                       {OBJECTS.map((object) => <option key={object.value} value={object.value}>{object.label}</option>)}
                     </select>
+                    {draft.objectType === "elevated_objects" && <>
+                      <label htmlFor="object-support" className="text-13">どこに載っていますか？</label>
+                      <select id="object-support" value={draft.supportSurface} onChange={event => setDraft({ ...draft, supportSurface: event.target.value as SupportSurface })} className="min-h-11 rounded-field border border-border bg-surface px-3">
+                        <option value="desk">机・テーブル</option><option value="shelf">棚</option><option value="stand">その他の台</option><option value="unknown">わからない・見えない</option>
+                      </select>
+                    </>}
                     <div className="flex gap-2">
                       <Button size="md" type="button" variant="outline" onClick={event => event.currentTarget.closest("dialog")?.close()}>キャンセル</Button>
                       <Button size="md" type="submit" disabled={!draft.name.trim()}>保存</Button>
                     </div>
                     <button type="button" className="min-h-11 text-13 text-ink-muted underline" onClick={() => {
                       update((prev) => ({ ...prev, risks: prev.risks.filter((item) => item.id !== risk.id) }));
-                      setEditing(null);
+                      // 修正シートを閉じるまで、完了ポップアップを重ねない。
                       setEditNotice("対象を一覧から外しました。続ける場合は別の番号を選んでください。");
                     }}>これは写っていない（一覧から外す）</button>
                   </form>
@@ -203,6 +224,7 @@ export default function RoomRecognitionPage() {
         {selected && selectedAdvice && <article className="rounded-panel bg-surface p-4" aria-live="polite">
           <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
           <h2 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h2>
+          {selected.objectType === "elevated_objects" && <p className="mt-1 text-sm text-ink-muted"><Furigana text={`置き場所：${({ desk: "机・テーブルの上", shelf: "棚の上", stand: "台の上", unknown: "確認できません" })[selected.supportSurface ?? "unknown"]}`} /></p>}
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
           <p className="mt-2 text-sm font-bold text-secondary-ink"><Furigana text={selectedAdvice.headline} /></p>
           <AdviceIllustration key={selected.id} risk={selected} />
@@ -220,30 +242,28 @@ export default function RoomRecognitionPage() {
           </div>}
           <SafetyProducts risks={[{ ...selected, confirmed: true }]} />
           </DetailSheet></div>
-          <label className="mt-4 flex min-h-12 cursor-pointer items-center gap-3 rounded-field border border-safe p-3 font-bold text-safe">
-            <input type="checkbox" checked={checked.includes(`prepared:${selected.id}`)} onChange={() => toggleChecked(`prepared:${selected.id}`)} className="size-5 accent-teal-700" />
-            <Furigana text="この家具・場所は対策[たいさく]済[ず]み" adult="この家具・場所は対策済み" />
-          </label>
         </article>}
-        {!allReviewed && selected && <div className="space-y-2 py-3">
-          <p className="text-center text-sm text-ink-muted"><Furigana text={`確認済み ${risks.filter(r => reviewedIds.includes(r.id)).length} / ${risks.length}`} /></p>
-          <Button size="md" onClick={() => {
-            const nextReviewed = [...new Set([...reviewedIds, selected.id])];
-            setReviewedIds(nextReviewed);
-            const next = risks.find(r => !nextReviewed.includes(r.id));
-            if (next) { setSelectedId(next.id); focusDescription("selected-room-photo"); }
-          }}><Furigana text={risks.filter(r => !reviewedIds.includes(r.id) && r.id !== selected.id).length ? "次の家具を確認" : "確認を終える"} /></Button>
+        {selected && <div className="space-y-2 py-3">
+          <p role="status" className="text-center text-sm text-ink-muted"><Furigana text={`確認済み ${risks.filter(r => reviewedIds.includes(r.id)).length} / ${risks.length}`} /></p>
+          {nextUnreviewed && <Button size="md" onClick={() => {
+            selectRisk(nextUnreviewed.id);
+            focusDescription("selected-room-photo");
+          }}><Furigana text="次の物体を確認" /></Button>}
         </div>}
         {allReviewed && <section className="space-y-3 rounded-panel bg-secondary-soft p-4">
           <h2 className="text-lg font-bold"><Furigana text="この部屋で、地震が起きたら？" /></h2>
-          <p className="text-base leading-relaxed"><Furigana text="部屋の備えを確認できました。次は、揺れている間と収まった後の行動を体験しよう。" /></p>
-          <Button size="md" onClick={start}><Furigana text="行動クイズへ" /></Button>
+          <p className="text-base leading-relaxed"><Furigana text={risks.length ? "すべての物体の説明を確認しました。次は、地震のときの行動を体験しよう。" : "確認する物体はありません。共通の行動クイズに進めます。"} /></p>
+          <Button size="md" onClick={risks.length ? () => setCompletionDismissed(false) : start}><Furigana text="行動クイズへ" /></Button>
         </section>}
         <div className="flex flex-col py-2">
           <button type="button" onClick={() => router.push("/camera")} className="min-h-11 text-13 text-ink-muted underline">写真を撮り直す</button>
         </div>
       </main>
       <DisclaimerFooter />
+      {analysisSource && risks.length > 0 && allReviewed && !editing && !completionDismissed && <RoomReviewComplete onStart={start} onBack={() => {
+        setCompletionDismissed(true);
+        requestAnimationFrame(() => focusDescription("selected-room-photo"));
+      }} />}
     </div>
   );
 }

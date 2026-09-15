@@ -16,8 +16,34 @@ const request = body => new Request('http://localhost/api/room/analyze',{method:
 const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',
-  confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 }, ...overrides,
+  supportSurface: 'unknown', confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 }, ...overrides,
 });
+test('認識した置き場所が問題文・対策・予想図の説明まで引き継がれる', async () => {
+  const { recognitionRisks, recognitionViews } = load('src/lib/server/room-recognition.ts');
+  const { fetchQuestions, aftermathEvents } = load('src/lib/api.ts');
+  const { roomAdvice, roomAdviceImage } = load('src/lib/room-guidance.ts');
+  const views = recognitionViews({image:'data:image/jpeg;base64,AA=='});
+  for (const [supportSurface, from] of [['desk','机から'],['shelf','棚から'],['stand','台から'],['unknown','置かれた場所から']]) {
+    const rows = recognitionRisks({output_text:JSON.stringify({risks:[detection({
+      name:'ノートパソコン', adultName:'ノートパソコン', objectType:'elevated_objects', supportSurface,
+      evidence: supportSurface === 'desk' ? '机の天板に載り、天板と脚が見える' : '支持面の確認用データ',
+    })]})}, views);
+    assert.equal(rows[0].supportSurface, supportSurface);
+    rows[0].confirmed = true;
+    const question = (await fetchQuestions(rows)).find(q => q.sourceRiskId === rows[0].id);
+    assert(question.situation.includes(from));
+    assert(question.adultSituation.includes(from));
+    assert(aftermathEvents(rows)[0].adultText.includes(from));
+    if (supportSurface !== 'shelf') {
+      for (const audience of ['adult','child']) assert(!JSON.stringify(roomAdvice(rows[0], audience)).includes('棚'));
+      assert.equal(roomAdviceImage(rows[0]), null);
+    }
+  }
+  const legacy = {id:'old',name:'ノートパソコン',objectType:'elevated_objects',kind:'fall',confirmed:true,x:50,y:50};
+  assert(aftermathEvents([legacy])[0].text.includes('置かれた場所から'));
+  assert.throws(() => recognitionRisks({output_text:JSON.stringify({risks:[detection({supportSurface:'ceiling'})]})}, views));
+});
+
 test('photo analysis normalizes TV names and validates photo input', async () => {
   const originalFetch = global.fetch;
   const key = process.env.OPENAI_API_KEY;
@@ -177,12 +203,14 @@ test('aftermath targets confirmed objects and compares structure; mismatches are
   const key = process.env.OPENAI_API_KEY;
   const quality = process.env.OPENAI_IMAGE_QUALITY;
   const image = 'data:image/png;base64,AA==';
-  const objects = [{name:'壁掛けテレビ',type:'tv',mounted:true,bounds:{x:10,y:20,w:30,h:40}}];
+  const objects = [{name:'壁掛けテレビ',type:'tv',mounted:true,bounds:{x:10,y:20,w:30,h:40}},
+    ...[['本棚','bookshelf'],['机','desk'],['椅子','other']].map(([name,type]) => ({name,type,mounted:false,bounds:null}))];
   try {
     process.env.OPENAI_API_KEY = 'test-only';
     delete process.env.OPENAI_IMAGE_QUALITY;
     for (const result of ['checked','mismatch','unavailable']) {
       const calls = [];
+      let plannedEdits;
       global.fetch = async (url,init) => {
         calls.push(url);
         if (url.endsWith('/edits')) {
@@ -190,9 +218,18 @@ test('aftermath targets confirmed objects and compares structure; mismatches are
           assert.equal(init.body.has('input_fidelity'),false);
           assert.match(init.body.get('prompt'),/壁掛け・壁内のテレビは取り付け位置に維持/);
           assert.match(init.body.get('prompt'),/"x":10,"y":20,"w":30,"h":40/);
+          assert.match(init.body.get('prompt'),/震度6強を想定/);
+          plannedEdits = JSON.parse(init.body.get('prompt').split('\n').find(line => line.startsWith('[{')));
+          assert.equal(plannedEdits.length, objects.length);
+          assert.match(plannedEdits[1].edit, /転倒/);
+          assert.match(plannedEdits[2].edit, /横倒し/);
+          assert.match(plannedEdits[3].edit, /横倒し/);
           return Response.json({data:[{b64_json:'AA=='}]});
         }
         const body = JSON.parse(init.body);
+        const comparedEdits = JSON.parse(body.input[1].content[0].text.split('\n')[1]);
+        assert.deepEqual(comparedEdits.slice(1), plannedEdits.slice(1), '転倒・移動を生成と比較で同じ条件にする');
+        assert.match(body.input[0].content, /移動・転倒・落下・散乱は許容/);
         assert.equal(body.store,false);
         assert.equal(body.text.format.strict,true);
         const images = body.input[1].content.filter(p=>p.type==='input_image');

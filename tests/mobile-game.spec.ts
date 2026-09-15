@@ -257,10 +257,10 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   await expect(page.getByRole("button", { name: /^判断\d+：/ })).toHaveCount(3);
   await capture(page, testInfo, "route-report");
   await expect(page.getByRole("heading",{name:"次に確かめること",exact:true})).toHaveCount(0);
-  await page.getByRole("button",{name:"判断のスコアを見る"}).click();
-  await expect(page).toHaveURL(/\/evac\/summary$/);
+  await expect(page.getByRole("button",{name:"判断のスコアを見る"})).toHaveCount(0);
+  await expect(page).toHaveURL(/\/evac\/report$/);
   await expect(page.getByRole("region",{name:"判断スコア"})).toContainText("/ 100");
-  await expect(page.getByRole("heading",{name:"判断の振り返り"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"判断の記録"})).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await capture(page,testInfo,"judgment-score");
   const finish = page.getByRole("button",{name:"振り返りを終わる"});
@@ -606,7 +606,7 @@ test("解析失敗時だけ固定問題を案内し洪水ケースのまま続�
   expect(session.walk.steps.filter((step:{event?:{id:string}})=>step.event).map((step:{event:{id:string}})=>step.event.id)).toEqual(["practice-flood"]);
 });
 
-test("結果ページは元の振り返り・4つのチカラ・備えのチェックリストを表示する", async ({ page }, testInfo) => {
+test("結果ページは振り返り・4つのチカラ・チェック不要の備えを表示する", async ({ page }, testInfo) => {
   let roomApiCalls = 0;
   page.on("request", request => { if (request.url().includes("/api/room/")) roomApiCalls++; });
   await page.goto("/test-room");
@@ -633,17 +633,18 @@ test("結果ページは元の振り返り・4つのチカラ・備えのチェ�
   await page.getByRole("button", { name: "次へ", exact: true }).click();
   await page.getByRole("button", { name: "次へ", exact: true }).click();
   await expect(page.getByRole("heading", { name: "室内の備え" })).toBeVisible();
-  await page.getByRole("button", { name: /備えのチェックリストを開く/ }).click();
-  const checklist = page.getByRole("dialog");
-  await checklist.getByRole("checkbox").first().check();
-  await checklist.getByRole("button", { name: "閉じる", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: /か所 対策済み/ })).toContainText("1 / 3");
+  await page.getByRole("button", { name: /物体ごとの備えを振り返る/ }).click();
+  const preparations = page.getByRole("dialog");
+  await expect(preparations.getByRole("listitem")).toHaveCount(3);
+  await expect(preparations.getByRole("checkbox")).toHaveCount(0);
+  await preparations.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByText(/対策済み|対策したらチェック/)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole("button", { name: /結果を共有/ }).click();
   await expect(page).toHaveURL(/\/share$/);
   await page.goBack();
   await expect(page.getByRole("heading", { name: "室内の備え" })).toBeVisible();
-  await expect(page.getByRole("status").filter({ hasText: /か所 対策済み/ })).toContainText("1 / 3");
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
   expect(roomApiCalls).toBe(0);
 });
 
@@ -695,6 +696,7 @@ test("家具の確認中は生成せず、修正した対象をクイズ開始�
     await route.fulfill({ json: { imageUrl: "/figma/img/room-risk.jpg", verification: "checked" } });
   });
   await page.goto("/risks");
+  await page.getByRole("dialog", { name: "すべての物体を確認しました" }).getByRole("button", { name: "説明に戻る" }).click();
   await page.getByRole("button", { name: /認識を修正する/ }).click();
   const dialog = page.getByRole("dialog", { name: "認識を修正する" });
   await dialog.getByLabel("名前", { exact: true }).fill("壁掛けテレビ");
@@ -702,9 +704,8 @@ test("家具の確認中は生成せず、修正した対象をクイズ開始�
   await dialog.getByRole("button", { name: "保存", exact: true }).click();
   await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
   expect(objects).toHaveLength(0);
-  await page.getByRole("button", { name: "確認を終える", exact: true }).click();
   expect(objects).toHaveLength(0);
-  await page.getByRole("button", { name: "行動クイズへ", exact: true }).click();
+  await page.getByRole("dialog", { name: "すべての物体を確認しました" }).getByRole("button", { name: "行動クイズへ", exact: true }).click();
   await expect(page).toHaveURL(/\/quiz$/);
   await expect.poll(() => objects.length).toBe(1);
   expect(objects[0][0]).toMatchObject({ name: "壁掛けテレビ", type: "tv", mounted: true, bounds: DETECTED_RISKS[0].bounds });
@@ -918,11 +919,13 @@ for (const perfect of [true, false]) {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(buttons.first()).toBeFocused();
     await page.goto("/evac/summary");
+    await expect(page).toHaveURL(/\/evac\/report$/);
     await expect(page.getByRole("region",{name:"判断スコア"})).toContainText(perfect ? "100" : "50");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("dialog",{name:"次に確かめること"})).toHaveCount(0);
     await expect(page.getByTestId("score-ring")).toHaveAttribute("stroke-dasharray", perfect ? "100 100" : "50 100");
-    await expect(page.getByRole("region",{name:"判断の振り返り"}).getByRole("img",{name:/状況のイラスト/})).toHaveCount(2);
+    await expect(page.getByRole("region",{name:"それぞれの判断"}).getByRole("button",{name:/^判断\d+：/})).toHaveCount(2);
+    await expect(page.getByRole("region",{name:"判断スコア"})).toBeInViewport({ratio:1});
     await page.screenshot({path:testInfo.outputPath(`score-overview-${perfect}.png`)});
     const trigger = page.getByRole("button",{name:/^判断1：/});
     await trigger.click();
@@ -977,6 +980,16 @@ for (const perfect of [true, false]) {
     await page.getByRole("button",{name:/^判断2：/}).click();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button",{name:"振り返りを終わる",exact:true}).click();
+    const follow = page.getByRole("dialog",{name:"次に確かめること"});
+    await follow.locator("button[aria-pressed]").first().click();
+    await expect(follow.getByRole("button",{pressed:true})).toHaveCount(1);
+    await follow.getByRole("button",{name:"次へ",exact:true}).click();
+    await expect(page).toHaveURL(/\/evac\/complete$/);
+    await page.getByRole("button",{name:"戻る",exact:true}).click();
+    await expect(page).toHaveURL(/\/evac\/report$/);
+    await page.getByRole("button",{name:"振り返りを終わる",exact:true}).click();
+    await expect(page.getByRole("dialog",{name:"次に確かめること"}).getByRole("button",{pressed:true})).toHaveCount(1);
   });
 }
 

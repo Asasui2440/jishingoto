@@ -22,7 +22,7 @@ function load(file) {
 }
 const { fetchQuestions } = load("src/lib/api.ts");
 const { safetyProductsFor } = load("src/lib/recommendations.ts");
-const risk = (objectType, kind = "fall", confirmed = true) => ({ id: objectType, name: "対象", adultName: "対象物", objectType, kind, confirmed, x: 50, y: 50 });
+const risk = (objectType, kind = "fall", confirmed = true) => ({ id: objectType, name: "対象", adultName: "対象物", objectType, supportSurface: objectType === "elevated_objects" ? "shelf" : "unknown", kind, confirmed, x: 50, y: 50 });
 
 test("short earthquake audio schedules volume changes within the sound duration", () => {
   const originalWindow = global.window;
@@ -126,7 +126,7 @@ test("fixture mode performs no API calls, measures simulated delays, and resets 
 test("elevated objects never get a floor-scatter question; furniture advice is specific", async () => {
   const { roomAdvice, EXIT_EXPLANATION } = load("src/lib/room-guidance.ts");
   const { aftermathEvents } = load("src/lib/api.ts");
-  for (const item of [risk("elevated_objects", "block"), { ...risk("loose_objects", "block"), name: "棚の上のもの" }]) {
+  for (const item of [risk("elevated_objects", "block"), { ...risk("loose_objects", "block"), name: "棚の上のもの", supportSurface: "shelf" }]) {
     const qs = await fetchQuestions([item]);
     const q = qs.find((q) => q.sourceRiskId === item.id);
     assert.equal(q.phase, "during");
@@ -263,9 +263,7 @@ test("photo questions exclude kitchen checks when no cooktop is visible", async 
   }
 });
 
-test("SNSの問題は選ばれた場合だけ5問目に出し、揺れの後の問題を保つ", async () => {
-  let withInformation = 0;
-  let withoutInformation = 0;
+test("SNSの地震予告問題を出さず、重複のない5問と揺れの前後の順序を保つ", async () => {
   for (const fixtures of [[], [risk("tv")], [risk("desk"), risk("tv"), risk("doorway", "block"), risk("cooktop")]]) {
     for (const value of [0, 0.2, 0.4, 0.6, 0.8, 0.999]) {
       const qs = await fetchQuestions(fixtures, "home", () => value);
@@ -275,13 +273,9 @@ test("SNSの問題は選ばれた場合だけ5問目に出し、揺れの後の�
       const duringCount = qs.filter(q => q.phase === "during").length;
       assert(duringCount >= 1 && duringCount <= 2);
       assert(qs.slice(duringCount).every(q => q.phase === "after"));
-      if (qs.some(q => q.id === "q5")) {
-        withInformation++;
-        assert.equal(qs.at(-1).id, "q5");
-      } else withoutInformation++;
+      assert(qs.every(q => q.id !== "q5"));
     }
   }
-  assert(withInformation > 0 && withoutInformation > 0);
 });
 
 test("a detected desk always gets the first protection question", async () => {
@@ -629,7 +623,7 @@ test("サンプルを保存するPNGにもサンプル表示と4項目を含む"
   const { createResultSummaryFile, axisRows } = load("src/lib/share-card.ts");
   const before = { Image: global.Image, document: global.document };
   const labels = [];
-  const context = { fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, roundRect() {}, fill() {}, fillText(t) { labels.push(t); }, save() {}, clip() {}, drawImage() {}, restore() {} };
+  const context = { fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, roundRect() {}, fill() {}, measureText(t) { return { width: t.length * 23 }; }, fillText(t) { labels.push(t); }, save() {}, clip() {}, drawImage() {}, restore() {} };
   global.Image = class { naturalWidth = 1536; naturalHeight = 1024; async decode() {} };
   global.document = { fonts: { ready: Promise.resolve() }, createElement: () => ({ getContext: () => context, toBlob: callback => callback(new Blob(["png"], { type: "image/png" })) }) };
   try {
@@ -637,7 +631,7 @@ test("サンプルを保存するPNGにもサンプル表示と4項目を含む"
     assert.equal(file.name, "jishingoto-result-sample.png");
     assert(labels.includes("対象なし"));
     assert(labels.some(text => text.includes("サンプル")));
-    assert(labels.some(text => text.includes("あなたの部屋を再現した画像ではありません")));
+    assert(labels.join("").includes("あなたの部屋を再現した画像ではありません"));
     assert(labels.includes("3/5") && labels.includes("4/5"));
   } finally { global.Image = before.Image; global.document = before.document; }
 });
