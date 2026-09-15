@@ -11,8 +11,9 @@ import { Furigana } from "@/components/ui/Furigana";
 import { SCENARIO_NOTE, MAP_NOTE, type EvacChoice, type HazardEvent } from "@/lib/evac-content";
 
 /** Choices stay beside the map; expanded context pauses the decision timer. */
-export function EventSheet({ event, viewingStreet = false, index, total, seconds, busy = false, onTimerChange, onViewStreet, onChoose }: {
+export function EventSheet({ event, viewLabel, viewingStreet = false, index, total, seconds, busy = false, onTimerChange, onViewStreet, onChoose }: {
   event: HazardEvent;
+  viewLabel?: string;
   viewingStreet?: boolean;
   index: number;
   total: number;
@@ -57,7 +58,7 @@ export function EventSheet({ event, viewingStreet = false, index, total, seconds
     <section className={styles.card} aria-label={`判断ポイント ${index + 1} / ${total}`}>
       <header className={styles.header}>
         <p className="text-11 font-bold text-primary-ink">POINT {index + 1} / {total}</p>
-        {onViewStreet ? <button type="button" className={styles.streetToggle} onClick={onViewStreet} aria-label="Street Viewで周りを見る">Street Viewを見る</button> : null}
+        {onViewStreet ? <button type="button" className={styles.streetToggle} onClick={onViewStreet} aria-label={viewLabel ?? "Street Viewで周りを見る"}>{viewLabel ?? "Street Viewを見る"}</button> : null}
         <button type="button" disabled={busy} onClick={() => setTimerSettings(true)} className={`${styles.timer} ${urgent ? styles.timerUrgent : ""} ${critical ? styles.timerCritical : ""}`} data-urgency={critical ? "critical" : urgent ? "warning" : "normal"} aria-label="制限時間の設定">
           <GameIcon name={paused ? "pause" : "clock"} className="size-4" />
           <span data-testid="decision-timer">{remaining === null ? "制限なし" : `${remaining}秒`}</span>

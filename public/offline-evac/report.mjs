@@ -3,6 +3,7 @@ import { validPoint, MAX_ROUTES, tilePlan } from './core.mjs';
 import { fetchGraph, findRoute, downloadBounds } from './routing.mjs';
 import { allRoutes, putRoute, sameRoute } from './storage.mjs';
 import { fetchShelters } from './shelters.mjs';
+import { saveOrigin, expiredRoute } from './expiry.mjs';
 
 // Same-origin, parent-frame handoff. Route geometry from Google is never received.
 export function initReport(map, shellPreparation) {
@@ -13,10 +14,12 @@ export function initReport(map, shellPreparation) {
   function validate(value) {
     if(!value || !(value.purpose==='home'?/^commute-(work|school)$/:/^report-\d{1,16}$/).test(value.id) || !validPoint(value.start) || !validPoint(value.shelter) || typeof value.name!=='string' || !value.name.trim() || value.name.length>80)throw new Error('リザルトの避難先を読み取れませんでした。元の画面から開き直してください。');
     const point=p=>({lat:p.lat,lng:p.lng});
-    return {purpose:value.purpose==='home'?'home':'evacuation',routeLabel:value.purpose==='home'?(value.id==='commute-work'?'会社 → 自宅':'学校 → 自宅'):null,scenario:value.scenario==='flood'?'flood':'earthquake',id:value.id,start:point(value.start),shelter:point(value.shelter),name:value.name.trim(),kind:String(value.kind??'避難先').slice(0,80),notes:String(value.notes??'').slice(0,600),source:String(value.source??'リザルトの避難先').slice(0,300),demo:value.demo===true};
+    value={...value,homeOrigin:saveOrigin(value.homeOrigin,value.demo===true)};
+    return {homeOrigin:value.homeOrigin,purpose:value.purpose==='home'?'home':'evacuation',routeLabel:value.purpose==='home'?(value.id==='commute-work'?'会社 → 自宅':'学校 → 自宅'):null,scenario:value.scenario==='flood'?'flood':'earthquake',id:value.id,start:point(value.start),shelter:point(value.shelter),name:value.name.trim(),kind:String(value.kind??'避難先').slice(0,80),notes:String(value.notes??'').slice(0,600),source:String(value.source??'リザルトの避難先').slice(0,300),demo:value.demo===true};
   }
   async function prepare() {
     if(busy||!input)return;
+    if(expiredRoute(input)){$('report-status').textContent='検索地点の期限が切れました。出発地点をもう一度検索してください。';return;}
     busy=true;record=null;$('report-retry').hidden=true;$('report-download').disabled=true;
     $('report-status').textContent='保存用の地図と徒歩経路を準備しています…';
     map.path=[];map.start=input.start;map.shelter=input.shelter;map.mode='pan';map.setPack(null);map.fit([input.start,input.shelter]);

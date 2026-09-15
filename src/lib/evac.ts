@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { validUIOrigin, type HomeOrigin } from "./place-selection";
 import type { EvacMode } from "./evac-mode";
 import type { WalkProgress } from "./evac-walk";
 import type { EvacScenario } from "./evac-scenario";
@@ -37,6 +38,7 @@ export type EvacSession = {
   home: LatLng | null;
   /** 指定した地点の呼び名（住所・「現在地」など）。画面表示だけに使う */
   homeLabel: string | null;
+  homeOrigin?: HomeOrigin | null;
   shelter: Shelter | null;
   /** 表示した候補経路 */
   routes: RouteOption[];
@@ -61,6 +63,7 @@ const EMPTY: EvacSession = {
   roomFinishedAt: null,
   home: null,
   homeLabel: null,
+  homeOrigin: null,
   shelter: null,
   routes: [],
   startRouteId: null,
@@ -76,10 +79,22 @@ const EMPTY: EvacSession = {
 const store = createPersistentStore<EvacSession>("jishingoto.evac.v2", EMPTY, "session");
 
 /** レンダーを介さず、いまの状態をそのまま読む（画面の入口チェックに使う） */
-export const getEvac = store.get;
+function expireSearch() {
+  const current = store.get();
+  if (current.homeOrigin?.kind === 'places-ui-kit' && !validUIOrigin(current.homeOrigin)) {
+    store.set({ ...EMPTY, mode: current.mode, scenario: current.scenario, roomFinishedAt: current.roomFinishedAt });
+  }
+}
+export const getEvac = () => { expireSearch(); return store.get(); };
 
 export function useEvac() {
   const [evac, set] = useStore(store);
+  useEffect(() => {
+    expireSearch();
+    const timer = window.setInterval(expireSearch, 60000);
+    window.addEventListener('focus', expireSearch);
+    return () => { clearInterval(timer); window.removeEventListener('focus', expireSearch); };
+  }, []);
 
   const decide = useCallback(
     (d: EvacDecision) =>

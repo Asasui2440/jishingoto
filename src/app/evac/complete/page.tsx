@@ -32,12 +32,12 @@ export default function EvacCompletePage() {
     }
   };
   const restart = () => {
-    const {mode,scenario,analysisMode,home,homeLabel,shelter,timerSeconds,roomFinishedAt,reset,update} = evac;
-    reset(); update({mode,scenario,analysisMode,home,homeLabel,shelter,timerSeconds,roomFinishedAt});
+    const {mode,scenario,analysisMode,home,homeLabel,homeOrigin,shelter,timerSeconds,roomFinishedAt,reset,update} = evac;
+    reset(); update({mode,scenario,analysisMode,home,homeLabel,homeOrigin,shelter,timerSeconds,roomFinishedAt});
     router.push("/evac/routes");
   };
   return <GameShell>
-    <GameHeader title="振り返りが終わりました" subtitle="記録を残したり、別の道を試したりできます" step={3} onBack={() => router.push("/evac/summary")} />
+    <GameHeader title="振り返りが終わりました" subtitle="記録を残したり、別の道を試したりできます" step={3} onBack={() => router.push("/evac/report")} />
     <main className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
       <section className="space-y-2 rounded-panel border border-border bg-surface p-3">
         <h2 className="flex items-center gap-2 font-bold"><GameIcon name="route" />今回のルート</h2>

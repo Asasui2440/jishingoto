@@ -60,6 +60,7 @@ export const RISK_KINDS: Record<
   },
 };
 
+export type SupportSurface = "desk" | "shelf" | "stand" | "unknown";
 export type KnowledgeReference = {
   id: string;
   title: string;
@@ -87,6 +88,8 @@ export type Risk = {
   kind: RiskKind;
   /** 写っている物体の種類。設問パターンとのマッチングに使う */
   objectType?: RoomObjectType;
+  /** 対象物が載っている支持面。写真から確認できない場合は unknown。 */
+  supportSurface?: SupportSurface;
   /** AI の自信度 0–1。ユーザーが自分で足したものは undefined */
   confidence?: number;
   /** 写真の観察と、ナレッジを参照した条件付きの想定・備え。 */

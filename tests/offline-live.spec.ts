@@ -3,7 +3,7 @@ import {test,expect} from '@playwright/test';
 test('実際の道路地図を保存して、通信断後に現在地と経路を描画する',async({page,context})=>{
   test.setTimeout(120000);
   await page.addInitScript(()=>sessionStorage.setItem('jishingoto.evac.v2',JSON.stringify({mode:'mock',home:{lat:35.7186,lng:139.7237},shelter:{id:'gokokuji',name:'護国寺一帯',kind:'指定緊急避難場所',position:{lat:35.720812,lng:139.726671},source:'国土地理院 指定緊急避難場所データ',address:''},routes:[],startRouteId:null,takenRouteIds:[],decisions:[],walk:null,finishedAt:987654321,followUp:'正門の位置を家族と確認する'})));
-  await page.goto('/evac/report');await page.getByRole('button',{name:'このマップと避難所を保存する',exact:true}).click();
+  await page.goto('/evac/report');await page.getByRole('link',{name:'オフライン用の避難地図を作成',exact:true}).click();
   const frame=page.frameLocator('iframe[title="保存するオフライン地図と避難所"]');
   await expect(frame.locator('#report-download')).toBeEnabled({timeout:90000});
   await expect(frame.locator('#map')).toHaveAttribute('data-map-ready','true');

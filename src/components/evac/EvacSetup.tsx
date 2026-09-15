@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import { BottomSheet, GameHeader, GameIcon, GameShell, Toast } from "./GameUI";
 import { EvacApiGate, EvacModeSelector } from "./EvacMode";
 import { EvacMap } from "./EvacMap";
+import { PlacesSearch } from "./PlacesSearch";
+import type { HomeOrigin } from "@/lib/place-selection";
 import { GeoAnalysisSettings } from "./GeoAnalysisSettings";
 import { EVAC_SCENARIOS, isEvacScenario, type EvacScenario } from "@/lib/evac-scenario";
 import { FLOOD_SOURCE } from "@/lib/flood-hazard";
 import { groupSchoolShelters } from "@/lib/shelter-groups";
 import { RoomConnectionSummary } from "./RoomConnectionSummary";
 import { Furigana } from "@/components/ui/Furigana";
-import { distanceM, fetchRoutes, fetchShelters, geocodeAddress, TIMER_PRESETS } from "@/lib/evac-api";
+import { distanceM, fetchRoutes, fetchShelters, TIMER_PRESETS } from "@/lib/evac-api";
 import { DEMO_HOME, DEMO_AREA_LABEL, LOCATION_NOTICE, SIM_CONDITIONS, SHELTER_SOURCE_LINK, type LatLng, type Shelter } from "@/lib/evac-content";
 import { formatDistance, formatDuration, getEvac, useEvac } from "@/lib/evac";
 import { parseEvacMode, type EvacMode } from "@/lib/evac-mode";
@@ -67,8 +69,6 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
   const [routeError, setRouteError] = useState<string | null>(null);
   const [needsShelter, setNeedsShelter] = useState(false);
   const [openedIds, setOpenedIds] = useState<string[]>([]);
-  const [address, setAddress] = useState("");
-  const [searchBusy, setSearchBusy] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -90,7 +90,7 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
-    if (!getEvac().home) update({home: DEMO_HOME, homeLabel: mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺", startedAt: Date.now()});
+    if (!getEvac().home) update({home: DEMO_HOME, homeOrigin: { kind: "sample" }, homeLabel: mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺", startedAt: Date.now()});
     const box = mapBox.current;
     if (!box) return;
     const observer = new ResizeObserver(([entry]) => setMapHeight(Math.max(140, Math.floor(entry.contentRect.height) - (mode === "mock" ? 28 : 0))));
@@ -152,37 +152,25 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
     if (initialRoutes || new URLSearchParams(window.location.search).get("view") === "routes") void loadRoutes();
   }, [initialRoutes, loadRoutes]);
 
-  const pickHome = (point: LatLng, label: string) => {
+  const pickHome = (point: LatLng, label: string, homeOrigin: HomeOrigin) => {
     locationRequest.current++; routeRequest.current++;
-    setBusy(false); setGeoBusy(false); setSearchBusy(false); setLocationError(null); setRouteError(null);
-    update({analysisMode: "geo-ai", home: point, homeLabel: label, shelter: null, routes: [], startRouteId: null, walk: null, decisions: [], takenRouteIds: [], finishedAt: null, followUp: null});
+    setBusy(false); setGeoBusy(false); setLocationError(null); setRouteError(null);
+    update({analysisMode: "geo-ai", home: point, homeLabel: label, homeOrigin, shelter: null, routes: [], startRouteId: null, walk: null, decisions: [], takenRouteIds: [], finishedAt: null, followUp: null});
     changeStage("place");
   };
   const requestMyLocation = () => {
     if (!navigator.geolocation) { setLocationError("現在地を取得できません。住所検索か地図で指定してください。"); return; }
     const request = ++locationRequest.current;
-    setSearchBusy(false); setGeoBusy(true); setLocationError(null);
+    setGeoBusy(true); setLocationError(null);
     navigator.geolocation.getCurrentPosition(pos => {
       if (!alive.current || request !== locationRequest.current) return;
-      pickHome({lat: pos.coords.latitude, lng: pos.coords.longitude}, "いまいる場所"); setToast("現在地を設定しました");
+      pickHome({lat: pos.coords.latitude, lng: pos.coords.longitude}, "いまいる場所", { kind: "device" }); setToast("現在地を設定しました");
     }, (error) => { if(alive.current && request === locationRequest.current) { setGeoBusy(false); setLocationError(error.code === 1 ? "位置情報の利用が許可されていません。ブラウザの設定で許可するか、住所検索・地図から場所を選べます。" : error.code === 3 ? "現在地の取得に時間がかかっています。もう一度試すか、住所を入力してください。" : "現在地を取得できません。住所検索か地図で指定してください。"); } }, {enableHighAccuracy: true, timeout: 8000});
-  };
-  const search = async () => {
-    if (!address.trim()) return;
-    const request = ++locationRequest.current;
-    setGeoBusy(false); setSearchBusy(true); setLocationError(null);
-    try {
-      const hit = await geocodeAddress(address.trim());
-      if (!alive.current || request !== locationRequest.current) return;
-      if (hit.ok) { pickHome(hit.position, hit.label); setToast("出発地点を設定しました"); }
-      else setLocationError(hit.reason === "too-coarse" ? "町名や駅名まで入力してください。" : "見つかりませんでした。地図でも指定できます。");
-    } catch { if(alive.current && request === locationRequest.current) setLocationError("検索できませんでした。通信・地図の設定を確認してください。"); }
-    finally { if(alive.current && request === locationRequest.current) setSearchBusy(false); }
   };
   const changeScenario = (next: EvacScenario) => {
     if (next === scenario) return;
     locationRequest.current++; routeRequest.current++;
-    setGeoBusy(false); setSearchBusy(false); setRouteError(null); setLocationError(null); setSheet(null); setOpenedIds([]);
+    setGeoBusy(false); setRouteError(null); setLocationError(null); setSheet(null); setOpenedIds([]);
     update({scenario: next, analysisMode: "geo-ai", routes: [], startRouteId: null, walk: null, decisions: [], takenRouteIds: [], followUp: null, finishedAt: null});
     void loadRoutes();
   };
@@ -202,13 +190,13 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
     <main className="flex min-h-0 flex-1 flex-col">
       {stage === "routes" ? <div className="mx-4 mb-2 shrink-0"><label className="flex shrink-0 items-center gap-3 rounded-xl bg-primary px-2 py-1 text-[0.625rem] font-bold">災害ケース<select aria-label="災害ケース" value={scenario} onChange={e => { if (isEvacScenario(e.target.value)) changeScenario(e.target.value); }} className="min-h-11 w-24 bg-transparent text-13">{Object.entries(EVAC_SCENARIOS).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}</select></label></div> : null}
       {stage === "place" ? <div className="shrink-0 px-4 pb-2">
-        {mode === "api" ? <form onSubmit={event => {event.preventDefault(); void search();}} className="flex gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-border bg-white px-3"><GameIcon name="search" className="size-4 shrink-0 text-ink-muted" /><input aria-label="住所・駅名で出発地点を検索" placeholder="住所・駅名を入力" value={address} onChange={event => setAddress(event.target.value)} className="h-11 min-w-0 w-full bg-transparent text-base" /></label><button type="submit" disabled={searchBusy || !address.trim()} className="min-h-11 rounded-2xl bg-white px-3 text-13 font-bold disabled:opacity-40">{searchBusy ? "検索中" : "検索"}</button></form> : null}
+        {mode === "api" ? <PlacesSearch onSelect={({ position, label, origin }) => { pickHome(position, label, origin); setToast("出発地点を設定しました"); }} /> : null}
         {mode === "api" ? <button type="button" onClick={requestMyLocation} disabled={geoBusy} className={button + " mt-2 w-full bg-primary"}><GameIcon name="locate" className={geoBusy ? "size-5 animate-pulse" : "size-5"} />{geoBusy ? "現在地を取得しています…" : "現在地から始める"}</button> : null}
         <button type="button" onClick={() => setSheet("place")} className="mt-1 flex min-h-9 w-full items-center gap-1.5 text-left text-11 text-ink-muted"><GameIcon name="pin" className="size-3.5 shrink-0" /><span className="truncate"><Furigana text={homeLabel ?? "出発地点"} /></span><GameIcon name="info" className="ml-auto size-3.5 shrink-0" /></button>
         {locationError ? <p role="alert" className="rounded-xl bg-warn-soft px-3 py-2 text-11">{locationError}</p> : null}
       </div> : null}
       <div ref={mapBox} className="relative mx-3 min-h-[160px] flex-1 overflow-hidden rounded-3xl border border-border bg-white">
-        <EvacMap floodHazard={scenario === "flood" && stage === "routes"} mode={mode} center={spot} home={home} shelters={stage === "routes" ? !busy && !needsShelter && shelter ? [shelter] : [] : shelters ?? []} selectedShelterId={shelter?.id} routes={stage === "routes" && !busy && !routeError ? routes : []} activeRouteId={startRouteId} onSelectRoute={stage === "routes" ? chooseRoute : undefined} onPickHome={stage === "place" ? p => pickHome(p, "地図で指定した地点") : undefined} onSelectShelter={stage === "place" ? id => { const selected = shelters?.find(s => s.id === id); if(selected) pickShelter(selected); } : undefined} height={mapHeight} className="!rounded-none" />
+        <EvacMap floodHazard={scenario === "flood" && stage === "routes"} mode={mode} center={spot} home={home} shelters={stage === "routes" ? !busy && !needsShelter && shelter ? [shelter] : [] : shelters ?? []} selectedShelterId={shelter?.id} routes={stage === "routes" && !busy && !routeError ? routes : []} activeRouteId={startRouteId} onSelectRoute={stage === "routes" ? chooseRoute : undefined} onPickHome={stage === "place" ? p => pickHome(p, "地図で指定した地点", { kind: "google-map" }) : undefined} onSelectShelter={stage === "place" ? id => { const selected = shelters?.find(s => s.id === id); if(selected) pickShelter(selected); } : undefined} height={mapHeight} className="!rounded-none" />
       </div>
       <section aria-label={stage === "place" ? "避難先を選ぶ" : "ルートを比較する"} className="mt-2 flex min-h-0 shrink flex-col rounded-t-3xl border-t border-border bg-white px-4 pt-3 pb-2">
         <div className="min-h-0 overflow-y-auto">
@@ -241,7 +229,7 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
     <BottomSheet open={sheet === "place"} title="出発地点" onClose={() => setSheet(null)}>
       <p className="text-base font-bold"><Furigana text={homeLabel ?? "未指定"} /></p><p className="mt-2 text-13 text-ink-muted">指定地点は、近くの避難先とルートの検索に使います。住所・現在地・地図のタップで変更できます。</p>
       {mode === "api" ? <button onClick={() => {setSheet(null); requestMyLocation();}} className={button + " mt-3 w-full bg-primary"}><GameIcon name="locate" />現在地を使う</button> : null}
-      <button onClick={() => {pickHome(DEMO_HOME, mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺"); setSheet(null);}} className={button + " mt-2 w-full border border-border"}>開始地点に戻す</button>
+      <button onClick={() => {pickHome(DEMO_HOME, mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺", { kind: "sample" }); setSheet(null);}} className={button + " mt-2 w-full border border-border"}>開始地点に戻す</button>
       <div className="mt-4 space-y-2 text-11 text-ink-muted">{LOCATION_NOTICE.map(t => <p key={t}><Furigana text={t} /></p>)}</div>
     </BottomSheet>
     <BottomSheet open={sheet === "shelters"} title="近くの避難先" onClose={() => setSheet(null)}>

@@ -1,5 +1,6 @@
 import { prepareOfflineEntry } from './registration.mjs';
 import { validPoint } from './core.mjs';
+import { expiredRoute } from './expiry.mjs';
 import { allRoutes, deleteRoute } from './storage.mjs';
 import { RouteMap } from './map.mjs';
 import { findRoute, inside } from './routing.mjs';
@@ -70,17 +71,19 @@ async function list(){
   routes=await allRoutes();$('saved-list').replaceChildren();
   if(!routes.length)$('saved-list').append(element('p','まだ保存したマップはありません。オンラインのときに、避難シミュレーションのリザルトから地図を保存してください。','empty'));
   for(const route of routes){const card=element('article','','saved-card'),body=element('div','');body.append(element('h3',route.routeLabel||route.name),element('p',`${route.demo?'練習データ · ':''}${new Date(route.savedAt).toLocaleString('ja-JP')} 保存`,'small'));
+    if(route.homeOrigin?.kind==='places-ui-kit')body.append(element('p',`Google Maps 検索地点 · ${new Date(route.homeOrigin.expiresAt).toLocaleDateString('ja-JP')} まで`,'small'));
     const actions=element('div','','actions'),open=element('button','地図を見る'),remove=element('button','削除','danger');open.onclick=()=>show(route);remove.setAttribute('aria-label',`${route.name}を削除`);
     remove.onclick=async()=>{if(!confirm(`「${route.name}」の保存を削除しますか？`))return;try{await deleteRoute(route.id);if(selected?.id===route.id){document.body.classList.remove('route-open');$('workspace').hidden=true;map.setPack(null);selected=null;stopLocation();}await list();}catch(e){message(e.message,true);}};
     actions.append(open,remove);card.append(body,actions);$('saved-list').append(card);
   }
 }
 function show(route){
+  if(expiredRoute(route)){void list();message('検索地点の保存期限が切れました。オンラインでもう一度検索してください。',true);return;}
   if(!route.mapPack){message('以前の形式で保存したマップです。新しい道路地図を使うには、リザルトから保存し直してください。',true);return;}
   pendingLocationAction=null;selected=route;destination={name:route.purpose==='home'?'保存時の自宅':route.name,position:route.shelter};$('map-loading').hidden=true;document.body.classList.add('route-open');$('workspace').hidden=false;$('route-details').hidden=false;$('saved-info').hidden=false;$('report-actions').hidden=true;
   map.destinationLabel=route.purpose==='home'?'保存時の自宅':'避難先';
   $('workspace-title').textContent=route.routeLabel||route.name;
-  $('saved-info').textContent=`${route.demo?'練習データ · ':''}${new Date(route.savedAt).toLocaleString('ja-JP')} 保存`;
+  $('saved-info').textContent=`${route.demo?'練習データ · ':''}${new Date(route.savedAt).toLocaleString('ja-JP')} 保存${route.homeOrigin?.kind==='places-ui-kit'?` · 出発地点：Google Maps · ${new Date(route.homeOrigin.expiresAt).toLocaleDateString('ja-JP')} まで`:''}`;
   $('route-notes').textContent=route.notes||'';$('route-memo').hidden=!route.notes?.trim();renderRouteSummary(route.result);$('offline-navigation').hidden=!route.graph;
   map.start=route.start;map.shelter=route.shelter;map.path=route.path;map.mode='pan';map.setPack(route.mapPack);map.fit(route.path);
   $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
@@ -94,3 +97,15 @@ const shellPreparation=prepareShell().then(()=>true).catch(e=>{document.document
 const params=new URLSearchParams(location.search);
 if(params.get('from')==='report'&&parent!==window)initReport(map,shellPreparation);
 else void list().then(()=>{const id=params.get('route');if(id){const route=routes.find(r=>r.id===id||r.aliases?.includes(id));if(route)show(route);else message('この端末には指定されたマップがありません。',true);}else if(params.get('entry')==='offline'&&routes.length===1)show(routes[0]);}).catch(e=>message(e.message,true));
+
+// Browsers cannot execute cleanup while closed; enforce it on resume and while open.
+async function expireVisibleMap(){
+  if(selected && expiredRoute(selected)){
+    stopLocation();map.setPack(null);map.path=[];map.start=null;map.shelter=null;
+    selected=null;destination=null;$('workspace').hidden=true;document.body.classList.remove('route-open');
+    message('検索地点の保存期限が切れたため、このマップを削除しました。オンラインでもう一度検索してください。',true);
+  }
+  await list();
+}
+window.addEventListener('focus',()=>void expireVisibleMap().catch(()=>{}));
+setInterval(()=>void expireVisibleMap().catch(()=>{}),60000);

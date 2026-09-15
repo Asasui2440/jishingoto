@@ -46,9 +46,9 @@ test("every playable phase-one choice has an existing illustration, stable after
       assert.equal(pictures.size, q.choices.length, `different actions must not share one picture: ${q.id}`);
     }
   }
-  assert.equal(seen.adult.size, 40);
-  assert.equal(seen.child.size, 33);
-  assert.equal(checkedFiles.size, 12);
+  assert.equal(seen.adult.size, 36);
+  assert.equal(seen.child.size, 30);
+  assert.equal(checkedFiles.size, 11);
 });
 
 test("unknown future choices do not silently receive a misleading illustration", () => {

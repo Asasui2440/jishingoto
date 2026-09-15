@@ -56,7 +56,7 @@ const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
   needsReview: true, reviewReason: 'スタンドで立つテレビの転倒への備えを確認する',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',
-  confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 },
+  supportSurface: 'unknown', confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 },
   scenario: '固定が不十分な場合は強い揺れでテレビが落下する可能性があります。',
   preparation: 'テレビと台の固定方法を説明書で確認します。',
   unknowns: ['固定具の状態'], knowledgeIds: ['EQ-004'], ...overrides,
@@ -113,6 +113,33 @@ test('missing and unchecked knowledge cannot be silently used; MD changes change
     fs.writeFileSync(notePath, original.replace('S-TFD-APPLIANCES','S-NOT-REGISTERED'));
     await assert.rejects(loadRoomKnowledge(root),/unchecked knowledge/);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test('認識した置き場所が問題文・対策・予想図の説明まで引き継がれる', async () => {
+  const { recognitionRisks, recognitionViews } = load('src/lib/server/room-recognition.ts');
+  const { fetchQuestions, aftermathEvents } = load('src/lib/api.ts');
+  const { roomAdvice, roomAdviceImage } = load('src/lib/room-guidance.ts');
+  const knowledge = await load('src/lib/server/room-knowledge.ts').loadRoomKnowledge();
+  const views = recognitionViews({image:'data:image/jpeg;base64,AA=='});
+  for (const [supportSurface, from] of [['desk','机から'],['shelf','棚から'],['stand','台から'],['unknown','置かれた場所から']]) {
+    const rows = recognitionRisks({output_text:JSON.stringify({risks:[detection({
+      name:'ノートパソコン', adultName:'ノートパソコン', objectType:'elevated_objects', supportSurface,
+      evidence: supportSurface === 'desk' ? '机の天板に載り、天板と脚が見える' : '支持面の確認用データ',
+    })]})}, views, knowledge);
+    assert.equal(rows[0].supportSurface, supportSurface);
+    rows[0].confirmed = true;
+    const question = (await fetchQuestions(rows)).find(q => q.sourceRiskId === rows[0].id);
+    assert(question.situation.includes(from));
+    assert(question.adultSituation.includes(from));
+    assert(aftermathEvents(rows)[0].adultText.includes(from));
+    if (supportSurface !== 'shelf') {
+      for (const audience of ['adult','child']) assert(!JSON.stringify(roomAdvice(rows[0], audience)).includes('棚'));
+      assert.equal(roomAdviceImage(rows[0]), null);
+    }
+  }
+  const legacy = {id:'old',name:'ノートパソコン',objectType:'elevated_objects',kind:'fall',confirmed:true,x:50,y:50};
+  assert(aftermathEvents([legacy])[0].text.includes('置かれた場所から'));
+  assert.throws(() => recognitionRisks({output_text:JSON.stringify({risks:[detection({supportSurface:'ceiling'})]})}, views, knowledge));
 });
 
 test('photo analysis normalizes TV names and validates photo input', async () => {

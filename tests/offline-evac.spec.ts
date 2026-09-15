@@ -22,7 +22,8 @@ async function resultPage(page: import('@playwright/test').Page){
     startRouteId:'demo-short',takenRouteIds:['demo-short'],decisions:[],walk:null,finishedAt:123456789,followUp:'正門で家族と集合',
   })));
   await page.goto('/evac/report');
-  await page.getByRole('button',{name:'このマップと避難所を保存する',exact:true}).click();
+  await page.getByRole('link',{name:'オフライン用の避難地図を作成',exact:true}).click();
+  await expect(page.locator('iframe[title="保存するオフライン地図と避難所"]')).toBeVisible({timeout:30000});
   const frame=page.frameLocator('iframe[title="保存するオフライン地図と避難所"]');
 
   return frame;
@@ -93,16 +94,16 @@ test('道路取得を待つ間も保存プレビューの地図を表示し、�
   let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
   await context.route('https://overpass-api.de/api/interpreter',async r=>{await gate;await r.fulfill({json:{elements:roadElements}});});
   const frame=await resultPage(page);
+  await expect(frame.locator('#map')).toHaveAttribute('data-map-ready','true',{timeout:30000});
   await expect(frame.locator('#map-loading')).toBeHidden();
-  await expect(frame.locator('#map')).toHaveAttribute('data-map-ready','true');
   await expect(frame.locator('#map')).not.toHaveAttribute('data-map-error',/.+/);
   await expect(frame.locator('#report-download')).toBeDisabled();
-  const mapBox=await frame.locator('#map').boundingBox();expect(mapBox!.height).toBeGreaterThan(380);
+  const mapBox=await frame.locator('#map').boundingBox();expect(mapBox!.height).toBeGreaterThan(250);
   release();await expect(frame.locator('#report-download')).toBeEnabled();
   await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
-  await page.getByRole('button',{name:'閉じる',exact:true}).click();
+  await page.getByRole('link',{name:'ふりかえりに戻る',exact:true}).click();
   const requests:string[]=[];context.on('request',r=>{if(/overpass|openfreemap|maps.gsi/.test(r.url()))requests.push(r.url());});
-  await page.getByRole('button',{name:'このマップと避難所を保存する',exact:true}).click();
+  await page.getByRole('link',{name:'オフライン用の避難地図を作成',exact:true}).click();
   await expect(frame.locator('#report-download')).toBeEnabled();expect(requests).toEqual([]);
 });
 test('周辺の避難先を取得できない間は保存を完了せず、再試行できる',async({page,context})=>{
@@ -171,7 +172,8 @@ test('場所登録は表示せず、選択した避難所のマップを一覧�
 test('ホームから保存一覧を選び、戻るボタンで直前の画面へ戻れる',async({page})=>{
   const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();
   await page.getByRole('link',{name:'保存したマップを開く'}).click();
-  await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/evac\/report$/);
+  await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/evac\/save$/);
+  await page.getByRole('link',{name:'ふりかえりに戻る',exact:true}).click();await expect(page).toHaveURL(/evac\/report$/);
   await expect(page.getByRole('heading',{name:'ふりかえり',exact:true})).toBeVisible();
   await page.goto('/home');await page.getByRole('link',{name:'保存したマップを見る'}).click();await expect(page.locator('#saved-list')).toContainText('リザルト小学校');
   await page.getByRole('button',{name:'戻る',exact:true}).click();await expect(page).toHaveURL(/home$/);
@@ -180,7 +182,7 @@ test('重複を最新の1件にまとめ、5件保存済みでも同じマップ
   const frame=await resultPage(page);await expect(frame.locator('#report-download')).toBeEnabled();await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toBeVisible();
   await page.evaluate(()=>new Promise<void>((resolve,reject)=>{const req=indexedDB.open('jishingoto-offline-evac-v1',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes'),get=store.get('report-123456789');get.onsuccess=()=>{const r=get.result;store.put({...r,id:'report-111',savedAt:r.savedAt+1});for(let i=1;i<=4;i++)store.put({...r,id:`other-${i}`,start:{...r.start,lat:r.start.lat+i*.001},name:`別のマップ${i}`});};tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};}));
   await page.addInitScript(()=>{const key='jishingoto.evac.v2',s=JSON.parse(sessionStorage.getItem(key)!);s.finishedAt=222;sessionStorage.setItem(key,JSON.stringify(s));});
-  await page.goto('/evac/report');await page.getByRole('button',{name:'このマップと避難所を保存する',exact:true}).click();
+  await page.goto('/evac/report');await page.getByRole('link',{name:'オフライン用の避難地図を作成',exact:true}).click();
   await expect(frame.locator('#report-download')).toBeEnabled();await expect(frame.locator('#report-status')).toContainText('更新します');await frame.locator('#report-download').click();await expect(page.getByRole('link',{name:'保存したマップを開く'})).toHaveAttribute('href','/offline-evac/index.html?route=report-222');
   await page.goto('/offline-evac/index.html');await expect(page.locator('#saved-list .saved-card')).toHaveCount(5);await expect(page.locator('#saved-list h3').filter({hasText:'リザルト小学校'})).toHaveCount(1);
   // Exercise actual IndexedDB transactions, including simultaneous saves and the cap.

@@ -83,9 +83,9 @@ export default function SharePage() {
           {audience === "adult" && <SocialImageShare platform="X" file={current?.predictionFile ?? null} includeImage={includeImage} text={imageShareText} url={APP_SHARE_URL} />}
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => router.push("/result")}><Furigana text={"戻る"} /></Button>
-          <Button onClick={() => router.push("/evac")}>フェーズ2へ</Button>
+        <div className="mx-auto grid w-full grid-cols-2 gap-2" style={{ maxWidth: 320 }}>
+          <Button size="sm" className="min-h-11" variant="outline" onClick={() => router.push("/result")}><Furigana text={"戻る"} /></Button>
+          <Button size="sm" className="min-h-11" onClick={() => router.push("/evac")}>フェーズ2へ</Button>
         </div>
 
       </div>

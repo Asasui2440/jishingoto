@@ -13,6 +13,11 @@ export function roomObjectType(risk: Risk): RoomObjectType {
   return risk.objectType ?? "other";
 }
 
+/** 支持面が見えない場合、物の種類から置き場所を決めつけない。 */
+export function fallSource(risk: Risk): string {
+  return ({ desk: "机から", shelf: "棚から", stand: "台から", unknown: "置かれた場所から" })[risk.supportSurface ?? "unknown"];
+}
+
 export function isCooktop(risk: Risk): boolean {
   const name = `${risk.name} ${risk.adultName ?? ""}`.replace(/\[[^\]]*\]/g, "");
   return /コンロ|こんろ|ガステーブル|クッキングヒーター|cooktop|stovetop/i.test(name);
@@ -101,6 +106,12 @@ const CHILD_ADVICE: Partial<Record<RoomObjectType, Advice>> = {
 const CHILD_DEFAULT: Advice = { headline: "落[お]ちたり、倒[たお]れたりしないように", steps: ["重[おも]いものは低[ひく]い所[ところ]に置[お]こう", "寝[ね]る場所[ばしょ]や通[とお]り道[みち]をあけよう"], detail: "重い物の移動[いどう]や固定は、一人で行わず家族に相談しよう。" };
 
 export function roomAdvice(risk: Risk, audience: "child" | "adult" = "adult"): Advice {
+  if (roomObjectType(risk) === "elevated_objects" && risk.supportSurface !== "shelf") {
+    const surface = risk.supportSurface === "desk" ? "机" : risk.supportSurface === "stand" ? "台" : "置き場所";
+    return audience === "child"
+      ? { headline: `${fallSource(risk)}落ちないようにしよう`, steps: [`${surface}のはしに置かないようにしよう`, "使い終わったら、低い安定した場所にしまおう"], detail: "動かしたり固定したりする方法は、家族と相談しよう。" }
+      : { headline: `${fallSource(risk)}の落下を防ぐ`, steps: [`${surface}の端から離して置く`, "使用後は低い安定した場所に収納する", "機器と設置面に合う滑り止め・固定方法を確認"], detail: "通気口や配線を妨げず、製品の説明書に沿って対策してください。" };
+  }
   if (isCooktop(risk)) return audience === "child"
     ? { headline: "コンロの周りを片づけて、火災に備えよう", steps: ["ふきん・紙・袋など、燃えやすい物をコンロから離そう", "消火器の置き場所を家族と確認しよう"], detail: "" }
     : { headline: "コンロ周辺の可燃物を減らし、消火の備えを確認", steps: ["ふきん・キッチンペーパー・袋などをコンロから離して収納", "消火器の設置場所と使用方法を確認"], detail: "" };
@@ -129,7 +140,7 @@ export function roomAdviceImage(risk: Risk): { src: string; alt: string } | null
   if (type === "cupboard") return { src: "/illustrations/textbook/actions/cupboard-v2.webp", alt: "男性がお皿を食器棚の低い段へしまう様子" };
   if (isGlassDoor(risk)) return { src: "/illustrations/textbook/actions/glass-film-v2.webp", alt: "大人がガラスのドアに飛散防止フィルムを貼っている様子" };
   if (["bookshelf", "tall_furniture"].includes(type)) return { src: "/illustrations/textbook/actions/anchor-shelf-v2.webp", alt: "棚本体を壁に金具で固定し、棚の中身に落下防止バーを設けた例" };
-  if (type === "elevated_objects") return { src: "/illustrations/textbook/actions/lower-items-v2.webp", alt: "棚の上にあった厚い本を、大人が低い棚へ移す前後の様子" };
+  if (type === "elevated_objects") return risk.supportSurface === "shelf" ? { src: "/illustrations/textbook/actions/lower-items-v2.webp", alt: "棚の上にあった厚い本を、大人が低い棚へ移す前後の様子" } : null;
   if (isWallMountedTv(risk)) return null;
   if (type === "tv") return { src: "/illustrations/textbook/products/tv-belt-v1.webp", alt: "テレビを台に固定するベルトの例" };
   if (["doorway", "loose_objects"].includes(type) || risk.kind === "block") return { src: "/illustrations/textbook/actions/clear-floor-v1.webp", alt: "床の段ボール箱やリュックを通り道から脇の収納場所へ移す様子" };

@@ -20,12 +20,13 @@ import { SUMMARY_COPY, AXIS_COLORS } from "@/lib/share-card";
 import { AXIS_LABEL, type Axis } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
 import { getSession, scoreByAxis, strengths, useSession } from "@/lib/session";
+import { roomAdvice } from "@/lib/room-guidance";
 
 const AXES: Axis[] = ["initial", "judgement", "room", "evacuation"];
 
 export default function ResultPage() {
   const router = useRouter();
-  const { answers, risks, questions, photoUrl, aftermathPhotoUrl, roomViews, checked, toggleChecked, reset, resultStep, resultIntroPending, update } = useSession();
+  const { answers, risks, questions, photoUrl, aftermathPhotoUrl, roomViews, reset, resultStep, resultIntroPending, update } = useSession();
   const { audience } = useSettings();
   const adult = audience === "adult";
   const prediction = useMemo(() => aftermathInput({ photoUrl, aftermathPhotoUrl, roomViews, risks }), [photoUrl, aftermathPhotoUrl, roomViews, risks]);
@@ -58,8 +59,8 @@ export default function ResultPage() {
 
   // 部屋の危険はクイズ前に確認済み。結果では選んだ行動だけを振り返る。
   const summaryStep = review.length;
-  const checklistStep = summaryStep + 1;
-  const lastStep = checklistStep;
+  const preparationStep = summaryStep + 1;
+  const lastStep = preparationStep;
   const step = Math.min(resultStep ?? 0, lastStep);
   const stepLabel = step < summaryStep ? `行動の振り返り ${step + 1} / ${review.length}`
     : step === summaryStep ? "今回のまとめ" : "今日からできること";
@@ -138,10 +139,17 @@ export default function ResultPage() {
             ))}
         </div>}
 
-        {step === checklistStep && <><Card className="p-[18px]">
+        {step === preparationStep && <><Card className="p-[18px]">
           <h2 className="text-lg font-bold">室内の備え</h2>
-          <p className="mt-2 font-bold text-safe" role="status">{risks.filter(r => checked.includes(`prepared:${r.id}`)).length} / {risks.length} か所 対策済み</p>
-          <div className="mt-3"><DetailSheet title="備えのチェックリストを開く" summary="家具ごとに対策済みのチェックをつける"><ul className="space-y-2">{risks.map(r => <li key={r.id}><label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-field bg-canvas p-3"><input type="checkbox" checked={checked.includes(`prepared:${r.id}`)} onChange={() => toggleChecked(`prepared:${r.id}`)} className="size-5 accent-teal-700" /><span className="flex-1"><Furigana text={r.name} adult={r.adultName} /></span><span className="text-sm font-bold text-safe">{checked.includes(`prepared:${r.id}`) ? "対策済み！" : "対策したらチェック"}</span></label></li>)}</ul></DetailSheet></div>
+          <p className="mt-2 text-13 text-ink-muted"><Furigana text="地震が起きる前に、できる備えから始めよう。" /></p>
+          {risks.length > 0 && <div className="mt-3">
+            <DetailSheet title="物体ごとの備えを振り返る" summary="危険を減らすためにできること">
+              <ul className="space-y-2">{risks.map(r => <li key={r.id} className="rounded-field bg-canvas p-3">
+                <h3 className="font-bold"><Furigana text={r.name} adult={r.adultName} /></h3>
+                <p className="mt-2 text-13"><Furigana text={roomAdvice(r, audience).headline} /></p>
+              </li>)}</ul>
+            </DetailSheet>
+          </div>}
         </Card>
 
           <EvacuationGuide />

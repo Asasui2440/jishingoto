@@ -2,7 +2,7 @@ import { buildWalkSteps, pathLengthM, distanceM, type DecisionPoint, type WalkSt
 import { WALK_SCENARIOS } from "./walk-scenarios";
 import type { RouteOption, LatLng } from "./evac-content";
 
-export type WalkProgress = { questionSpacingVersion?: 2 | 3 | 4; questionsAligned?: boolean; source?: "geo-ai" | "context" | "sample"; routeId: string; steps: WalkStep[]; index: number; street?: StreetProgress };
+export type WalkProgress = { navigationMode?: "hybrid"; questionSpacingVersion?: 2 | 3 | 4; questionsAligned?: boolean; source?: "geo-ai" | "context" | "sample"; routeId: string; steps: WalkStep[]; index: number; street?: StreetProgress };
 
 /** 早送りでも未回答の判断地点を越えない。 */
 export function nextWalkIndex(walk: WalkProgress, answeredIds: string[], jump = false) {
@@ -59,7 +59,7 @@ export function nextStreetIndex(walk: WalkProgress, answeredIds: string[]) {
 }
 
 
-/** Actual Street View positions only. Panorama IDs intentionally stay out of storage. */
+/** Observed positions, or simulated route positions in hybrid mode. No stored panorama IDs. */
 export type StreetProgress = {
   position: LatLng;
   heading: number;
@@ -97,7 +97,7 @@ export function streetRouteGuidance(path: LatLng[], position: LatLng) {
   const t = Math.min(1, ahead / (lengths[targetSegment] || 1));
   const target = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
   const heading = Math.atan2((target.lng - projection.lng) * Math.cos(projection.lat * Math.PI / 180), target.lat - projection.lat) * 180 / Math.PI;
-  return { heading, distanceFromRoute: best, routeM: along, remainingM: Math.max(0, total - along), segment, total };
+  return { projection, heading, distanceFromRoute: best, routeM: along, remainingM: Math.max(0, total - along), segment, total };
 }
 
 /** Actual position drives progress; missed questions cannot prevent arrival. */

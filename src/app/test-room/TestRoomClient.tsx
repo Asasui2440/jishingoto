@@ -24,7 +24,7 @@ export default function TestRoomClient() {
           "shelter-damaged", "shelter-home", "shelter-tsunami", "home-bed",
           "office-copier", "office-elevator", "office-stay",
         ].includes(q.id))]
-      : [QUESTIONS[0], QUESTIONS.find(q => q.id === "q5")!];
+      : [QUESTIONS[0], AFTER_SHAKING_QUESTIONS[1]];
     update({ photoUrl: "/figma/img/room-risk.jpg", risks: DETECTED_RISKS.map(r => ({ ...r, confirmed: true })), questions,
       answers: questions.map((q, i) => {
         const c = q.choices.find(c => i === 0 ? c.safety < 0.4 : c.safety >= 0.7)!;

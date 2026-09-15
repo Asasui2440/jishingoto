@@ -17,6 +17,7 @@
 
 # next.js
 /.next/
+/.next-room-dev/
 /out/
 
 # production

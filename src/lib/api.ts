@@ -9,7 +9,7 @@ import {
   type RoomObjectType,
 } from "./content";
 import { adultText } from "./adult-copy";
-import { roomObjectType, isCooktop, EXIT_EXPLANATION } from "./room-guidance";
+import { roomObjectType, isCooktop, fallSource, EXIT_EXPLANATION } from "./room-guidance";
 import { HOME_KITCHEN_AFTER, SCENARIOS, shuffleChoices, type RoomSetting } from "./scenarios";
 import type { RoomView } from "./room-views";
 import { AFTER_SHAKING_QUESTIONS } from "./after-shaking-questions";
@@ -81,7 +81,7 @@ function questionForRisk(risk: Risk, index: number): Question {
   const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { ...region, label: risk.name }, seconds: 10 };
   if (isCooktop(risk)) return { ...HOME_KITCHEN_AFTER, ...common, id: HOME_KITCHEN_AFTER.id, seconds: 12 };
   if (type === "desk") return { ...common, knowledgeKey: "room.desk.during", axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
-  if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が棚から落ちそうです。`, choices: SIMPLE_CHOICES.move };
+  if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が${fallSource(risk)}落ちそうです。`, choices: SIMPLE_CHOICES.move };
   if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, knowledgeKey: "room.floor.after", phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
   if (type === "window") {
     const base = QUESTIONS.find((question) => question.id === "q6")!;
@@ -105,7 +105,7 @@ export function withAdultSituation(question: Question, risk: Risk): Question {
   if (type === "tv") adultSituation = `${name}の近くで強い揺れが始まりました。どのように行動しますか。`;
   if (type === "hanging_object") adultSituation = `${name}が大きく揺れており、落下する恐れがあります。どのように行動しますか。`;
   if (question.axis === "evacuation") adultSituation = `揺れが収まりました。${name}の近くの床に物が散乱し、通りにくくなった場面を想定してください。どのように行動しますか。`;
-  if (type === "elevated_objects") adultSituation = `強い揺れで、${name}が棚から落ちそうな場面です。どのように身を守りますか。`;
+  if (type === "elevated_objects") adultSituation = `強い揺れで、${name}が${fallSource(risk)}落ちそうな場面です。どのように身を守りますか。`;
   return { ...question, adultPlace: name, adultSituation };
 }
 
@@ -130,7 +130,6 @@ export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "hom
   if (!during.length) during.push({ id: "initial-common", axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: "強[つよ]いゆれが始[はじ]まりました。まずどうする？", adultSituation: "強い揺れが発生しました。まず、どのように身を守りますか。", seconds: 10, choices: SIMPLE_CHOICES.protect });
   const kitchen = roomQuestions.find(q => q.id === HOME_KITCHEN_AFTER.id);
   const afterRoom = pickMany(roomQuestions.filter((q) => q.axis !== "initial" && q.id !== HOME_KITCHEN_AFTER.id), 1, random);
-  const information = QUESTIONS.find((q) => q.id === "q5")!;
   const after = [...afterRoom, ...(kitchen ? [kitchen] : [])];
   const shelter = pickMany(SCENARIOS.filter(q => q.id === "shelter-home" || q.id === "shelter-damaged"), 1, random)
     .map(q => ({ ...q, seconds: 15,
@@ -138,10 +137,8 @@ export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "hom
       adultSituation: q.id === "shelter-damaged" ? "揺れが収まり、現在いる建物が傾いています。避難所は未開設です。まずどのように行動しますか。" : q.adultSituation,
     }));
   const floor: Question = { id: "floor-common", axis: "evacuation", category: "足元の確認", situation: "揺れが収まり、床にガラスや物が散らばっています。玄関へ行く前に、どうする？", adultSituation: "揺れが収まり、床にガラス片や物が散乱しています。玄関に向かう前に、どのように行動しますか。", seconds: 12, choices: SIMPLE_CHOICES.exit };
-  const pool = [...AFTER_SHAKING_QUESTIONS, ...shelter, ...(afterRoom.length ? [] : [floor]), information];
+  const pool = [...AFTER_SHAKING_QUESTIONS, ...shelter, ...(afterRoom.length ? [] : [floor])];
   after.push(...pickMany(pool, 5 - during.length - after.length, random));
-  // 情報確認は、身を守る行動の後に振り返る最後の問題にする。
-  after.sort((a, b) => Number(a.id === information.id) - Number(b.id === information.id));
   return during.map((q): Question => ({ ...q, phase: "during" }))
     .concat(after.map((q): Question => ({ ...q, phase: "after" })))
     .map((q) => shuffleChoices(audience === "adult" ? adultQuestion(q) : q, random));
@@ -154,8 +151,8 @@ export function aftermathEvents(risks: Risk[]): Aftermath["events"] {
   const confirmed = risks.filter((risk) => risk.confirmed);
   return confirmed.map((risk) => ({
     riskId: risk.id,
-    text: roomObjectType(risk) === "elevated_objects" ? `${risk.name}が棚から落ち、人に当たったり近くの床に散らばったりするかもしれません。` : `${risk.name}が${AFTERMATH_TEXT[risk.kind]}`,
-    adultText: roomObjectType(risk) === "elevated_objects" ? `${risk.adultName ?? adultText(risk.name)}が棚から落下し、人に当たったり床の通行を妨げたりする可能性があります。` : {
+    text: roomObjectType(risk) === "elevated_objects" ? `${risk.name}が${fallSource(risk)}落ち、人に当たったり近くの床に散らばったりするかもしれません。` : `${risk.name}が${AFTERMATH_TEXT[risk.kind]}`,
+    adultText: roomObjectType(risk) === "elevated_objects" ? `${risk.adultName ?? adultText(risk.name)}が${fallSource(risk)}落下し、人に当たったり床の通行を妨げたりする可能性があります。` : {
       fall: `${risk.adultName ?? adultText(risk.name)}が転倒・落下し、避難経路を塞ぐ可能性があります。`,
       break: `${risk.adultName ?? adultText(risk.name)}が破損し、床に破片が散乱する可能性があります。`,
       block: `${risk.adultName ?? adultText(risk.name)}の周囲で物が崩れ、通行できなくなる可能性があります。`,

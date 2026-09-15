@@ -8,7 +8,7 @@ import roomRisk from "@/../public/figma/img/room-risk.jpg";
 import { Button } from "@/components/ui/Button";
 import { Furigana, plain } from "@/components/ui/Furigana";
 import { DisclaimerFooter, StatusBar } from "@/components/ui/Screen";
-import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
+import { type Risk, type RiskKind, type RoomObjectType, type SupportSurface } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { viewForRisk, riskOnView, groupRisksByView } from "@/lib/room-views";
 import { focusDescription } from "@/lib/focus-description";
@@ -36,7 +36,7 @@ const DANGER_TEXT: Record<RiskKind, { child: string; adult: string }> = {
 const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
   { value: "bookshelf", label: "本棚", kind: "fall" },
   { value: "cupboard", label: "食器棚", kind: "fall" },
-  { value: "elevated_objects", label: "棚の上・高い所のもの", kind: "fall" },
+  { value: "elevated_objects", label: "机・棚・台の上のもの", kind: "fall" },
   { value: "tall_furniture", label: "背の高い家具・収納", kind: "fall" },
   { value: "tv", label: "テレビ", kind: "fall" },
   { value: "window", label: "窓・ガラス", kind: "break" },
@@ -84,10 +84,10 @@ export default function RoomRecognitionPage() {
   const beginEdit = (risk: Risk) => {
     setEditing(risk.id);
     setSelectedId(risk.id);
-    setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other" });
+    setDraft({ name: plain(risk.name), objectType: risk.objectType ?? "other", supportSurface: risk.supportSurface ?? "unknown" });
     setEditNotice("");
   };
-  const [draft, setDraft] = useState({ name: "", objectType: "other" as RoomObjectType });
+  const [draft, setDraft] = useState({ name: "", objectType: "other" as RoomObjectType, supportSurface: "unknown" as SupportSurface });
 
   useEffect(() => {
     if (!getSession().analysisSource) router.replace("/analyzing");
@@ -105,6 +105,7 @@ export default function RoomRecognitionPage() {
         name,
         adultName: name,
         objectType: draft.objectType,
+        supportSurface: draft.objectType === "elevated_objects" ? draft.supportSurface : "unknown",
         kind: draft.objectType === risk.objectType ? risk.kind : OBJECTS.find((object) => object.value === draft.objectType)!.kind,
         confidence: undefined,
         assessment: undefined,
@@ -196,6 +197,7 @@ export default function RoomRecognitionPage() {
         {selected && selectedAdvice && <article className="rounded-panel bg-surface p-4" aria-live="polite">
           <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
           <h2 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h2>
+          {selected.objectType === "elevated_objects" && <p className="mt-1 text-sm text-ink-muted"><Furigana text={`置き場所：${({ desk: "机・テーブルの上", shelf: "棚の上", stand: "台の上", unknown: "確認できません" })[selected.supportSurface ?? "unknown"]}`} /></p>}
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
           <p className="mt-2 text-sm font-bold text-secondary-ink"><Furigana text={selectedAdvice.headline} /></p>
           <AdviceIllustration key={selected.id} risk={selected} />
@@ -243,6 +245,12 @@ export default function RoomRecognitionPage() {
                     <select id="object-type" value={draft.objectType} onChange={(event) => setDraft({ ...draft, objectType: event.target.value as RoomObjectType })} className="min-h-11 rounded-field border border-border bg-surface px-3">
                       {OBJECTS.map((object) => <option key={object.value} value={object.value}>{object.label}</option>)}
                     </select>
+                    {draft.objectType === "elevated_objects" && <>
+                      <label htmlFor="object-support" className="text-13">どこに載っていますか？</label>
+                      <select id="object-support" value={draft.supportSurface} onChange={event => setDraft({ ...draft, supportSurface: event.target.value as SupportSurface })} className="min-h-11 rounded-field border border-border bg-surface px-3">
+                        <option value="desk">机・テーブル</option><option value="shelf">棚</option><option value="stand">その他の台</option><option value="unknown">わからない・見えない</option>
+                      </select>
+                    </>}
                     <div className="flex gap-2">
                       <Button size="md" type="button" variant="outline" onClick={event => event.currentTarget.closest("dialog")?.close()}>キャンセル</Button>
                       <Button size="md" type="submit" disabled={!draft.name.trim()}>保存</Button>

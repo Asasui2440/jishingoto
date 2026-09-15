@@ -97,7 +97,8 @@ test("被災者の声：洪水の振り返りで車の経験との条件差と�
     sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify({ scenario: "flood", finishedAt: Date.now(), decisions: [{ pointId: "voice-flood-test", eventId: "walk-case-8", choiceId: "go", timedOut: false, rerouted: false, extraSeconds: 0 }] }));
   });
   await page.goto("/evac/summary");
-  await page.getByRole("button", { name: /判断1：.*を見返す/ }).click();
+  await expect(page).toHaveURL(/\/evac\/report$/);
+  await page.getByRole("button", { name: /判断1：.*の記録を見る/ }).click();
   const voice = page.getByRole("region", { name: "被災者の声", exact: true });
   await expect(voice).toHaveAttribute("data-voice-id", "VOICE-011-underpass");
   await voice.getByText("経験の背景・出典を読む", { exact: true }).click();
