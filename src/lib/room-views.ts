@@ -3,7 +3,7 @@ import type { Risk, Question } from "./content";
 export type ViewBounds = { x: number; y: number; w: number; h: number };
 export type RoomView = { url: string; bounds: ViewBounds };
 
-/** 解析用一覧の中に描かれた、余白を除く各写真の領域（百分率）。 */
+/** 表示・予想図用一覧の中に描かれた、余白を除く各写真の領域（百分率）。 */
 export function roomViewBounds(width: number, height: number, index: number, count: number): ViewBounds {
   if (count === 1) return { x: 0, y: 0, w: 100, h: 100 };
   const canvasHeight = 504 * Math.ceil(count / 2);

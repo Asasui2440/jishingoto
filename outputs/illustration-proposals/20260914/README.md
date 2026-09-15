@@ -1,0 +1,32 @@
+# 温かさを残したイラスト案（2026-09-14）
+
+元の生活感と家具・小物を残し、今のシンプルな図との中間になる絵本の挿絵風を試作。ホーム用の部屋と、結果画面で情報を確認する親子の2点。
+
+内蔵の image_gen を使用。既存4素材を参照して新しいイラストを生成した。アプリの差し替え候補として保存。
+
+## warm-room-v1.png
+
+[画像を開く](/Users/suzurinene/Codex感謝祭/jishingoto2/outputs/illustration-proposals/20260914/warm-room-v1.png)
+
+![試作イラスト](/Users/suzurinene/Codex感謝祭/jishingoto2/outputs/illustration-proposals/20260914/warm-room-v1.png)
+
+### 実際に使用したプロンプト
+
+Use case: illustration-story. Asset type: a new landscape home-screen illustration for the Japanese earthquake-preparedness app ジシンゴト, no embedded text. The four attached references in order are: (1) the original colorful detailed bedroom with a child, books, teddy bears and furniture; (2) the currently too-austere black-and-white room pictogram; (3) the original detailed family living-room TV illustration; (4) its overly austere pictogram. Create ONE home/bedroom illustration that sits midway between references 1 and 2. Preserve reference 1's domestic warmth, familiar bedroom furniture, window with soft blue curtains, wooden bookshelf with a few books and a teddy bear, small desk, low drawers and tidy floor. Include one parent and one school-age child calmly looking at the shelf together, unobtrusive and naturally engaged. They are checking the room, not installing anything; no child using power tools. Medium-detail contemporary Japanese children's nonfiction book illustration, confident slightly imperfect graphite-brown outlines, flat matte gouache fills, simple kind faces with tiny eyes and restrained hair shapes, no anime eyes. Simplify each object to readable silhouettes but preserve a handful of specific lived-in details: teddy, 5-8 books, folded blanket, small houseplant. Muted warm cream, sage green, soft sky blue and a little mustard yellow, warm wood, small terracotta accent. Subtle paper texture only, at most one simple flat shadow per object. Natural coherent perspective, calm daylight implied with flat color, airy composition and generous breathing room. Keep a clear floor path, no added danger callouts or instructional badges. Attractive editorial illustration that feels commissioned and human-drawn, inviting to both children and adults. Landscape 3:2 composition usable as a small app banner, important objects centered, soft warm-white background extending cleanly to the edges. Avoid photorealistic rendering, 3D, lens effects, gradients, detailed wood grain, shiny lighting, dense decoration, repeated tiny objects, thick black pictograms, stock-vector geometric people, labels, letters, logos, watermarks, collage or multiple panels. This is a new style proposal, not an exact redraw.
+
+## warm-family-v1.png
+
+[画像を開く](/Users/suzurinene/Codex感謝祭/jishingoto2/outputs/illustration-proposals/20260914/warm-family-v1.png)
+
+![試作イラスト](/Users/suzurinene/Codex感謝祭/jishingoto2/outputs/illustration-proposals/20260914/warm-family-v1.png)
+
+### 実際に使用したプロンプト
+
+Use case: illustration-story. Asset type: one landscape illustration for an earthquake learning app's result page, showing a parent and child checking information after they are in a safe place. The four reference images in order are the old detailed colorful bedroom, its bare room pictogram, the old detailed family watching TV, and its bare black-white family pictogram. Reinterpret reference 3's warm everyday living room with the clarity of reference 4, but with real illustrated people and enough domestic detail. Create ONE parent and ONE school-age child sitting side by side on a low sage-green sofa on the left, viewed from three-quarter rear/profile, calmly watching a modest flat television on the right. Their age difference is clearly readable, simple natural anatomy, tiny dot-like eyes, relaxed simple faces, unembellished clothes. The parent holds a small plain remote; child looks attentively at the TV. TV screen has only a simple muted map shape and a small clock symbol, no presenter, no readable text, no authoritative seal. Include just a low wooden media cabinet, 5-6 books, a small houseplant and the edge of a cream rug, a simplified window with pale blue curtain. Preserve the original's sense of a family at home, a little perspective, soft furniture shapes and relatable props. Style is medium-detail contemporary Japanese children's nonfiction book editorial illustration: confident slightly imperfect graphite-brown outlines, flat matte gouache fills, tiny paper grain, one restrained flat shadow at most, warm cream background with sage green, soft sky blue, muted mustard, natural warm wood and tiny terracotta accent. Airy, warm and legible, attractive commissioned hand-drawn feeling. This should match a companion cozy bedroom illustration in the same editorial style. Landscape 3:2, parent/child and television read immediately at small sizes, generous breathing room and warm-white margin. Avoid anime, photorealism, 3D, detailed hair strands or fabric folds, cinematic lighting, gradients, ornamental clutter, black silhouette people, empty circle heads, corporate stock-vector characters, badges, instructions, logos, watermark, captions, collage or multiple panels. Preserve the meaning of checking information, not a generic family portrait.
+
+## 参照素材
+
+- public/figma/img/hero-room.jpg
+- public/illustrations/handbook/room.png
+- public/illustrations/review/information-tv-v11.png
+- public/illustrations/handbook/information.png

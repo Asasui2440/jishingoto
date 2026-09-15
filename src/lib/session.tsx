@@ -24,6 +24,8 @@ export type Answer = {
 export type Session = {
   roomSetting: RoomSetting;
   resultStep: number;
+  /** 最後の回答から結果に入るときだけ、短い場面転換を表示する */
+  resultIntroPending: boolean;
   /** 撮影した写真（data URL）。個人情報を残さないため永続化しない */
   photoUrl: string | null;
   roomViews: RoomView[];
@@ -46,6 +48,7 @@ export type Session = {
 const EMPTY: Session = {
   roomSetting: "home",
   resultStep: 0,
+  resultIntroPending: false,
   photoUrl: null,
   roomViews: [],
   aftermathPhotoUrl: null,

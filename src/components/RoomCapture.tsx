@@ -96,7 +96,7 @@ export default function RoomCapture() {
       if (controller.signal.aborted) return;
       reset(); setRoomTestOptions({ mode: "live", analysisMs: 0, imageMs: 0 });
       update({ photoUrl: photo, aftermathPhotoUrl: masked[0], roomViews, blurRegions: [] });
-      void prepareMaskedRoom(photo, masked[0]);
+      void prepareMaskedRoom(photo, roomViews);
       router.push("/analyzing");
     } catch {
       setError("画像を準備できませんでした。もう一度お試しください。");
@@ -108,7 +108,7 @@ export default function RoomCapture() {
     <main className="flex flex-1 flex-col gap-2 px-5 py-3">
       <h1 className="font-display text-28 font-bold"><Furigana text={stage === "input" ? "部屋を写そう" : stage === "photo" ? "写真を撮る" : stage === "video" ? "動画を撮る" : stage === "privacy" ? "画像の確認・マスク" : "部屋の画像を準備しています"} /></h1>
       {stage === "input" && <>
-        <Image src="/illustrations/actions/room-wide-v7.png" width={1536} height={1024} alt="床・出入口・家具の上まで広く写した部屋のイラスト" className="h-24 w-full rounded-panel object-cover" priority />
+        <Image src="/illustrations/textbook/room-v3.webp" width={1536} height={1024} alt="親子が部屋の家具や出入口を確かめる淡い色の説明イラスト" className="h-32 w-full rounded-panel border border-border bg-surface object-contain p-2" priority />
         <p className="text-13 leading-relaxed"><Furigana text="写真でも動画でも確認できるよ。動画は15秒ほどで、一定の速さで部屋を見回すように撮ろう。" adult="写真・動画のどちらでも確認できます。動画は15秒程度を目安に、一定の速さで部屋全体を撮影してください。" /></p>
         <section aria-labelledby="photo-method" className="rounded-field bg-secondary-soft p-2">
           <h2 id="photo-method" className="mb-1 font-display text-sm font-bold"><Furigana text="写真" /></h2>
@@ -117,7 +117,7 @@ export default function RoomCapture() {
             <Button size="sm" variant="outline" onClick={() => photoFileInput.current?.click()} disabled={!!busy}><Furigana text="写真から選ぶ" /></Button>
           </div>
         </section>
-        <section aria-labelledby="video-method" className="rounded-field bg-secondary-soft p-2">
+        <section aria-labelledby="video-method" className="rounded-field bg-glass-soft p-2">
           <h2 id="video-method" className="mb-1 font-display text-sm font-bold"><Furigana text="動画" /></h2>
           <div className="grid grid-cols-2 gap-2">
             <Button size="sm" aria-label="動画を撮影する" onClick={() => { setError(""); setStage("video"); }} disabled={!!busy}><Furigana text="撮影する" /></Button>

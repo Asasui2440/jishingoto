@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon } from "./DetailSheet";
+import { TopLink } from "./TopLink";
 
 export function PhaseOneNavigation() {
   const pathname = usePathname();
@@ -13,5 +12,5 @@ export function PhaseOneNavigation() {
 }
 
 export function TopPageLink() {
-  return <Link href="/home" aria-label="トップページへ戻る" title="トップページへ戻る" className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface px-3 text-primary-ink shadow-sm"><HomeIcon /><span className="text-xs font-bold">トップ</span></Link>;
+  return <TopLink />;
 }

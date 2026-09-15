@@ -23,7 +23,7 @@ import { useSession } from "@/lib/session";
 
 export default function AnalysisLoadingPage() {
   const router = useRouter();
-  const { photoUrl, startedAt, update } = useSession();
+  const { photoUrl, roomViews, startedAt, update } = useSession();
   const [elapsed, setElapsed] = useState(0);
   const [failed, setFailed] = useState(false);
   const [cancelled, setCancelled] = useState(false);
@@ -36,7 +36,7 @@ export default function AnalysisLoadingPage() {
   useEffect(() => {
     if (cancelled) return;
     let alive = true;
-    const job = prepareRoom(photoUrl);
+    const job = prepareRoom(photoUrl, roomViews);
     const started = roomTimings().analysis?.start ?? performance.now();
     const timer = setInterval(() => setElapsed((performance.now() - started) / 1000), 250);
     void job.then((analysis) => {
@@ -51,7 +51,7 @@ export default function AnalysisLoadingPage() {
       router.replace("/risks");
     }).catch(() => { if (alive) { clearInterval(timer); setFailed(true); } });
     return () => { alive = false; clearInterval(timer); };
-  }, [cancelled, photoUrl, update, router]);
+  }, [cancelled, photoUrl, roomViews, update, router]);
 
   // 待機中の3段階の演出。以前と同じ1.4秒間隔で進み、最後の段階で解析完了を待つ。
   const step = Math.min(ANALYSIS_STEPS.length - 1, Math.floor(elapsed / 1.4));

@@ -1,3 +1,4 @@
+import { DETECTED_RISKS, QUESTIONS } from "../src/lib/content";
 import { readFile } from "node:fs/promises";
 import { WALK_SCENARIOS } from "../src/lib/walk-scenarios";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
@@ -544,6 +545,134 @@ test("解析失敗時だけ固定問題を案内し洪水ケースのまま続�
   expect(session.scenario).toBe("flood");
   expect(session.walk.source).toBe("sample");
   expect(session.walk.steps.filter((step:{event?:{id:string}})=>step.event).map((step:{event:{id:string}})=>step.event.id)).toEqual(["practice-flood"]);
+});
+
+test("結果ページは元の振り返り・4つのチカラ・備えのチェックリストを表示する", async ({ page }, testInfo) => {
+  let roomApiCalls = 0;
+  page.on("request", request => { if (request.url().includes("/api/room/")) roomApiCalls++; });
+  await page.goto("/test-room");
+  await page.getByRole("button", { name: "結果ページを試す（APIなし）" }).click();
+  await expect(page).toHaveURL(/\/result$/);
+  await expect(page.getByRole("heading", { name: "防災シミュレーション結果" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("行動の振り返り 1 / 2");
+  await expect(page.getByRole("button", { name: "戻る", exact: true })).toBeDisabled();
+  await expect(page.locator("article")).toContainText("Q1");
+  await page.getByRole("button", { name: "次へ", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("行動の振り返り 2 / 2");
+  await page.getByRole("button", { name: "次へ", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("今回のまとめ");
+  await expect(page.getByText("あなたの防災4つのチカラ")).toBeVisible();
+  await expect(page.getByRole("img", { name: "サンプルの予想図。あなたの部屋を再現した画像ではありません" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "親子で部屋の見取り図を囲み、備えを相談するイラスト" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "結果の読み方" })).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("result-summary-restored.png"), fullPage: true, animations: "disabled" });
+  await page.getByRole("button", { name: "戻る", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("行動の振り返り 2 / 2");
+  await page.getByRole("button", { name: /理由・注意点を読む/ }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: "次へ", exact: true }).click();
+  await page.getByRole("button", { name: "次へ", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "室内の備え" })).toBeVisible();
+  await page.getByRole("button", { name: /備えのチェックリストを開く/ }).click();
+  const checklist = page.getByRole("dialog");
+  await checklist.getByRole("checkbox").first().check();
+  await checklist.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: /か所 対策済み/ })).toContainText("1 / 3");
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: /結果を共有/ }).click();
+  await expect(page).toHaveURL(/\/share$/);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "室内の備え" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /か所 対策済み/ })).toContainText("1 / 3");
+  expect(roomApiCalls).toBe(0);
+});
+
+test("結果ページは元の予想図表示で不一致の再試行と共有時の再利用に対応する", async ({ page }) => {
+  const photo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==";
+  const questions = [QUESTIONS[0]];
+  const q = questions[0], choice = q.choices[0];
+  await page.addInitScript(data => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify(data)), {
+    photoUrl: photo, risks: DETECTED_RISKS.map(r => ({ ...r, confirmed: true })), questions,
+    answers: [{ questionId: q.id, choiceId: choice.id, safety: choice.safety, axis: q.axis, timedOut: false }],
+    finishedAt: 1, resultStep: questions.length, checked: [],
+  });
+  let calls = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/room/aftermath", async route => {
+    calls++;
+    const body = route.request().postDataJSON();
+    expect(body.image).toBe(photo);
+    expect(body.objects.map((object: { type: string }) => object.type)).toEqual(["bookshelf", "window", "doorway"]);
+    if (calls === 1) {
+      await gate;
+      await route.fulfill({ status: 502, json: { error: "room-image-mismatch" } });
+    } else await route.fulfill({ json: { imageUrl: photo, verification: "unavailable" } });
+  });
+  await page.goto("/result");
+  await expect(page.getByText("AIが予想図をつくっています...")).toBeVisible();
+  release();
+  await expect(page.getByText(/元の部屋と大きく異なる画像/)).toBeVisible();
+  expect(calls).toBe(1);
+  await page.getByRole("button", { name: "予想図をもう一度生成" }).click();
+  await expect(page.getByRole("img", { name: "撮影した部屋をもとにした地震後の予想図", exact: true })).toBeVisible();
+  await expect(page.getByText(/元写真との自動比較は完了していません/)).toBeVisible();
+  await page.getByRole("button", { name: "次へ", exact: true }).click();
+  await page.getByRole("button", { name: /結果を共有/ }).click();
+  await expect(page).toHaveURL(/\/share$/);
+  await page.getByRole("checkbox", { name: "予想図も共有する" }).check();
+  await expect(page.getByText(/元写真との自動比較は完了していません/)).toBeVisible();
+  expect(calls).toBe(2);
+});
+
+test("家具の確認中は生成せず、修正した対象をクイズ開始時に渡す", async ({ page }) => {
+  await page.addInitScript(risk => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
+    photoUrl: "data:image/png;base64,AA==", risks: [risk], analysisSource: "ai", questions: [], answers: [], checked: [], resultStep: 5,
+  })), DETECTED_RISKS[0]);
+  const objects: { name: string; type: string }[][] = [];
+  await page.route("**/api/room/aftermath", async route => {
+    objects.push(route.request().postDataJSON().objects);
+    await route.fulfill({ json: { imageUrl: "/figma/img/room-risk.jpg", verification: "checked" } });
+  });
+  await page.goto("/risks");
+  await page.getByRole("button", { name: /認識を修正する/ }).click();
+  const dialog = page.getByRole("dialog", { name: "認識を修正する" });
+  await dialog.getByLabel("名前", { exact: true }).fill("壁掛けテレビ");
+  await dialog.locator("select").selectOption("tv");
+  await dialog.getByRole("button", { name: "保存", exact: true }).click();
+  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+  expect(objects).toHaveLength(0);
+  await page.getByRole("button", { name: "確認を終える", exact: true }).click();
+  expect(objects).toHaveLength(0);
+  await page.getByRole("button", { name: "行動クイズへ", exact: true }).click();
+  await expect(page).toHaveURL(/\/quiz$/);
+  await expect.poll(() => objects.length).toBe(1);
+  expect(objects[0][0]).toMatchObject({ name: "壁掛けテレビ", type: "tv", mounted: true, bounds: DETECTED_RISKS[0].bounds });
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).resultStep)).toBe(0);
+});
+
+test("フェーズ2の準備・経路比較・歩行からホームへ戻れ、部屋の記録を保持する", async ({ page }) => {
+  await page.goto("/test-room");
+  await page.getByRole("button", { name: "結果ページを試す（APIなし）" }).click();
+  const roomBefore = await page.evaluate(() => sessionStorage.getItem("jishingoto.session.v1"));
+  const goHome = async () => {
+    const link = page.getByRole("link", { name: "トップページへ戻る", exact: true });
+    await expect(link).toBeInViewport({ ratio: 1 });
+    await link.click();
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.locator(".home-wordmark")).toHaveText("ジシンゴト！");
+    expect(await page.evaluate(() => sessionStorage.getItem("jishingoto.session.v1"))).toEqual(roomBefore);
+  };
+  await page.goto("/evac?mode=mock&from=standalone");
+  await expect(page.getByRole("heading", { name: "ひなんルート" })).toBeVisible();
+  await goHome();
+  await openMockRoute(page);
+  await expect(page.getByRole("region", { name: "Street Viewで進む体験" })).toBeVisible();
+  await goHome();
+  await page.goto("/evac/routes");
+  await expect(page.getByRole("heading", { name: "どの道で行こう？" })).toBeVisible();
+  await goHome();
 });
 
 test("共通問題をノードで出題し回答後は自動歩行を再開する", async ({page}, testInfo) => {

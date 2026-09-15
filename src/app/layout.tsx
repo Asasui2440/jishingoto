@@ -29,18 +29,18 @@ const notoSansJp = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "ジシンゴト｜地震＋自分事",
+  title: "ジシンゴト！｜地震＋自分事",
   description:
     "部屋の写真から危ないところを見つけて、地震のときの動きを試せる防災シミュレーション。",
   manifest: "/offline-evac/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "ジシンゴト" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "ジシンゴト！" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f4f6f9",
+  themeColor: "#f8f7f0",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -57,8 +57,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script src="/offline-evac/entry.mjs" type="module" strategy="afterInteractive" />
         <SettingsProvider>
           <SessionProvider>
-            {/* スマホ幅が基準。PC で開いたときは中央に寄せる */}
-            <div className="mx-auto w-full max-w-[402px] bg-canvas shadow-[0_0_60px_rgba(26,32,44,0.08)]">
+            {/* 画面幅に合わせて本文を広げ、スマホからタブレットまで同じ体験を表示する */}
+            <div className="app-page legacy-page bg-canvas border-x border-border/60">
               <PhaseOneNavigation />
               {children}
             </div>

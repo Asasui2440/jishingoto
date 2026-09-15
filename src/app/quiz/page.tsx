@@ -3,7 +3,7 @@
 import { questionRoomView } from "@/lib/room-views";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import roomQuiz from "@/../public/figma/img/room-risk.jpg";
 import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
 import { Meter, Tag } from "@/components/ui/Bits";
@@ -111,7 +111,8 @@ function QuestionView({
         </div>
       </div>
 
-      <div className={["flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+      <div className={["quiz-content flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+        <div className="quiz-room flex flex-col gap-3">
         {/* 部屋で「あぶない」と確認した場所が、そのまま問題になる */}
         {kind && question.place ? (
           <div className="flex items-center gap-2">
@@ -129,7 +130,7 @@ function QuestionView({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
-            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 402px) 100vw, 402px" className="block h-auto w-full" priority />
+            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 639px) 100vw, 560px" className="block h-auto w-full" priority />
           )}
 
           {question.highlight ? (
@@ -173,6 +174,8 @@ function QuestionView({
           ) : null}
         </div></div>
 
+        </div>
+        <div className="quiz-question flex flex-col gap-3">
         <Card className="p-3">
           <p className="font-display text-lg font-bold text-ink">
             <Furigana text={question.situation} adult={question.adultSituation} />
@@ -207,6 +210,7 @@ function QuestionView({
             </li>
           ))}
         </ul>
+        </div>
       </div>
 
       <DisclaimerFooter />
@@ -222,6 +226,7 @@ export default function QuizPage() {
 
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [index, setIndex] = useState(0);
+  const answeredQuestion = useRef<string | null>(null);
 
   // 部屋で確認した危険にひもづく設問を取りに行く
   useEffect(() => {
@@ -248,6 +253,9 @@ export default function QuizPage() {
     (choice: Choice, timedOut: boolean) => {
       if (!questions) return;
       const question = questions[index];
+      // 連打や時間切れとタップの競合でも、同じ回答から二度進めない。
+      if (answeredQuestion.current === question.id) return;
+      answeredQuestion.current = question.id;
 
       // answer は同じ設問への回答を上書きするので、進む前に記録しておく
       answer({
@@ -265,7 +273,7 @@ export default function QuizPage() {
       if (index + 1 < questions.length) {
         setIndex(index + 1);
       } else {
-        update({ finishedAt: Date.now() });
+        update({ finishedAt: Date.now(), resultStep: 0, resultIntroPending: true });
         router.push("/result");
       }
     },

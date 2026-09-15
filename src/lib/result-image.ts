@@ -6,8 +6,9 @@ import { aftermathDisplay } from "./aftermath-display";
 import { createAftermathShareFile } from "./aftermath-share";
 
 export async function preparePredictionImage(photo: string | null, risks: Risk[], retry = false) {
-  const result = aftermathDisplay(await prepareAftermath(photo, risks, retry));
-  return createAftermathShareFile(result.imageUrl, result.mock);
+  const prediction = await prepareAftermath(photo, risks, retry);
+  const result = aftermathDisplay(prediction);
+  return createAftermathShareFile(result.imageUrl, result.mock, prediction.verification === "unavailable");
 }
 
 export class ResultImageError extends Error {
@@ -18,7 +19,7 @@ export class ResultImageError extends Error {
 export async function prepareResultImage({ photo, risks, rows, audience, retry = false }: { photo: string | null; risks: Risk[]; rows: ShareRow[]; audience: Audience; retry?: boolean }) {
   const prediction = await prepareAftermath(photo, risks, retry);
   const display = aftermathDisplay(prediction);
-  try { return await createResultSummaryFile({ rows, audience, ...display }); }
+  try { return await createResultSummaryFile({ rows, audience, ...display, comparisonUnavailable: prediction.verification === "unavailable" }); }
   catch { throw new ResultImageError("export", "予想図は生成済みですが、保存用の画像に変換できませんでした。もう一度試すか、別のブラウザーで開いてください。"); }
 }
 
