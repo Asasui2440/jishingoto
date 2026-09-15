@@ -22,7 +22,7 @@
   --color-primary-ink: #5d4612;
   --color-primary-soft: #fff3c8;
 
-  /* 青いロゴと、黄色の主要操作。 */
+  /* 青は補足表示、黄色は主要操作に使う。 */
   --color-accent: #205f82;
 
   /* 補足・強調カード。黄色の操作ボタンと区別する。 */
@@ -320,9 +320,6 @@ html { scroll-padding-top: 60px; }
 @container (min-width: 640px) {
   .review-figure .grid .review-diagram { height: 185px; }
 }
-
-/* ロゴは読みやすい一続きの形を保ち、本文の文字拡大とは別に画面幅へ合わせる。 */
-.home-wordmark { font-size: min(2.5rem, 10cqw); }
 
 /* 色は見出しや小さな面に使い、本文と挿絵には白い余白を残す。 */
 .home-phase-two { border-color: #9fc9df; background: var(--color-glass-soft); color: var(--color-glass); }

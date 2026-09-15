@@ -24,6 +24,51 @@ const { fetchQuestions } = load("src/lib/api.ts");
 const { safetyProductsFor } = load("src/lib/recommendations.ts");
 const risk = (objectType, kind = "fall", confirmed = true) => ({ id: objectType, name: "対象", adultName: "対象物", objectType, kind, confirmed, x: 50, y: 50 });
 
+test("adult quizzes keep five room-linked questions while adding four meaningful choices and review clues", async () => {
+  const { reviewNotes } = load("src/lib/review-copy.ts");
+  const { withAdultSituation } = load("src/lib/api.ts");
+  const { reviewIllustration } = load("src/lib/review-illustrations.ts");
+  const fixtures = [[], [risk("desk"), risk("window", "break"), risk("doorway", "block")],
+    [risk("bookshelf"), { ...risk("other"), name: "コンロ" }], [risk("elevated_objects")], [risk("tv", "fall", false)]];
+  const seen = new Set();
+  const seeded = seed => {
+    seed = Math.imul(seed, 2654435761) >>> 0;
+    return () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  };
+  const bestPositions = new Set();
+  for (const risks of fixtures) for (let seed = 1; seed <= 25; seed++) {
+    const before = JSON.stringify(risks);
+    const children = await fetchQuestions(risks, "home", seeded(seed));
+    const adults = await fetchQuestions(risks, "home", seeded(seed), "adult");
+    assert.equal(adults.length, 5);
+    assert.deepEqual(adults.map(q => q.id), children.map(q => q.id));
+    for (const [i, question] of adults.entries()) {
+      const child = children[i];
+      assert.equal(child.challenge, undefined);
+      assert.equal(child.choices.length, 3);
+      assert.equal(question.choices.length, 4, question.id);
+      assert.equal(new Set(question.choices.map(c => c.id)).size, 4);
+      assert.equal(question.choices.filter(c => c.safety >= 0.7).length, 1);
+      assert.equal(question.sourceRiskId, child.sourceRiskId);
+      assert.deepEqual(question.highlight, child.highlight);
+      assert.equal(question.phase, child.phase);
+      assert(question.seconds >= 20);
+      assert(question.challenge.takeaway);
+      assert.equal(withAdultSituation(question, risk("desk")), question, "review must retain the exact challenge that was answered");
+      assert(question.sources.length);
+      const best = question.choices.reduce((a, b) => b.safety > a.safety ? b : a);
+      seen.add(best.id);
+      bestPositions.add(question.choices.indexOf(best));
+      assert.equal(best.id, child.choices.reduce((a, b) => b.safety > a.safety ? b : a).id);
+      assert.deepEqual(reviewNotes(question, "adult"), best.explanation);
+      assert(reviewIllustration(question), question.id);
+    }
+    assert.equal(JSON.stringify(risks), before);
+  }
+  for (const id of ["under-desk", "curtain", "move-away", "protect-head", "clear-exit", "open-exit", "check-family", "kitchen-check", "verify", "shelter-home-0", "shelter-damaged-0"]) assert(seen.has(id), id);
+  assert.equal(bestPositions.size, 4, "the recommended answer must not stay in the same position");
+});
+
 test("short earthquake audio schedules volume changes within the sound duration", () => {
   const originalWindow = global.window;
   let times = [];

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { Furigana } from "@/components/ui/Furigana";
+import { Brand } from "@/components/Brand";
 import styles from "./QuizResultTransition.module.css";
 
 const DURATION_MS = 3_000;
@@ -52,7 +53,7 @@ export function QuizResultTransition({
     >
       <div className={styles.content}>
         <header>
-          <p className={styles.brand}>ジシンゴト！</p>
+          <div className={styles.brand}><Brand variant="wordmark" eager /></div>
           <p className={styles.eyebrow}><Furigana text="室内[しつない]での体験[たいけん]を終[お]えました" /></p>
         </header>
         <div className={styles.message}>

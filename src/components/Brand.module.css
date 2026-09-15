@@ -1,0 +1,59 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.5cqw, 14px);
+  width: 100%;
+  max-width: 28rem;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.inline {
+  width: 92%;
+}
+
+.symbol {
+  position: relative;
+  display: block;
+  flex: 0 0 clamp(36px, 10cqw, 56px);
+  aspect-ratio: 1;
+}
+
+.symbolImage {
+  object-fit: contain;
+}
+
+.lettering {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  aspect-ratio: 2172 / 440;
+  overflow: hidden;
+}
+
+/* 元のPNGは2172×724。上下の透明部分だけを表示枠から外す。 */
+.letteringImage {
+  object-fit: cover;
+  object-position: center 43%;
+}
+
+.stacked {
+  flex-direction: column;
+  gap: 14px;
+  max-width: 30rem;
+}
+
+.stacked .symbol {
+  flex: none;
+  width: 72px;
+}
+
+.stacked .lettering {
+  flex: none;
+  width: 100%;
+}
+
+.wordmark {
+  max-width: 20rem;
+}

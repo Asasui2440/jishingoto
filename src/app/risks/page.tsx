@@ -53,7 +53,7 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
 export default function RoomRecognitionPage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, update } = useSession();
   const risks = groupRisksByView(sessionRisks, roomViews);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const allReviewed = risks.every(risk => reviewedIds.includes(risk.id));
@@ -220,10 +220,6 @@ export default function RoomRecognitionPage() {
           </div>}
           <SafetyProducts risks={[{ ...selected, confirmed: true }]} />
           </DetailSheet></div>
-          <label className="mt-4 flex min-h-12 cursor-pointer items-center gap-3 rounded-field border border-safe p-3 font-bold text-safe">
-            <input type="checkbox" checked={checked.includes(`prepared:${selected.id}`)} onChange={() => toggleChecked(`prepared:${selected.id}`)} className="size-5 accent-teal-700" />
-            <Furigana text="この家具・場所は対策[たいさく]済[ず]み" adult="この家具・場所は対策済み" />
-          </label>
         </article>}
         {!allReviewed && selected && <div className="space-y-2 py-3">
           <p className="text-center text-sm text-ink-muted"><Furigana text={`確認済み ${risks.filter(r => reviewedIds.includes(r.id)).length} / ${risks.length}`} /></p>

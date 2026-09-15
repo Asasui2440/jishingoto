@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Brand } from "@/components/Brand";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { aftermathInput } from "@/lib/aftermath-plan";
@@ -74,9 +75,9 @@ export default function ResultPage() {
       <div>
         <StatusBar />
         <div className="flex items-center gap-2 px-6 pt-3">
-          <span className="shrink-0 rounded-field bg-primary-soft px-2 py-0.5 font-display text-xs font-black whitespace-nowrap text-primary-ink">
-            ジシンゴト！
-          </span>
+          <div className="w-28 shrink-0">
+            <Brand variant="wordmark" eager />
+          </div>
           <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold text-ink">
             <Furigana text="防災[ぼうさい]シミュレーション結果[けっか]" />
           </h1>
