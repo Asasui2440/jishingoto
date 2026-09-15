@@ -1,0 +1,102 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 4,
+  "assets": [
+    {
+      "number": 13,
+      "variant": "situation",
+      "prompt": "Use case illustration-story. Reference STYLE ONLY, no pole or wire. Very thick navy rounded outlines, simple faceless blue-shirt yellow-backpack adult LARGE at 65% canvas height, pale blue sky, gray pavement, muted broad colors, minimal detail. 3:2 mobile illustration readable at 94px. NEW SCENE: shop on RIGHT, a large blank rectangular sign visibly tilted attached above a SEPARATE horizontal awning. Protagonist stands before shop waiting alone. LEFT a clearly open paved plaza away from building. Sign and awning must be different objects. No falling debris, other people, text, arrows, icons, checkmarks. Tight view with full person and sign visible.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec7ef6a-a8f8-4b44-a3d0-f54c19de35d1.png",
+      "asset": "public/illustrations/evac/walk-case-13/situation-v2.webp",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+    },
+    {
+      "number": 13,
+      "variant": "distance",
+      "prompt": "Edit reference action: same blue shirt yellow backpack person now stands in open plaza at LEFT well away from shop, holding phone to ear to change meeting place. Shop small at far RIGHT, tilted blank sign still distinct from horizontal awning. Large full person 65% canvas height. Very thick rounded navy outlines, sparse flat colors, no text arrows icons or extra people. 3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec7ef6a-a8f8-4b44-a3d0-f54c19de35d1.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-8d21fde4-b0fa-48aa-b88b-f301ba7212cb.png",
+      "asset": "public/illustrations/evac/walk-case-13/distance-v2.webp"
+    },
+    {
+      "number": 13,
+      "variant": "go",
+      "prompt": "Edit reference action: protagonist stands waiting directly UNDER shop awning at RIGHT beside shop door, arms down no phone. Clearly place full body below awning roof, tilted blank sign above separate awning. Crop closer keeping large full person and empty plaza LEFT. Very thick navy outlines same colors. No other people, text icons arrows. 3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec7ef6a-a8f8-4b44-a3d0-f54c19de35d1.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-0a9956a1-bcec-4963-8057-f164e3f415dd.png",
+      "asset": "public/illustrations/evac/walk-case-13/go-v2.webp"
+    },
+    {
+      "number": 13,
+      "variant": "consider",
+      "prompt": "Edit reference action: protagonist walks away LEFT from shop with long clear walking stride, arms swinging DOWN, no phone. Large full person in foreground, shop with tilted blank sign above distinct red striped awning behind at RIGHT. Empty open paving. Very thick navy outlines same simple V2 colors. No other people, text icons arrows. 3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec7ef6a-a8f8-4b44-a3d0-f54c19de35d1.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b52036be-5536-4b07-933d-7900d635e4d3.png",
+      "asset": "public/illustrations/evac/walk-case-13/consider-v2.webp"
+    },
+    {
+      "number": 17,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY, no poles/wires. Simple thick navy rounded outline illustration, blue shirt yellow backpack faceless adult LARGE 65% canvas height, pale blue sky, flat muted colors, sparse background. 3:2 landscape mobile readable94px. Draw situation: 右に斜面、その足元を通る道。落ちる小石は2〜3個。左の来た道へ戻れる配置。 Person stationary at left facing slope right. Keep 2 small pebbles midair adjacent slope, no giant rocks or landslide. No text arrows icons.",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9a5dfd85-4022-4962-80f2-5b3a2c776906.png",
+      "asset": "public/illustrations/evac/walk-case-17/situation-v2.webp"
+    },
+    {
+      "number": 17,
+      "variant": "distance",
+      "prompt": "Edit reference into action: 斜面を背にし、左へ戻る歩行姿勢。 Clearly walking LEFT away from slope, arms down. Keep same slope/right, 2 small pebbles, path/left. Enlarge full person to65%canvas height. Very thick navy outlines same colors, no arrows text icons or new hazards. One3:2 illustration.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9a5dfd85-4022-4962-80f2-5b3a2c776906.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9892011c-a99e-467d-8d6c-8a620ec9f290.png",
+      "asset": "public/illustrations/evac/walk-case-17/distance-v2.webp"
+    },
+    {
+      "number": 17,
+      "variant": "go",
+      "prompt": "Edit action: LARGE protagonist walking briskly RIGHT along foot of slope, both forearms covering top of head, long stride. Keep road, slope RIGHT and 2small falling pebbles same, full person65%height. No giant rocks landslide injury. Thick navy outline simple V2. No text icons arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9a5dfd85-4022-4962-80f2-5b3a2c776906.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c4b703e8-47cb-4c70-81bd-41a1d5080b4a.png",
+      "asset": "public/illustrations/evac/walk-case-17/go-v2.webp"
+    },
+    {
+      "number": 17,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist stands STILL close to slope foot at RIGHT looking UP toward two small falling pebbles, head clearly tilted upward, arms down, feet side by side. Large full body65%height. Same slope and left return path. Very thick navy simple V2 outlines. No phone headshield walking arrows text icons added hazards.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9a5dfd85-4022-4962-80f2-5b3a2c776906.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c98a778b-e322-463e-8b1f-d411eba6e755.png",
+      "asset": "public/illustrations/evac/walk-case-17/consider-v2.webp"
+    },
+    {
+      "number": 20,
+      "variant": "situation",
+      "prompt": "STYLE reference ONLY, no pole wire. Simple thick navy rounded outlines faceless blue shirt yellow backpack adult65%canvasheight. ONE3:2 mobile scene: person near center standing offbalance legs spread slightly kneesbent, arms slightly outward during earthquake. Immediately LEFT broad empty paved area withoutwalls. Shop entrance under awning farther RIGHT. Only two short vibration strokes by feet. No cracks debris damage text arrows icons otherpeople. Flat muted colors pale bluesky. 地面の大割れや倒壊を足さない。しゃがむ・移動・直立のシルエットを主役にする。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ac38d377-413c-4958-a566-63fc5fe81e28.png",
+      "asset": "public/illustrations/evac/walk-case-20/situation-v2.webp"
+    },
+    {
+      "number": 20,
+      "variant": "distance",
+      "prompt": "Edit action: protagonist crouches LOW both knees deeplybent, both forearms covering head in EMPTY open space LEFT away from shop. Crop closer to make crouching person LARGE, shop edge right ascontext. Keep same thick navy simple colors no new hazards. No text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ac38d377-413c-4958-a566-63fc5fe81e28.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f478b86c-b5de-4d44-b5f5-d1a24fab866e.png",
+      "asset": "public/illustrations/evac/walk-case-20/distance-v2.webp"
+    },
+    {
+      "number": 20,
+      "variant": "go",
+      "prompt": "Edit action: protagonist walks RIGHT toward shop door underneath green striped awning, one foot forward at door threshold, upright arms down. LARGE full person with yellowbackpack, entrance prominent, open space LEFT. Same thick navy V2 style no damage text arrows icons otherpeople.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ac38d377-413c-4958-a566-63fc5fe81e28.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f0b5b15f-2226-4322-b6f9-0840178bf111.png",
+      "asset": "public/illustrations/evac/walk-case-20/go-v2.webp"
+    },
+    {
+      "number": 20,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist stays UPRIGHT at original center position, legs straight feetapart arms down, not moving or crouching. Increaseperson60%height. Same shopRIGHT and openspaceLEFT, tiny vibration strokes atfeet. Thick navy simple V2. No damage text icons arrows otherpeople.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ac38d377-413c-4958-a566-63fc5fe81e28.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-4ba1eda3-d93a-44ec-886b-349adda7df48.png",
+      "asset": "public/illustrations/evac/walk-case-20/consider-v2.webp"
+    }
+  ]
+}

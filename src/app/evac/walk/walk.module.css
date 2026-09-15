@@ -3,10 +3,23 @@
 .status { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; padding: 0 16px; }
 .scene { flex: 1; min-height: 140px; margin: 0 12px; overflow: hidden; border-radius: 24px; }
 .actions { display: flex; flex-shrink: 0; flex-direction: column; gap: 10px; padding: 4px 16px 14px; }
-.decisionSlot { position: absolute; z-index: 20; bottom: 124px; left: 12px; right: 12px; display: grid; max-height: calc(100% - 160px); border-radius: 24px; box-shadow: 0 8px 32px #17212c33; }
+.decisionSlot { position: absolute; z-index: 20; bottom: 78px; left: 12px; right: 12px; display: grid; max-height: calc(100% - 160px); border-radius: 24px; box-shadow: 0 8px 32px #17212c33; }
 .decisionContent { display: flex; min-height: 0; grid-area: 1 / 1; }
-.decisionHidden { visibility: hidden; }
-.attentionNotice { z-index: 1; display: flex; grid-area: 1 / 1; align-self: end; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; background: #eff6ff; padding: 14px; color: #1e40af; font-size: 0.875rem; font-weight: 800; text-align: center; }
-@keyframes attention-toast-in { from { opacity: 0; } to { opacity: 1; } }
+.decisionHidden { visibility: hidden; pointer-events: none; box-shadow: none; }
+.attentionNotice { position: absolute; z-index: 30; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; gap: 12px; width: max-content; max-width: calc(100% - 40px); border: 2px solid #a66b00; border-radius: 20px; background: #ffe16a; padding: 20px 24px; color: #513600; font-size: 1.25rem; font-weight: 800; text-align: center; box-shadow: 0 8px 28px #17212c44; }
+.streetReturn { position: absolute; z-index: 20; bottom: 84px; left: 20px; right: 20px; display: grid; gap: 8px; border-radius: 16px; padding: 12px; background: #fff5d4; color: #513600; font-size: 12px; text-align: center; }
+.streetReturn button { min-height: 44px; border: 2px solid #a66b00; border-radius: 12px; background: #ffe16a; font-weight: 800; }
 @media (max-height: 650px) { .main { gap: 4px; } .scene { min-height: 112px; } .actions { gap: 6px; padding-bottom: 8px; } }
-@media (max-height: 650px) { .decisionSlot { bottom: 100px; max-height: calc(100% - 105px); } }
+@media (max-height: 650px) { .decisionSlot { bottom: 12px; max-height: calc(100% - 40px); } }
+
+.navigationAlert { position: absolute; z-index: 10; bottom: 78px; left: 20px; right: 20px; border-radius: 12px; background: #fff4dd; padding: 12px; font-size: 12px; }
+.illustratedSlot { position: fixed; inset: max(100px, env(safe-area-inset-top)) 8px max(24px, env(safe-area-inset-bottom)); width: min(560px, calc(100% - 16px)); max-height: none; margin-inline: auto; background: transparent; }
+
+.loadingNotice { position: absolute; z-index: 20; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 18px; border-radius: 16px; background: #ffffffb3; color: #344454; font-size: 13px; white-space: nowrap; pointer-events: none; display: flex; flex-direction: column; gap: 8px; width: min(280px, calc(100% - 32px)); }
+
+@media (max-height: 650px) { .illustratedSlot { top: max(56px, env(safe-area-inset-top)); bottom: max(16px, env(safe-area-inset-bottom)); } }
+
+.preparationProgress { appearance: none; width: 100%; height: 8px; overflow: hidden; border: 0; border-radius: 8px; background: #d5dde3; }
+.preparationProgress::-webkit-progress-bar { background: #d5dde3; border-radius: 8px; }
+.preparationProgress::-webkit-progress-value { background: #2563eb; border-radius: 8px; transition: width .3s; }
+.preparationProgress::-moz-progress-bar { background: #2563eb; border-radius: 8px; }

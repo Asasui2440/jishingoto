@@ -1,0 +1,120 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 9,
+  "assets": [
+    {
+      "number": 31,
+      "variant": "situation",
+      "prompt": "Correct smokeSOURCE: REMOVE factory chimney entirely. Factory justlowgrayroof silhouettes atbottomRIGHT. Smoke is widegrayband entering from RIGHT IMAGE EDGE abovefactory with LARGE SKY GAP between smokeband andfactory; never taper tobuilding. Smoke driftsleft overroad but stops beforeblueperson, leftreturnroutefreeofsmoke. Keepblueperson same largepose andthicknavy minimalstyle.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f483347b-906e-4c04-9302-57b8003f60cd.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b168beeb-396d-4bb7-83a4-9d4bdf4c2165.png",
+      "asset": "public/illustrations/evac/walk-case-31/situation-v2.webp"
+    },
+    {
+      "number": 31,
+      "variant": "distance",
+      "prompt": "Edit action: blueperson walks LEFT awayfromsmokyroad, phone heldfront checkingroute. Bigclear gap between personleft and smokeRIGHT; factorylowroof stillright smokeNOTconnected. Samebranch simplethicknavyV2 person65%height. No clothmask words arrows icons flames.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b168beeb-396d-4bb7-83a4-9d4bdf4c2165.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-765bf222-ee78-42c6-a963-e31cc0569133.png",
+      "asset": "public/illustrations/evac/walk-case-31/distance-v2.webp"
+    },
+    {
+      "number": 31,
+      "variant": "go",
+      "prompt": "Edit action: protagonist walks RIGHT towardsmokyroad/factory holdingWHITEcloth overmouth withonehand, longclearstride. Largeperson65%height nearcenter, samegraybandRIGHT notattachedfactory. No actualinjury flames phone safetyicons words arrows. VerythicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b168beeb-396d-4bb7-83a4-9d4bdf4c2165.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-6414d5d7-95a8-496d-9dc0-66d07a33ab50.png",
+      "asset": "public/illustrations/evac/walk-case-31/go-v2.webp"
+    },
+    {
+      "number": 31,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist remains ORIGINAL position LEFT nearbranch, feetparallel stationary operatingphone BOTHhands lookingdown. Same smoke grayband RIGHT andfactorylowroof no connection. Keepneutralupright fullperson65%height no cloth. ThicknavyV2 no words arrows icons fire.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b168beeb-396d-4bb7-83a4-9d4bdf4c2165.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-96bd063c-48a9-4b60-9a1b-dde9bb67a35e.png",
+      "asset": "public/illustrations/evac/walk-case-31/consider-v2.webp"
+    },
+    {
+      "number": 33,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference no wires. ONE3:2 verythicknavy flat simple mobile illustration blueyellowbackpack adult65%height LEFT onehandnearnose noticingodor. FactorywallRIGHT cropped with LARGE wallmounted alarmhorn facingLEFT and2shortsoundstrokes. RoadbranchesLEFT awayfactory. AirCLEAR no smoke gas clouds fire. Neutralstance, no mask yetphoneor text arrows floatingicons. 工場と大きく簡略化した警報スピーカー。主人公はにおいに気づく程度に顔へ手を寄せ、横に離れる道。 見えない異臭を毒色の煙に置き換えない。警報はスピーカーの短い音線だけ。マスクで防げた結果は描かない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d64fad23-d437-4eec-b151-eacf285580b7.png",
+      "asset": "public/illustrations/evac/walk-case-33/situation-v2.webp"
+    },
+    {
+      "number": 33,
+      "variant": "distance",
+      "prompt": "Edit action: blueperson walks LEFT awayfactory alongbranch checkingphone infront, nohandnose mask. Enlarge fullperson65%height. SamefactoryRIGHT alarmhorn withtwostrokes airclear. No smoke words arrows icons otherpeople. ThicknavyV2 one3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d64fad23-d437-4eec-b151-eacf285580b7.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-09be1602-414f-4160-bac7-4d4b9028c2a4.png",
+      "asset": "public/illustrations/evac/walk-case-33/distance-v2.webp"
+    },
+    {
+      "number": 33,
+      "variant": "go",
+      "prompt": "ONLY remove both eyes/eyebrows from face, replace with plainpeach skin to match FACELESSV2. Keepwhitemask hand largebody yellowbag factoryalarm roads EXACTLY. No otherchanges.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b42a1362-fc84-4ddc-9935-e40dbbe1b67f.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-951aad45-5687-4698-ac75-70276959fe84.png",
+      "asset": "public/illustrations/evac/walk-case-33/go-v2.webp"
+    },
+    {
+      "number": 33,
+      "variant": "consider",
+      "prompt": "Edit action: protagonist stays ORIGINALposition nearfactory, stationary feetparallel BOTHhandsoperatingphone lookingdown. No mask no handnose. Enlargefullperson65%height. SamefactoryalarmRIGHT airclear branchLEFT. Thicknavy facelessV2 no text arrows icons smoke.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d64fad23-d437-4eec-b151-eacf285580b7.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-05a0ecb8-2deb-4da6-9d59-d764a998c06b.png",
+      "asset": "public/illustrations/evac/walk-case-33/consider-v2.webp"
+    },
+    {
+      "number": 34,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference no wires. ONE3:2 verythicknavy simple flatmobile illustration. Tallbuilding croppedtop RIGHT, onebrokenwindow and2fallingglasspieces above a DISTINCT flatgrayawning. LARGEblueyellowbackpackperson60%height stands sidewalkbelow leftofawning. DarkgrayroadforegroundLEFT withONEsmallcar and openpavedarea acrossroad. Clearcurbs feetbothonsidewalk. No fulltower skyline text arrows icons injury. 高い建物は上端で切り、割れた窓と数個の落下片、下のひさしを大きく。道を挟んだ空間と車を一台。 ビル全景を収めて人物を小さくしない。離れる案と沿って進む案は建物に対する体の向きで区別。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-057f9afe-04c7-4d08-abdf-7fa44698fd60.png",
+      "asset": "public/illustrations/evac/walk-case-34/situation-v2.webp"
+    },
+    {
+      "number": 34,
+      "variant": "distance",
+      "prompt": "Edit action: protagonist covershead withbothforearms, bodyturnedLEFT awaybuilding towardopenarea acrossroad, headturned towardcar checkingtraffic, firstsmallstep towardcurb but BOTH feet stillonsidewalk whilechecking. Large65%height, samecar buildingwindow2pieces awningRIGHT. Clearfeetcurb no collision. ThicknavyV2 no words arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-057f9afe-04c7-4d08-abdf-7fa44698fd60.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-28980b6b-c917-4d88-8683-7b0e7d088a72.png",
+      "asset": "public/illustrations/evac/walk-case-34/distance-v2.webp"
+    },
+    {
+      "number": 34,
+      "variant": "go",
+      "prompt": "Edit action: blueperson standsSTILL directly UNDER grayawning RIGHT besidebuildingdoor, armsdown feetparallel waiting. Tightcrop enoughperson55%height whilebrokenwindow2piecesaboveawning andcarLEFT visible. Samegeometryverythicknavy V2 no text arrows icons injuries.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-057f9afe-04c7-4d08-abdf-7fa44698fd60.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-229d2f03-0204-4e7d-a174-afd6253b116e.png",
+      "asset": "public/illustrations/evac/walk-case-34/go-v2.webp"
+    },
+    {
+      "number": 34,
+      "variant": "consider",
+      "prompt": "Edit action: blueperson coversheadwithbotharms and walks RIGHT PARALLEL buildingfacade at OUTERedge of SAME sidewalk. Bothfeet fullylightgray sidewalk, darkroadtoleft, buildingright. LongstrideRIGHT distinct fromleftwardawaychoice. Largeperson65%height samecar brokenwindow2pieces awning. VerythicknavyV2 no words arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-057f9afe-04c7-4d08-abdf-7fa44698fd60.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ca299a22-6118-4b03-af9d-323bf0840edc.png",
+      "asset": "public/illustrations/evac/walk-case-34/consider-v2.webp"
+    }
+  ],
+  "revisions": [
+    {
+      "number": 31,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference no wires. One3:2 verythicknavy flat simple mobile illustration largeblueyellowbackpackperson60%height foregroundLEFT neutralstanding. Road goesRIGHT toward distantfactory, ONEgray smoke band driftingfromRIGHT acrossroad towardleft, source OFFCANVAS unknown NOT connectedtofactorychimney. Leftreturnroad clear. No fire toxicgreengas text arrows icons injury. 工場方向から道へ伸びる一つの灰色の煙の帯。人物は手前、工場から離れる側に道。火元や炎は描かない。 工場の煙突が火元と断定できる接続は避ける。退避二次方向の安全性を緑色等で保証しない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f483347b-906e-4c04-9302-57b8003f60cd.png",
+      "asset": "public/illustrations/evac/walk-case-31/situation-v2.webp"
+    },
+    {
+      "number": 33,
+      "variant": "go",
+      "prompt": "Edit action: blueperson WEARS simplewhitemask attachedaroundhead, turnsupperbody glancing betweenbranchroutes, onehand adjustingmask. Closewaistup largeperson, factoryalarmRIGHT roadforkbehind. No gas smoke phone shieldicons or suggestionmaskworks, no words arrows. VerythicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-d64fad23-d437-4eec-b151-eacf285580b7.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b42a1362-fc84-4ddc-9935-e40dbbe1b67f.png",
+      "asset": "public/illustrations/evac/walk-case-33/go-v2.webp"
+    }
+  ]
+}

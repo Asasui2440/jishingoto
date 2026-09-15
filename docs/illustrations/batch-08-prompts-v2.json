@@ -1,0 +1,112 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 8,
+  "assets": [
+    {
+      "number": 26,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference. ONE3:2 verythicknavy flat simple mobile illustration. 狭い入口に集まる人の列。主人公と同行者は列の外、脇に空いた場所。斜め上から間隔を見せる。 Blueyellowbackpack adult withpurplecompanion foregroundLEFT OUTSIDEqueue neutralstanding. Threegraygreenpeople queue toward narrowpassageRIGHT between two plainwalls. OpenoffflowspaceLEFT withphysicalblankguidanceboard. Obliquesideview main2people60%height. Keep gaps andsilhouettes clear, no crushinjury text arrows floatingicons wires. 人数の細密描写は避ける。goとconsiderは同じ視点・人数で間隔のみを変える。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c78070ae-8e1b-4618-93cd-9d93f6164eba.png",
+      "asset": "public/illustrations/evac/walk-case-26/situation-v2.webp"
+    },
+    {
+      "number": 26,
+      "variant": "distance",
+      "prompt": "Edit action: blueandpurple have moved aside LEFT to physicalguidanceboard, bluepointsboard while bothlook atboard and passage fromoutsideflow. Boardcontains onlyboldplainroute lines no textarrows. Keep queue3people RIGHT samewallpassage, mainfiguresLARGE60%height close. ThicknavyV2 no floatingicons newpeople.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c78070ae-8e1b-4618-93cd-9d93f6164eba.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-87bfad9c-3c25-44f9-b048-2b125796a44e.png",
+      "asset": "public/illustrations/evac/walk-case-26/distance-v2.webp"
+    },
+    {
+      "number": 26,
+      "variant": "go",
+      "prompt": "Edit action: blueandpurple join backofqueue VERY CLOSE behind graygreenperson, just narrowgap shoulders/back nearlytouch but silhouettesdistinct. Main2 in singlefile towardRIGHTpassage. KEEP exactly3graygreen queuepeople plus2mainpeople, sameobliqueview andwallsboard. Zoom group fillscanvas, mainpeople55%height, no injurycrush words arrows icons. ThicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c78070ae-8e1b-4618-93cd-9d93f6164eba.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec54e74-96d4-49ad-9a1c-7c77a853c82d.png",
+      "asset": "public/illustrations/evac/walk-case-26/go-v2.webp"
+    },
+    {
+      "number": 26,
+      "variant": "consider",
+      "prompt": "Correct spacing ONLY: move GREEN person currently immediately infront ofpurple FAR RIGHT UP beside grayperson at doorway. Leave BIG EMPTYFLOOR between purpleandgreen at least widthofoneadult. Blueandpurple remainleft positions, threequeuepeople group tightlyright bydoor. Same5people exact no newpeople. Remove overlaps betweenpurpleandgreen completely. Same3:2 navyV2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c4f57521-4706-4314-b575-da44a2e7924e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-9549e849-edc3-44a4-b824-2f5722398638.png",
+      "asset": "public/illustrations/evac/walk-case-26/consider-v2.webp"
+    },
+    {
+      "number": 35,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference no wires. One3:2 verythicknavy flat simple mobile illustration blueyellowbackpackperson large60%height foregroundLEFT. Buildingexit largeclear doorframeRIGHT, TWOgraygreenpeople emerge towardforeground, onegraypedestrian walks sideway alongsidewalk crossingtheirflow. Blue stands BEFOREintersection of people. Empty offpath alcoveLEFT behindblue withplainphysicalboard. Keepdoorframevisible and only3others, no crashinjury iconsarrows text. 建物の出口から出る流れと歩道を進む流れが交差する。主人公の手前に、流れから外れた空き場所。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7d9bef3d-968a-4bd4-890d-e0be07863974.png",
+      "asset": "public/illustrations/evac/walk-case-35/situation-v2.webp"
+    },
+    {
+      "number": 35,
+      "variant": "distance",
+      "prompt": "Edit action: blueperson moved FAR LEFT into off-flowrecess besidephysicalboard, looks fromboard towardintersectingpeople RIGHT, onehand atboard. Keep3people anddoorRIGHT, allbluefeet withinleftrecess NOTexitarea. Largeblue60%height. Sparse verythicknavyV2 no text arrows icons newpeople.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7d9bef3d-968a-4bd4-890d-e0be07863974.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-af7a8b2f-5f98-4dbc-bd69-61e1a04d8e12.png",
+      "asset": "public/illustrations/evac/walk-case-35/distance-v2.webp"
+    },
+    {
+      "number": 35,
+      "variant": "go",
+      "prompt": "Edit action: blueperson joins immediately BEHIND grayperson emergingfromdoor, bothwalking towardforeground awayfromdoor same direction. DoorframeRIGHT remainsvisible, greenpersonbehind, sidewaygraypersonright. Mainblueforegroundlarge65%height, offpathboardLEFTunused. Clearindividualsilhouettes no collision. ThicknavyV2 no words arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7d9bef3d-968a-4bd4-890d-e0be07863974.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-79c323ad-6b27-4a24-b5d1-ef7c684f04d9.png",
+      "asset": "public/illustrations/evac/walk-case-35/go-v2.webp"
+    },
+    {
+      "number": 35,
+      "variant": "consider",
+      "prompt": "Edit action: blueprotagonist stationary RIGHT immediatelybeside LEFT doorjamb ofexit, armsdown feetparallel, close to emerginggrayperson. Offflowrecess andblankboard remain FAR LEFT unused. Doorframevisible behindblue, same3otherpeople. Mainblue60%height. VerythicknavyV2 no newobjects text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7d9bef3d-968a-4bd4-890d-e0be07863974.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-28470333-6619-4364-b62f-e63e59445159.png",
+      "asset": "public/illustrations/evac/walk-case-35/consider-v2.webp"
+    },
+    {
+      "number": 28,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference. ONE3:2 VERYTHICKnavy simpleflat mobile illustration CLOSEUP twoadults waistsup, blueyellowbackpack protagonistLEFT holds LARGE phone facingviewer showing nearEMPTYbattery symbol (outlinewithONEtinyredbar) and simpleboldYjunctionmap, no words. PurplecompanionRIGHT holds blankpaperandpen, notwritingyet. Simplifiedbranchingstreetbackground. Handsphonepaper bigreadable94px. No wires floatingicons text arrows clocks. 画面保存と電源切れを混同させない。画像内の小さい文字に頼らず、端末内と紙への記録の違いを見せる。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3eca7c79-256f-4645-8fb9-f9f89c56305e.png",
+      "asset": "public/illustrations/evac/walk-case-28/situation-v2.webp"
+    },
+    {
+      "number": 28,
+      "variant": "distance",
+      "prompt": "Edit action closeup HANDS: blueperson holdsphone LEFT with same nearlyemptybattery/map, purpleperson usespen to COPY boldYroute/currentdot onto whitepaper RIGHT. PenTIP contacts paper, otherhand supports sheet, copiedroute visuallylarge. Heads maycrop to prioritisehands. SamepaletteverythicknavyV2 no words arrows floatingicons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3eca7c79-256f-4645-8fb9-f9f89c56305e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-dd1b011b-b682-4d68-8e22-4d39af301573.png",
+      "asset": "public/illustrations/evac/walk-case-28/distance-v2.webp"
+    },
+    {
+      "number": 28,
+      "variant": "go",
+      "prompt": "Edit action widenview fullbody: blueprotagonist walks towardRIGHTbranch holding phone litmap infront looking atscreen, purplefollows holdingUNUSEDblankpaperandpen. Mainblue65%height phoneprominent, clearwalkinglegs. SameYroad andsimplecolors thicknavyV2. No extraicons words arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3eca7c79-256f-4645-8fb9-f9f89c56305e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-97a51633-fbb3-4a2f-b7ca-e067ece6dea6.png",
+      "asset": "public/illustrations/evac/walk-case-28/go-v2.webp"
+    },
+    {
+      "number": 28,
+      "variant": "consider",
+      "prompt": "Edit action CLOSEUP HANDS: blueperson presses phone SIDEbutton withindexfinger, phone screen nowplainDARK without batterywarning toshow intentionallyscreenoff. Purplecompanion holdsUNUSEDblankpaperpen RIGHT no writing. Largephone sidebutton andfinger clearlytouch separateedges. SameYroadbackground, simpleverythicknavyV2. No powerfailureicons text arrows.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3eca7c79-256f-4645-8fb9-f9f89c56305e.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ca043628-2643-4419-b8c5-2bc57d49738d.png",
+      "asset": "public/illustrations/evac/walk-case-28/consider-v2.webp"
+    }
+  ],
+  "revisions": [
+    {
+      "number": 26,
+      "variant": "consider",
+      "prompt": "Edit ONLY spacing: blueandpurple queueatback now leave LARGE clearlyvisible onefullperson-width emptyfloor gap behind greenperson, and modestgapbetweenbluepurple. Same5people total samecameraangle sizeclothes wallpassageblankboard. Bluepurple smallwalkingsteps tojoinrear. Keep gap visuallydominant without shrinking mainpeople. VerythicknavyV2 no text arrows icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-5ec54e74-96d4-49ad-9a1c-7c77a853c82d.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c4f57521-4706-4314-b575-da44a2e7924e.png",
+      "asset": "public/illustrations/evac/walk-case-26/consider-v2.webp"
+    }
+  ]
+}

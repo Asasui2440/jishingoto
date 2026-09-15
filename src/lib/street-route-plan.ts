@@ -31,10 +31,10 @@ export async function prepareStreetRoute(
         read(id).then(node => {
           if (node.pano !== id || !Number.isFinite(node.position.lat) || !Number.isFinite(node.position.lng)) throw new Error("invalid-node");
           known.set(id, node);
+          if (!options.signal?.aborted) options.onProgress?.(known.size);
           resolve(node);
         }).catch(reject).finally(() => clearTimeout(timer));
       }));
-      options.onProgress?.(cache.size);
     }
     return cache.get(id)!;
   };

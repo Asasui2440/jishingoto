@@ -2,6 +2,7 @@
 
 import { hasMapsKey, loadMaps } from "./gmaps";
 import type { LatLng } from "./evac-content";
+import { hasRouteBacktracking } from "./route-backtracking";
 
 /** SDKのインスタンスを持ち回らず、経路に必要な数値・座標だけを画面へ渡す。 */
 export type WalkingRoute = {
@@ -34,7 +35,7 @@ function normalizeRoute(route: google.maps.routes.Route): WalkingRoute | null {
  * サーバー用キー、RESTへの直接fetch、旧Directions APIは使用しない。
  * @see https://developers.google.com/maps/documentation/javascript/routes/start
  */
-export async function requestWalkingRoutes(origin: LatLng, destination: LatLng, via?: LatLng): Promise<WalkingRoute[]> {
+export async function requestWalkingRoutes(origin: LatLng, destination: LatLng, via?: LatLng | LatLng[]): Promise<WalkingRoute[]> {
   if (!hasMapsKey()) throw new Error("GoogleマップのAPIキーが未設定です。");
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("徒歩ルートの取得に時間がかかっています。接続を確認して再試行してください。")), 20000);
@@ -44,7 +45,7 @@ export async function requestWalkingRoutes(origin: LatLng, destination: LatLng, 
       const { routes } = await Route.computeRoutes({
         origin,
         destination,
-        ...(via ? { intermediates: [{ location: via }] } : {}),
+        ...(via ? { intermediates: (Array.isArray(via) ? via : [via]).map(location => ({ location })) } : {}),
         travelMode: "WALKING",
         computeAlternativeRoutes: !via,
         fields: ["path", "distanceMeters", "durationMillis", "legs"],
@@ -52,7 +53,7 @@ export async function requestWalkingRoutes(origin: LatLng, destination: LatLng, 
         region: "jp",
         polylineQuality: "HIGH_QUALITY",
       });
-      return (routes ?? []).map(normalizeRoute).filter((route): route is WalkingRoute => route !== null);
+      return (routes ?? []).map(normalizeRoute).filter((route): route is WalkingRoute => route !== null && !hasRouteBacktracking(route.path));
     })().then(resolve, () => reject(new Error("徒歩ルートを取得できませんでした。通信と、Google CloudのRoutes APIの有効化・キーのAPI制限を確認して再試行してください。"))).finally(() => clearTimeout(timeout));
   });
 }

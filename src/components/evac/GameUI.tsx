@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { TopLink } from "@/components/ui/TopLink";
 import { Furigana } from "@/components/ui/Furigana";
+import { TopPageLink } from "@/components/ui/PhaseOneNavigation";
 import styles from "./GameUI.module.css";
 
 type IconName = "map" | "pin" | "route" | "walk" | "flag" | "settings" | "info" | "close" | "back" | "check" | "locate" | "search" | "chevron" | "play" | "pause" | "eye" | "clock";
@@ -31,8 +31,8 @@ export function GameIcon({ name, className = "size-5" }: { name: IconName; class
 
 export function GameShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`game-shell ${styles.shell} ${className}`}>
-    <nav aria-label="フェーズ2の共通ナビゲーション" className="flex h-[52px] shrink-0 items-start px-3 pt-1">
-      <TopLink />
+    <nav aria-label="共通ナビゲーション" className="flex h-[52px] shrink-0 items-start px-3 pt-1">
+      <TopPageLink />
     </nav>
     {children}
     <footer className={styles.footer}>練習用の想定です。災害時は公的情報に従ってください。</footer>
@@ -56,7 +56,7 @@ export function GameHeader({ title, subtitle, step, onBack, onHelp, actions, lea
 }
 
 /** Native modal provides focus trapping, Escape dismissal and focus restoration. */
-export function BottomSheet({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+export function BottomSheet({ open, title, onClose, children, footer, expanded = false }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; expanded?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -66,9 +66,10 @@ export function BottomSheet({ open, title, onClose, children }: { open: boolean;
     if (open) dialog.querySelector('[data-sheet-body]')?.scrollTo({ top: 0 });
     if (!open && dialog.open) dialog.close();
   }, [open, title]);
-  return <dialog ref={ref} className={styles.sheet} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientY < r.top || event.clientX < r.left || event.clientX > r.right || event.clientY > r.bottom) onClose(); } }}>
+  return <dialog ref={ref} className={`${styles.sheet} ${expanded ? styles.sheetExpanded : ""}`} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientY < r.top || event.clientX < r.left || event.clientX > r.right || event.clientY > r.bottom) onClose(); } }}>
     <div className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3"><h2 id={titleId} className="flex-1 text-base font-bold"><Furigana text={title} /></h2><button type="button" onClick={onClose} aria-label="閉じる" className="grid size-11 shrink-0 place-items-center rounded-full bg-canvas"><GameIcon name="close" /></button></div>
     <div data-sheet-body className={styles.sheetBody}>{open ? children : null}</div>
+    {open && footer ? <div className="shrink-0 border-t border-border bg-surface px-4 py-2">{footer}</div> : null}
   </dialog>;
 }
 

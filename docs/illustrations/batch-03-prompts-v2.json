@@ -1,0 +1,114 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 3,
+  "assets": [
+    {
+      "number": 11,
+      "variant": "situation",
+      "prompt": "Use reference STYLE ONLY no wires/poles. Thick navy rounded outlines, simple faceless blue-shirt yellow-backpack adult, large readable at 94px. NEW street scene oblique birdseye side view: tall plain gray block wall along RIGHT side, narrow LIGHT GRAY sidewalk at its base; DARK GRAY road in foreground-left, across road a WIDE light-gray open sidewalk with no buildings. A zebra crossing at lower-left BEHIND protagonist connects sidewalks. One muted gray-blue car far along roadway. Protagonist stands on wall-side sidewalk facing ahead along wall, full body around 55% image height. Clear curb boundaries, few large block seams. No cracks/damage, extra people, arrows, text or icons. Avoid perspective clutter, fit all essential geography. ONE 3:2 landscape.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b999b280-6fb0-40b9-80cf-d2b278294f30.png",
+      "asset": "public/illustrations/evac/walk-case-11/situation-v2.webp",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+    },
+    {
+      "number": 11,
+      "variant": "distance",
+      "prompt": "Edit scene into action: protagonist has returned to zebra crossing and stands on wall-side LIGHT GRAY sidewalk at crossing entrance, body turned LEFT toward opposite wide sidewalk, head turned up-road toward car to check traffic. BOTH SHOES entirely inside light-gray sidewalk with margin from dark curb line, none on road. Enlarge sidewalk slightly locally if needed to fit feet without changing narrow-versus-wide relationship. Keep LARGE protagonist, tall wall right, same distant car, crossing, very thick navy outlines. No new symbols, arrows, words or people. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-824b4d48-d34c-43fc-8f70-4ef4fe08214e.png",
+      "asset": "public/illustrations/evac/walk-case-11/distance-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f6afa75f-25b5-4415-8356-abfbdd4e221e.png"
+    },
+    {
+      "number": 11,
+      "variant": "go",
+      "prompt": "Edit reference action: person walks briskly FORWARD along wall, close to wall, long stride and slight forward lean, arms swinging. Keep BOTH shoes completely on LIGHT GRAY sidewalk, never overlapping dark roadway. Wall to person's right, crossing behind. Show large person and wall proximity, same road geometry, car, colors, thick navy outlines. No motion arrows, text, cracks or other people. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-37f31768-2492-4f28-9ed8-350087eef4d4.png",
+      "asset": "public/illustrations/evac/walk-case-11/go-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f6afa75f-25b5-4415-8356-abfbdd4e221e.png"
+    },
+    {
+      "number": 11,
+      "variant": "consider",
+      "prompt": "Edit reference action: protagonist walking slowly along OUTER CURB SIDE of same wall-side sidewalk, short cautious step, turned to glance toward ROAD on left. Maintain visible light-gray pavement gap BETWEEN person and wall on right. Both shoes fully on sidewalk just inside curb, NOT on dark road. Crop closer around lower body and side-on torso if needed to show lateral position, retain wall, curb and crossing behind. Very thick outlines, same palette, no symbols or text. Distinct from brisk back-facing stride close to wall. ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-c8061a40-4558-495c-9a7e-bafb10a0b47f.png",
+      "asset": "public/illustrations/evac/walk-case-11/consider-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f6afa75f-25b5-4415-8356-abfbdd4e221e.png"
+    },
+    {
+      "number": 12,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY no wires/poles: VERY THICK navy outlines, minimal broad flat shapes, blue-shirt yellow-backpack faceless adult. NEW SCENE oblique side view: cracked gray wall at RIGHT; a very narrow light-gray pedestrian strip along it; dark-gray roadway to LEFT with one large simple gray-blue car passing ahead. Protagonist and purple-shirt companion stand in WIDER entrance foreground before narrow section, each person 55-65% image height. Behind them a dry side street turns left away from wall. Clear curb separates feet from roadway. Only one bold crack on wall, no falling blocks or injury. No crosswalk, text, arrows, symbols, detailed paving or extra people. 3:2, tightly framed but all feet visible.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15995d38-aa3f-47ac-901c-effec94709cb.png",
+      "asset": "public/illustrations/evac/walk-case-12/situation-v2.webp",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+    },
+    {
+      "number": 12,
+      "variant": "distance",
+      "prompt": "Edit reference: BOTH people turn around and walk BACK toward viewer and slightly left, away from cracked wall's narrow section and passing car, staying on widened LIGHT GRAY pedestrian entrance. Full large walking figures, blue/yellow protagonist and purple companion. Show pedestrian branch opening in foreground away from wall; do not put people on dark car road or crossing it. Same car ahead, crack and thick navy outlines, neutral posture, no arrows/text/symbols/new hazards. ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-3570150a-ce29-4328-a398-9da43e647bc0.png",
+      "asset": "public/illustrations/evac/walk-case-12/distance-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15995d38-aa3f-47ac-901c-effec94709cb.png"
+    },
+    {
+      "number": 12,
+      "variant": "go",
+      "prompt": "Edit reference hypothetical action: blue-shirt yellow-backpack protagonist steps OFF sidewalk onto DARK GRAY roadway next to curb, following behind car that has just passed. Purple companion follows one pace behind at curb. All feet clearly positioned, blue protagonist feet on dark road, purple person one step behind. Cracked wall and narrow light-gray strip RIGHT, car ahead LEFT. Same large figures and very thick navy outlines. No collision, contact, new car, arrows, words or symbols. This is proposed movement, not successful completion. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15ccd257-245f-4c41-b2e6-b68f069672f7.png",
+      "asset": "public/illustrations/evac/walk-case-12/go-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15995d38-aa3f-47ac-901c-effec94709cb.png"
+    },
+    {
+      "number": 12,
+      "variant": "consider",
+      "prompt": "Edit reference: blue protagonist and purple companion walk AWAY from viewer in SINGLE FILE on NARROW LIGHT GRAY sidewalk. Blue in front, purple behind with visible spacing, never side by side. Both sets of shoes fully on sidewalk just inside curb, none on dark road. Tall cracked wall right, car passing on road left, same colors thick navy outlines. Keep people large, overlap minimally so four feet and order readable. No new hazards, text, symbols or arrows. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-4823aeea-664c-4fde-ad6a-03a004408233.png",
+      "asset": "public/illustrations/evac/walk-case-12/consider-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-15995d38-aa3f-47ac-901c-effec94709cb.png"
+    },
+    {
+      "number": 15,
+      "variant": "situation",
+      "prompt": "Reference STYLE ONLY no poles/wires: very thick navy outlines, large faceless blue-shirt yellow-backpack adult, pale blue background gray pavement muted green verges. NEW SCENE: a NARROW jagged crack across road ahead at center-right, slight low step between two otherwise flat gray surfaces. Crack no wider than shoe sole, not canyon, no exposed underground. Protagonist stands left before crack, full body 65% image height; dry branch behind toward bottom-left. Low oblique side view clearly shows small step and flat far side. No water, debris, buildings, text, arrows, extra people or visible underground. Simple broad shapes, ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-58fcd98b-da56-4ab9-9d54-f42d318818b9.png",
+      "asset": "public/illustrations/evac/walk-case-15/situation-v2.webp",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp"
+    },
+    {
+      "number": 15,
+      "variant": "distance",
+      "prompt": "Edit reference: same large protagonist turns LEFT and walks away from narrow crack toward branch behind. Clear full-body stride, feet on near-side flat gray road with gap to crack. Preserve crack small step, road geography, thick navy outlines and colors. REMOVE stray brown twig and grass tufts, keep background sparse. No new objects, text, arrows or symbols. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-7a3d6b4f-97f4-4b98-adc8-a88c57591f7a.png",
+      "asset": "public/illustrations/evac/walk-case-15/distance-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-58fcd98b-da56-4ab9-9d54-f42d318818b9.png"
+    },
+    {
+      "number": 15,
+      "variant": "go",
+      "prompt": "Edit reference action: protagonist takes one careful step ACROSS narrow crack at low step, one shoe on near side and other extended over crack toward far side. Full large body bowed slightly watching feet, no jump or running. Keep narrow fissure, no deep trench or underground view, same colors and thick outlines. Frame feet/crack prominently. Remove brown twig/grass tufts. No tools, text, arrows, new damage or successful arrival. ONE 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-95a3d8b8-01a4-43dc-9ab4-e3859a6ac736.png",
+      "asset": "public/illustrations/evac/walk-case-15/go-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-58fcd98b-da56-4ab9-9d54-f42d318818b9.png"
+    },
+    {
+      "number": 15,
+      "variant": "consider",
+      "prompt": "Edit reference action: protagonist and ONE purple-shirt passerby face each other on NEAR side of crack, both stationary with all feet on same intact near-side gray road. Protagonist open hand asks passerby about walking conditions. Two large full-body figures, crack visible to right with clear gap from both people. Same simple navy thick outlines. Remove stray twig and grass details. No phone, speech bubbles, arrows, text, successful crossing or underground view. 3:2.",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-6dbd3840-5c69-4442-b912-4a3b1af4658d.png",
+      "asset": "public/illustrations/evac/walk-case-15/consider-v2.webp",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-58fcd98b-da56-4ab9-9d54-f42d318818b9.png"
+    }
+  ],
+  "revisions": [
+    {
+      "number": 11,
+      "prompt": "Edit this image to mobile V2 style: MUCH THICKER navy outlines on everything, especially person and curbs; enlarge protagonist to 60% canvas height while feet stay on wall-side sidewalk at current position. Reduce wall seams and pavement lines to just 2-3. Wide opposite sidewalk stays visibly wider than narrow wall-side sidewalk. Keep zebra crossing behind person, car distant, wall on right and road center-left. Flat simple colors, no added objects or damage. ONE 3:2 image.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-fbbddeb2-d265-4f5b-9266-728d05973183.png"
+    },
+    {
+      "number": 11,
+      "prompt": "Correct ONLY feet/curb relationship in reference situation. Both shoes must stand entirely on LIGHT GRAY sidewalk, with clear small pavement margin between shoe and navy curb. Shift protagonist slightly toward wall if necessary or widen strip slightly. Keep same forward-facing neutral standing pose and large size, road, car, crosswalk, tall wall, palette and very thick outlines. No other changes. ONE 3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f6afa75f-25b5-4415-8356-abfbdd4e221e.png"
+    }
+  ]
+}

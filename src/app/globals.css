@@ -185,13 +185,6 @@ ruby > rt {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* 気づいた瞬間のフラッシュ */
-@keyframes zone-flash {
-  0%   { opacity: 0; }
-  12%  { opacity: 0.45; }
-  100% { opacity: 0; }
-}
-
 /* 枠の中を1度だけ走るスキャン線 */
 @keyframes zone-scan {
   0%   { top: 0%; opacity: 0; }
@@ -244,9 +237,7 @@ ruby > rt {
 @utility animate-zone-lock {
   animation: zone-lock 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@utility animate-zone-flash {
-  animation: zone-flash 0.5s ease-out both;
-}
+
 @utility animate-zone-scan {
   animation: zone-scan 0.7s ease-in-out 0.1s both;
 }

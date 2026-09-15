@@ -8,3 +8,6 @@
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 8px; padding-left: 12px; border-radius: 16px; background: #24312e; color: #fff; font-size: 0.75rem; box-shadow: 0 5px 20px #152c2926; }
 @keyframes sheet-in { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .sheet[open] { animation: none; } }
+
+.sheetExpanded { height: 96dvh; max-height: 96dvh; width: min(100%, 640px); }
+.sheetExpanded .sheetBody { display: flex; flex: 1; min-height: 0; overflow: hidden; padding: 8px 12px max(12px, env(safe-area-inset-bottom)); }

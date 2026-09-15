@@ -1,0 +1,70 @@
+{
+  "mode": "built-in imagegen",
+  "batch": 10,
+  "assets": [
+    {
+      "number": 37,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference nowires. ONE3:2 verythicknavy flat simplemobile illustration largeblueyellowbackpackperson60%height foregroundLEFT. Lightgray sidewalk runsRIGHT, blockedby2-3BIGtanboxes, graydeliveryvan parkedon darkroad adjacentboxes RIGHT. CLEARcurb separates roadforeground fromsidewalk. BranchbehindpersonLEFT towidewalkway. Personbothfeet sidewalk beforeboxes. Vanopaque no hiddencars workers text arrows icons. 作業員や撤去作業を追加して待つ理由を強めない。歩道側と車道側を縁石で区別する。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b3a5dfb4-4696-4250-9779-a5f3ecb0d175.png",
+      "asset": "public/illustrations/evac/walk-case-37/situation-v2.webp"
+    },
+    {
+      "number": 37,
+      "variant": "distance",
+      "prompt": "Edit action: blueperson walks LEFT backtobranch awayboxesandvan, bothfeetlightgraypath, clearstridearmsdown. Large65%height, same3boxesRIGHT vanopaque curbunchanged. No workers phones words arrows icons. VerythicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b3a5dfb4-4696-4250-9779-a5f3ecb0d175.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-41504cea-ed9c-496d-b7c1-fb538d60fc8c.png",
+      "asset": "public/illustrations/evac/walk-case-37/distance-v2.webp"
+    },
+    {
+      "number": 37,
+      "variant": "go",
+      "prompt": "Edit action and reframe: blueperson walks around OUTER ROAD SIDE of grayvan, onehandcuppedtoear listeningtraffic, BOTHfeet on DARKGRAYROAD to RIGHT ofvan awaycurb. Van now center,3boxes/sidewalkLEFT, thickcurb separates. Frontside3quarterview adjustcamera toshow FULLlargeperson60%height outsidevan withoutocclusion. No workers othercars text arrows icons. Simple thicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b3a5dfb4-4696-4250-9779-a5f3ecb0d175.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-785af689-9ea7-4bdc-abd7-e5ba818e5576.png",
+      "asset": "public/illustrations/evac/walk-case-37/go-v2.webp"
+    },
+    {
+      "number": 37,
+      "variant": "consider",
+      "prompt": "Edit action: person stands closer BEFOREboxes onLIGHTGRAYsidewalk, feetparallel armsdown watchingboxes waiting, no phone. Cleargap between personboxes curb toRIGHT. Enlargeperson65%height same3boxes parkedvan no workers movingboxes text arrows icons. ThicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-b3a5dfb4-4696-4250-9779-a5f3ecb0d175.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-a7fb96e3-99e7-4e57-bde7-01499894f709.png",
+      "asset": "public/illustrations/evac/walk-case-37/consider-v2.webp"
+    },
+    {
+      "number": 38,
+      "variant": "situation",
+      "prompt": "STYLEONLY reference no wires. ONE3:2 verythicknavy simpleflat mobile illustration blueyellowbackpackperson60%height foregroundCENTER onlightgray sidewalk. ShopRIGHT tilted blankrectanglesign distinctabove redawning, 3largeglassshards on sidewalk beside storefront with narrowclearstrip. DarkroadLEFT ONEcar, sidepathbehindpersonLEFTforegroundbranch avoidingstore. Clearcurb feetonsidewalk. No extrahazards text arrows icons people. 三つの危険を細密化せず看板・破片・車を各一まとまりにする。車道案は既に渡り終わった絵にしない。",
+      "reference": "/Users/wmayuka/Documents/jishingoto/public/illustrations/evac/walk-case-18/situation-v2.webp",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ec3f9419-a921-4821-a36b-5f9c09b091be.png",
+      "asset": "public/illustrations/evac/walk-case-38/situation-v2.webp"
+    },
+    {
+      "number": 38,
+      "variant": "distance",
+      "prompt": "Edit action: blueprotagonist turnsawaystore walks BACK LEFT alonglightgraysidepath behind towardbranch, armsdown. Keepfeet entirelylightgray sidewalk NOTdarkroad. Store/glassRIGHT carLEFT same. Turnbodyback3quarter yellowbackpack prominent, fullpersonlarge60%height. No newobjects arrows words icons. ThicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ec3f9419-a921-4821-a36b-5f9c09b091be.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-f4ff1902-689f-4212-aa25-ad61e33d0481.png",
+      "asset": "public/illustrations/evac/walk-case-38/distance-v2.webp"
+    },
+    {
+      "number": 38,
+      "variant": "go",
+      "prompt": "Edit action: blueprotagonist coversheadbotharms walks FORWARD alongsideSHOP towardforegroundRIGHT, carefulstep in clearband oflightgraypavement between fewglassshards andcurb. Bothfeetonsidewalk no steppingglass. Large65%height, same tiltedblanksign redawning carLEFT. No newhazards text arrows icons. ThicknavyV2.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ec3f9419-a921-4821-a36b-5f9c09b091be.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-da8e22f7-0f8c-4535-b4a1-f20ad1704e73.png",
+      "asset": "public/illustrations/evac/walk-case-38/go-v2.webp"
+    },
+    {
+      "number": 38,
+      "variant": "consider",
+      "prompt": "Edit action: blueperson moves to outeredge sidewalk LEFT, bodyturnedLEFT lookingatcar waitinggap, feetparallel BOTH entirelyLIGHTGRAY sidewalk withsmallmargininsidecurb, armsDOWN no headcover. Not alreadycrossingroad. Large65%height same storetiltedsignredawning glassRIGHT carLEFT. ThicknavyV2 no arrows words icons.3:2.",
+      "reference": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-ec3f9419-a921-4821-a36b-5f9c09b091be.png",
+      "source": "/Users/wmayuka/.codex/generated_images/01a09e45-0f65-7af0-b9da-9d918ceab710/exec-34841565-e89a-41e2-ba87-7ced0f161dee.png",
+      "asset": "public/illustrations/evac/walk-case-38/consider-v2.webp"
+    }
+  ]
+}
