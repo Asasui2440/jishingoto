@@ -647,6 +647,105 @@ test("結果ページは元の予想図表示で不一致の再試行と共有�
   expect(calls).toBe(2);
 });
 
+test("危険確認は写真と下部のどちらのボタンでも確認して進める", async ({ page }, testInfo) => {
+  await page.addInitScript(risks => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
+    photoUrl: "/figma/img/room-risk.jpg", risks, analysisSource: "ai", questions: [], answers: [], checked: [],
+  })), DETECTED_RISKS);
+  await page.route("**/api/room/aftermath", route => route.fulfill({ json: { imageUrl: "/figma/img/room-risk.jpg", verification: "checked" } }));
+  await page.goto("/risks");
+  const actions = page.getByRole("region", { name: "確認の進み具合" });
+  await expect(actions.getByText("確認済み 0 / 3")).toBeVisible();
+  await expect(actions.getByRole("button")).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: testInfo.outputPath("risks-initial.png") });
+  if (testInfo.project.name === "mobile-390") {
+    const mobileViewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await expect(actions.getByRole("button")).toBeInViewport({ ratio: 1 });
+    const photo = await page.locator("#selected-room-photo").boundingBox();
+    const advice = await page.locator("article").boundingBox();
+    expect(advice!.x).toBeGreaterThan(photo!.x + photo!.width);
+    expect(Math.abs(advice!.y - photo!.y)).toBeLessThan(2);
+    await page.screenshot({ path: testInfo.outputPath("risks-wide.png") });
+    await page.setViewportSize(mobileViewport);
+  }
+  const photo = page.locator("#selected-room-photo");
+  const next = photo.getByRole("button", { name: "確認して次へ" });
+  const previous = photo.getByRole("button", { name: "確認して前へ" });
+  await expect(previous).toBeDisabled();
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(0);
+  await expect(actions.getByText("確認済み 0 / 3")).toBeVisible();
+  await next.scrollIntoViewIfNeeded();
+  const image = await photo.locator("img").boundingBox();
+  const left = await previous.boundingBox();
+  const right = await next.boundingBox();
+  expect(right!.height).toBeGreaterThanOrEqual(52);
+  expect(left!.x - image!.x).toBeLessThanOrEqual(6);
+  expect(image!.x + image!.width - right!.x - right!.width).toBeLessThanOrEqual(6);
+  expect(Math.abs(right!.y + right!.height / 2 - image!.y - image!.height / 2)).toBeLessThan(2);
+  await next.click();
+  await expect(actions.getByText("確認済み 1 / 3")).toBeVisible();
+  await previous.click();
+  await expect(actions.getByText("確認済み 2 / 3")).toBeVisible();
+  await expect(actions.getByRole("button")).toBeInViewport({ ratio: 1 });
+  await actions.getByRole("button").click();
+  await expect(photo.getByRole("button", { name: /^2番/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(actions.getByText("確認済み 2 / 3")).toBeVisible();
+  await actions.getByRole("button").click();
+  await expect(photo.getByRole("button", { name: /^3番/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(actions.getByRole("button", { name: "確認を終える", exact: true })).toBeInViewport({ ratio: 1 });
+  await photo.getByRole("button", { name: "確認を終える", exact: true }).click();
+  const complete = page.getByRole("dialog", { name: "すべて確認できました！" });
+  await expect(complete).toBeVisible();
+  const quiz = complete.getByRole("button", { name: "行動クイズへ", exact: true });
+  await expect(quiz).toBeFocused();
+  await expect(quiz).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: testInfo.outputPath("risks-complete.png") });
+  await page.keyboard.press("Escape");
+  await expect(complete).not.toBeVisible();
+  await expect(actions.getByRole("button", { name: "行動クイズへ" })).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).checked)).toEqual([]);
+  await actions.getByRole("button", { name: "行動クイズへ" }).click();
+  await expect(page).toHaveURL(/\/quiz$/);
+});
+
+test("危険確認は番号を飛ばしても未確認の項目へ戻れる", async ({ page }) => {
+  await page.addInitScript(risks => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
+    photoUrl: "/figma/img/room-risk.jpg", risks, analysisSource: "ai", questions: [], answers: [], checked: [],
+  })), DETECTED_RISKS);
+  await page.goto("/risks");
+  const photo = page.locator("#selected-room-photo");
+  const actions = page.getByRole("region", { name: "確認の進み具合" });
+  await photo.getByRole("button", { name: /^3番/ }).click();
+  await expect(actions.getByText("確認済み 1 / 3")).toBeVisible();
+  await photo.getByRole("button", { name: "確認して次へ" }).click();
+  await expect(actions.getByText("確認済み 2 / 3")).toBeVisible();
+  await expect(photo.getByRole("button", { name: /^2番/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await photo.getByRole("button", { name: "確認して次へ" }).click();
+  await expect(page.getByRole("dialog", { name: "すべて確認できました！" })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).checked)).toEqual([]);
+});
+
+test("危険確認は文字拡大・ふりがなでも操作でき、対象ゼロでも進める", async ({ page }) => {
+  await page.addInitScript(risks => {
+    localStorage.setItem("jishingoto.settings.v1", JSON.stringify({ uiScale: "xlarge", furigana: true }));
+    sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({ risks, analysisSource: "ai", checked: [], questions: [], answers: [] }));
+  }, DETECTED_RISKS.slice(0, 1));
+  await page.goto("/risks");
+  const actions = page.getByRole("region", { name: "確認の進み具合" });
+  await expect(actions.getByRole("button")).toBeInViewport({ ratio: 1 });
+  await actions.getByRole("button").click();
+  const complete = page.getByRole("dialog");
+  await expect(complete.getByRole("button").first()).toBeInViewport({ ratio: 1 });
+  await complete.getByRole("button").last().click();
+  await page.getByRole("button", { name: /認識.*修正/ }).click();
+  await page.getByRole("button", { name: "これは写っていない（一覧から外す）" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /^閉/ }).click();
+  await expect(actions.getByText("確認する家具・場所がありません")).toBeVisible();
+  await expect(actions.getByRole("button")).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test("家具の確認中は生成せず、修正した対象をクイズ開始時に渡す", async ({ page }) => {
   await page.addInitScript(risk => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
     photoUrl: "data:image/png;base64,AA==", risks: [risk], analysisSource: "ai", questions: [], answers: [], checked: [], resultStep: 5,
@@ -664,9 +763,9 @@ test("家具の確認中は生成せず、修正した対象をクイズ開始�
   await dialog.getByRole("button", { name: "保存", exact: true }).click();
   await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
   expect(objects).toHaveLength(0);
-  await page.getByRole("button", { name: "確認を終える", exact: true }).click();
+  await page.getByRole("region", { name: "確認の進み具合" }).getByRole("button", { name: "確認を終える", exact: true }).click();
   expect(objects).toHaveLength(0);
-  await page.getByRole("button", { name: "行動クイズへ", exact: true }).click();
+  await page.getByRole("dialog", { name: "すべて確認できました！" }).getByRole("button", { name: "行動クイズへ", exact: true }).click();
   await expect(page).toHaveURL(/\/quiz$/);
   await expect.poll(() => objects.length).toBe(1);
   expect(objects[0][0]).toMatchObject({ name: "壁掛けテレビ", type: "tv", mounted: true, bounds: DETECTED_RISKS[0].bounds });
