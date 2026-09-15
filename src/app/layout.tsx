@@ -33,6 +33,10 @@ export const metadata: Metadata = {
   description:
     "部屋の写真から危ないところを見つけて、地震のときの動きを試せる防災シミュレーション。",
   manifest: "/offline-evac/manifest.webmanifest",
+  icons: {
+    icon: { url: "/brand/symbol-v6.png", type: "image/png", sizes: "1254x1254" },
+    apple: { url: "/brand/symbol-v6.png", type: "image/png", sizes: "1254x1254" },
+  },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "ジシンゴト！" },
 };
 

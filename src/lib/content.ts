@@ -173,6 +173,8 @@ export type Question = {
   situation: string;
   /** 固有の検出物名を含む、大人向けの完全文。 */
   adultSituation?: string;
+  /** 大人向けの判断の決め手。conditions は以前に保存した出題の振り返り用。 */
+  challenge?: { conditions?: string; takeaway: string };
   /** 写真に重ねるハイライト（％指定）とラベル */
   highlight?: { x: number; y: number; w: number; h: number; label: string };
   /** 制限時間（秒）。0 なら時間制限なし */

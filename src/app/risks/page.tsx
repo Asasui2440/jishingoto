@@ -55,7 +55,7 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
 export default function RoomRecognitionPage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, update } = useSession();
   const risks = groupRisksByView(sessionRisks, roomViews);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const reviewedCount = risks.filter(risk => reviewedIds.includes(risk.id)).length;
@@ -214,11 +214,6 @@ export default function RoomRecognitionPage() {
           </div>}
           <SafetyProducts risks={[{ ...selected, confirmed: true }]} />
           </DetailSheet></div>
-          <p className="mt-4 text-xs text-ink-muted"><Furigana text="実際[じっさい]に対策[たいさく]できているときだけチェック（任意[にんい]）" /></p>
-          <label className="mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-field border border-safe p-3 font-bold text-safe">
-            <input type="checkbox" checked={checked.includes(`prepared:${selected.id}`)} onChange={() => toggleChecked(`prepared:${selected.id}`)} className="size-5 accent-teal-700" />
-            <Furigana text="この家具・場所は対策[たいさく]済[ず]み" adult="この家具・場所は対策済み" />
-          </label>
         </article>}
         </div>
         <DetailSheet title="認識を修正する" onOpenChange={open => { if (open && selected) beginEdit(selected); else setEditing(null); }} summary={`写真の番号と見比べて、名前・種類を直す（${risks.length}か所）`}>

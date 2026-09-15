@@ -53,6 +53,7 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
           <dd className="mt-2 text-base font-bold leading-relaxed text-ink">
             <Furigana text={question.situation} adult={question.adultSituation} />
           </dd>
+          {question.challenge?.conditions && <dd className="mt-2 text-sm leading-relaxed text-ink-muted">想定条件：<Furigana text={question.challenge.conditions} /></dd>}
         </div>
         <div className={`review-answer mt-4 rounded-field p-3 ${timedOut ? "bg-canvas" : "bg-primary-soft"}`}>
           <dt className="text-sm font-bold text-primary-ink">
@@ -93,6 +94,12 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
       <p className="mt-1 text-15 font-bold"><Furigana text={best.label} /></p>
     </div>}
     <div className="review-copy space-y-3 p-4">
+      {question.challenge && <section aria-label="判断の決め手" className="rounded-field bg-primary-soft p-3">
+        <h3 className="text-sm font-bold text-primary-ink">判断の決め手</h3>
+        <p className="mt-2 text-base font-bold leading-relaxed"><Furigana text={question.challenge.takeaway} /></p>
+        <p className="mt-2 text-sm leading-relaxed">この条件で選びたい行動：<Furigana text={best.label} /></p>
+        {!timedOut && choice.id !== best.id && <p className="mt-2 text-sm leading-relaxed"><Furigana text={choice.explanation[0]} /></p>}
+      </section>}
       <div className="text-ink">
         <h3 className="text-sm font-bold text-primary-ink"><Furigana text="振[ふ]り返[かえ]りのポイント" /></h3>
         <p className={`mt-1 text-13 font-bold ${safe ? "text-green-700" : "text-amber-900"}`}><span aria-hidden>{safe ? "✓ " : timedOut ? "◷ " : "! "}</span><Furigana text={audience === "child" && !safe && !timedOut && question.id !== "q5" && choice.safety < 0.4 ? "この場面では、けがをするかもしれない行動です" : feedback} /></p>

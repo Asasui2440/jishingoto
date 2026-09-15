@@ -1,6 +1,55 @@
 import { expect, test } from "@playwright/test";
 import { DETECTED_RISKS } from "../src/lib/content";
 
+test("大人向けは短い問いと4択を表示し、結果に選んだ理由と判断の決め手を残す", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  let roomApiCalls = 0;
+  await page.route("**/api/room/**", async route => {
+    roomApiCalls++;
+    await route.fulfill({ status: 500, json: { error: "unexpected-test-request" } });
+  });
+  await page.addInitScript(risks => {
+    localStorage.setItem("jishingoto.settings.v1", JSON.stringify({ audience: "adult", sound: false, haptics: false }));
+    if (!sessionStorage.getItem("jishingoto.session.v1")) sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
+      risks, analysisSource: "demo", questions: [], answers: [], checked: [], resultStep: 0,
+    }));
+  }, DETECTED_RISKS.map(risk => ({ ...risk, confirmed: true })));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/quiz");
+  let selectedReason = "";
+  for (let index = 0; index < 5; index++) {
+    await expect(page.getByText(`Q${index + 1}`, { exact: true })).toBeVisible();
+    await expect(page.locator(".quiz-question button")).toHaveCount(4);
+    await expect(page.locator(".quiz-question [data-choice-art]")).toHaveCount(4);
+    await expect(page.locator(".quiz-question button").first()).toBeEnabled();
+    const choices = await page.evaluate(index => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).questions[index].choices, index);
+    const selected = index === 0 ? choices.find((c: { safety: number }) => c.safety < 0.7) : choices.find((c: { safety: number }) => c.safety >= 0.7);
+    if (index === 0) {
+      const rows = await page.locator(".quiz-question button").evaluateAll(nodes => nodes.map(n => {
+        const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, bottom: r.bottom };
+      }));
+      expect(rows.every((r, i) => r.x === rows[0].x && r.width === rows[0].width && (i === 0 || r.y >= rows[i - 1].bottom))).toBe(true);
+      selectedReason = selected.explanation[0];
+      await expect(page.getByRole("region", { name: "判断の決め手" })).toHaveCount(0);
+      await page.screenshot({ path: testInfo.outputPath("adult-quiz.png"), fullPage: true });
+    }
+    await page.getByRole("button", { name: new RegExp(selected.label) }).click();
+  }
+  await expect(page).toHaveURL(/\/result$/);
+  const review = page.getByRole("region", { name: "判断の決め手" });
+  await expect(review).toBeVisible();
+  await expect(review).toContainText(selectedReason);
+  const recorded = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!));
+  await expect(page.locator(".review-recall")).toContainText(recorded.questions[0].adultSituation);
+  expect(recorded.answers).toHaveLength(5);
+  expect(recorded.answers.every((answer: { timedOut: boolean }) => !answer.timedOut)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("adult-review.png"), fullPage: true });
+  expect(roomApiCalls).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test("最後の回答を記録してから終了演出を出し、一度だけ振り返りへ進む", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));

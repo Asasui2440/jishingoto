@@ -3,6 +3,7 @@ import type { Question } from "./content";
 /** 振り返りは対象年齢に合わせ、正しい行動と必要な条件を短く示す。 */
 export function reviewNotes(question: Question, audience: "child" | "adult" = "child"): string[] {
   const best = question.choices.reduce((a, b) => b.safety > a.safety ? b : a);
+  if (question.challenge) return best.explanation;
   const adult = audience === "adult";
   switch (best.id) {
     case "under-desk": return adult

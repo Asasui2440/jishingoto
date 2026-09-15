@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, LogoCircleXIcon } from "@/components/icons";
+import { ArrowRightIcon } from "@/components/icons";
+import { Brand } from "@/components/Brand";
 import { useSettings, type Audience } from "@/lib/settings";
 
 export default function AudiencePage() {
@@ -16,10 +17,7 @@ export default function AudiencePage() {
   return (
     <main className="flex min-h-dvh flex-col justify-center gap-12 px-6 py-12">
       <header className="flex flex-col items-center gap-4">
-        <span className="grid size-20 place-items-center rounded-full bg-primary-soft">
-          <LogoCircleXIcon className="size-9 text-primary-ink" />
-        </span>
-        <p className="font-display text-40 font-black leading-none text-primary-ink">ジシンゴト！</p>
+        <Brand variant="stacked" eager />
         <p className="text-sm font-bold text-ink-muted">地震＋自分事</p>
       </header>
         <section aria-labelledby="audience-heading" className="flex flex-col gap-4">

@@ -9,10 +9,12 @@ import { AFTER_SHAKING_QUESTIONS } from "@/lib/after-shaking-questions";
 import { HOME_KITCHEN_AFTER, SCENARIOS } from "@/lib/scenarios";
 import { DETECTED_RISKS, QUESTIONS } from "@/lib/content";
 import { Button } from "@/components/ui/Button";
+import { useSettings } from "@/lib/settings";
 
 export default function TestRoomClient() {
   const [analysis, setAnalysis] = useState(2);
   const { reset, update } = useSession();
+  const { update: updateSettings } = useSettings();
   const router = useRouter();
   const previewResult = (showIntro = false, showPeople = false) => {
     reset();
@@ -44,6 +46,15 @@ export default function TestRoomClient() {
       router.push("/analyzing");
     }}>APIなしでテスト開始</Button>
     <Button variant="outline" onClick={() => previewResult()}>結果ページを試す（APIなし）</Button>
+    <Button variant="outline" onClick={() => {
+      reset();
+      clearRoomPreparation();
+      setRoomTestOptions({ mode: "fixture", analysisMs: 0, imageMs: 0 });
+      updateSettings({ audience: "adult", furigana: false });
+      update({ photoUrl: "/figma/img/room-risk.jpg", risks: DETECTED_RISKS.map(r => ({ ...r, confirmed: true })),
+        analysisSource: "demo", startedAt: Date.now() });
+      router.push("/quiz");
+    }}>大人向けの4択クイズを試す（APIなし）</Button>
     <Button variant="outline" onClick={() => previewResult(true)}>クイズ終了の演出を試す（APIなし）</Button>
     <Button variant="outline" onClick={() => previewResult(false, true)}>人物入りのイラストを試す（APIなし）</Button>
     <Button variant="outline" onClick={() => {
