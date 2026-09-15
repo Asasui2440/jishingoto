@@ -1,7 +1,8 @@
 /** 公的な資料に基づく短い教材。電話番号だけに偏らせない。 */
-type Trivia = { title: string; body: string; adultBody: string; note: string; adultNote: string; source: { title: string; url: string } };
+type Trivia = { id: string; title: string; body: string; adultBody: string; note: string; adultNote: string; source: { title: string; url: string } };
 export const TRIVIA: Trivia[] = [
   {
+    id: "tip.toilet-stock",
     title: "携帯[けいたい]トイレは何回分？",
     body: "備[そな]える目安は1人1日5回分、1週間で35回分。4人家族なら140回分になるよ。水や食料と一緒[いっしょ]に数を確認[かくにん]しよう。",
     adultBody: "備蓄の目安は1人1日5回分、1週間で35回分です。4人家族なら140回分。水や食料と併せて備蓄量を確認してください。",
@@ -10,6 +11,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "内閣府：災害用トイレの備蓄", url: "https://www.bousai.go.jp/kohou/kouhoubousai/r06/111/news_08.html" },
   },
   {
+    id: "tip.toilet-drain",
     title: "水が出ても、トイレを流せない？",
     body: "マンションでは、地震[じしん]で排水管[はいすいかん]が壊[こわ]れていると、下の階に汚水[おすい]があふれることがあるよ。管理者から使ってよいと確認[かくにん]できるまでは、携帯[けいたい]トイレを使おう。",
     adultBody: "マンションでは排水管の損傷に気付かずトイレを流すと、下階で汚水があふれる恐れがあります。管理者が使用可能と確認するまでは携帯トイレを使用してください。",
@@ -18,6 +20,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "東京都：東京防災", url: "https://www.bousai.metro.tokyo.lg.jp/content/tb2023/pageindices/index67.html" },
   },
   {
+    id: "tip.food-stock",
     title: "非常食[ひじょうしょく]は、食べながら備[そな]える",
     body: "いつもの食品を少し多めに買い、古いものから食べて、使った分を買い足す。「ローリングストック」という備[そな]え方だよ。",
     adultBody: "普段の食品を少し多めに買い、古いものから消費して使った分を補充する「ローリングストック」で、備蓄を日常生活に組み込めます。",
@@ -26,6 +29,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "農林水産省：家庭備蓄ポータル", url: "https://www.maff.go.jp/j/zyukyu/foodstock/" },
   },
   {
+    id: "tip.earthquake-alert",
     title: "緊急地震速報[きんきゅうじしんそくほう]が間に合わないことも",
     body: "地震[じしん]が起きた場所に近いと、速報より先に強い揺[ゆ]れが来る場合があるよ。通知[つうち]がなくても、揺[ゆ]れを感じたら身を守ろう。",
     adultBody: "震源に近い地域では、緊急地震速報より先に強い揺れが到達する場合があります。通知の有無にかかわらず、揺れを感じたら身を守ってください。",
@@ -34,6 +38,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "気象庁：緊急地震速報の限界", url: "https://www.jma.go.jp/jma/kishou/know/jishin/eew/shikumi/tokusei.html" },
   },
   {
+    id: "tip.evacuation-sites",
     title: "避難場所[ひなんばしょ]と避難所[ひなんじょ]は違[ちが]う",
     body: "危険[きけん]から命を守るために逃[に]げるのが「避難場所[ひなんばしょ]」。家で暮[く]らせない時などに生活するのが「避難所[ひなんじょ]」。同じ場所とは限らないよ。",
     adultBody: "指定緊急避難場所は危険から命を守るための場所、指定避難所は被災者が一定期間滞在する施設です。同じ施設とは限りません。",
@@ -42,6 +47,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "内閣府：避難場所と避難所", url: "https://www.bousai.go.jp/taisaku/hinanbasyo.html" },
   },
   {
+    id: "tip.furniture-layout",
     title: "家具の向きでも危険[きけん]が変わる",
     body: "倒[たお]れた家具がベッドや出口に重ならないか、置き方を確認[かくにん]しよう。固定するだけでなく、落ちたり倒[たお]れたりする先を空けることも大切だよ。",
     adultBody: "家具が転倒した際、就寝場所や出入口を塞がない配置にしてください。固定器具に加え、家具の位置や向きを見直すことも重要です。",
@@ -50,6 +56,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "東京消防庁：地震への備え", url: "https://www.tfd.metro.tokyo.lg.jp/lfe/bou_topic/jisin/point10.html" },
   },
   {
+    id: "tip.family-message",
     title: "171で伝える内容も決めておこう",
     body: "家族に声の伝言を残せる171。「無事か」「今いる場所」「次に行く場所」を短く伝えられるようにしよう。",
     adultBody: "災害用伝言ダイヤル171では、安否・現在地・移動先を簡潔に伝えます。家族で登録・確認に使う電話番号を事前に決めておくと円滑です。",
@@ -58,6 +65,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "NTT西日本：171の使い方", url: "https://www.ntt-west.co.jp/dengon/way/pla.html" },
   },
   {
+    id: "tip.water-stock",
     title: "水は飲む分だけでいい？",
     body: "備える水の目安は、1人1日3リットルだよ。飲むだけでなく、料理に使う分も考えて家族と準備しよう。",
     adultBody: "飲料水の備蓄は1人1日3リットルが目安です。飲用と調理に必要な量を人数・日数に合わせて確認してください。",
@@ -66,6 +74,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "内閣府：災害対応準備用品チェックリスト", url: "https://www.bousai.go.jp/kyoiku/chikubousai/chikubo/chikubo/pdf/04_013.pdf" },
   },
   {
+    id: "tip.practice-171",
     title: "171は、災害の前に練習できる",
     body: "災害用伝言ダイヤル171には、毎月1日・15日などの体験日があるよ。家族で電話番号を決め、伝言を残す練習をしてみよう。",
     adultBody: "災害用伝言ダイヤル171は、毎月1日・15日などに体験利用できます。家族で登録・確認に使う電話番号を決め、操作を練習してください。",
@@ -74,6 +83,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "NTT西日本：災害用伝言ダイヤル171", url: "https://www.ntt-west.co.jp/dengon/" },
   },
   {
+    id: "tip.web171",
     title: "声ではなく、文字で伝えるweb171",
     body: "災害用伝言板web171では、電話番号を使って、無事かどうかを文字で残せるよ。電話と合わせて、連絡する方法を家族と決めておこう。",
     adultBody: "災害用伝言板web171は、電話番号を使って安否情報を文字で登録・確認できるサービスです。家族で複数の連絡手段を共有してください。",
@@ -82,6 +92,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "NTT西日本：災害用伝言板web171", url: "https://www.ntt-west.co.jp/dengon/web171/qa.html" },
   },
   {
+    id: "tip.tsunami-waves",
     title: "津波は、最初の波が一番高いとは限らない",
     body: "津波は何度も来て、後から来る波の方が高いこともあるよ。最初の波が引いても、海の近くへ戻らないようにしよう。",
     adultBody: "津波は繰り返し到達し、後続の波がより高くなる場合があります。第一波が引いても海岸へ戻らず、避難を継続してください。",
@@ -90,6 +101,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "気象庁：津波について", url: "https://www.jma.go.jp/jma/kishou/know/faq/faq26.html" },
   },
   {
+    id: "tip.high-floor",
     title: "高い階では、家具が大きく動くことも",
     body: "高い建物の上の階では、ゆっくりした大きな揺れが長く続くことがあるよ。家具が倒れるだけでなく、動いてぶつかることにも気をつけよう。",
     adultBody: "高層階では大きくゆっくりした揺れが数分続く場合があります。家具の転倒・落下に加え、大きな移動にも注意が必要です。",
@@ -98,6 +110,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "東京消防庁：地震 その時10のポイント", url: "https://www.tfd.metro.tokyo.lg.jp/lfe/bou_topic/jisin/point10.html" },
   },
   {
+    id: "tip.light-battery",
     title: "暗い部屋で、明かりを見つけられる？",
     body: "停電すると、いつもの部屋でも足元が見えにくくなるよ。懐中電灯を置く場所を家族と決め、明かりがつくか確かめておこう。",
     adultBody: "停電時に備え、懐中電灯の保管場所を家族で共有し、点灯することを定期的に確認してください。",
@@ -106,6 +119,7 @@ export const TRIVIA: Trivia[] = [
     source: { title: "内閣府：災害対応準備用品チェックリスト", url: "https://www.bousai.go.jp/kyoiku/chikubousai/chikubo/chikubo/pdf/04_013.pdf" },
   },
   {
+    id: "tip.evacuation-bag",
     title: "持ち出す物は、実際に持って確かめよう",
     body: "持ち出し袋に物を詰めたら、自分で持てる重さか家族と確かめよう。必要な物と、家に備えておく物を分けて考えると準備しやすいよ。",
     adultBody: "非常持出品は実際に持ち運べる量にまとめ、家庭内の備蓄と分けて準備してください。持ち出し袋の重さも確認します。",

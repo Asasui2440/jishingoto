@@ -15,6 +15,7 @@ import { focusDescription } from "@/lib/focus-description";
 import { aftermathInput } from "@/lib/aftermath-plan";
 import { prepareAftermath } from "@/lib/room-preparation";
 import { SafetyProducts } from "@/components/SafetyProducts";
+import { KnowledgeAssessment } from "@/components/KnowledgeAssessment";
 import { RISK_KINDS } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
 import { roomAdviceImages, roomAdvice } from "@/lib/room-guidance";
@@ -106,6 +107,7 @@ export default function RoomRecognitionPage() {
         objectType: draft.objectType,
         kind: draft.objectType === risk.objectType ? risk.kind : OBJECTS.find((object) => object.value === draft.objectType)!.kind,
         confidence: undefined,
+        assessment: undefined,
       } : risk),
     }));
     setReviewedIds(ids => ids.filter(id => id !== editing));
@@ -197,6 +199,7 @@ export default function RoomRecognitionPage() {
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
           <p className="mt-2 text-sm font-bold text-secondary-ink"><Furigana text={selectedAdvice.headline} /></p>
           <AdviceIllustration key={selected.id} risk={selected} />
+          {selected.assessment && <KnowledgeAssessment assessment={selected.assessment} />}
           <div className="mt-3"><DetailSheet key={selected.id} title="対策の手順・注意点" summary="具体的な備え方と対策グッズ">
           <div className="mt-3 rounded-field bg-secondary-soft p-3">
             <p className="text-11 font-bold text-secondary-ink"><Furigana text="地震[じしん]の前[まえ]にできること" adult="事前にできる対策" /></p>

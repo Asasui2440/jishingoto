@@ -20,6 +20,8 @@ import { prepareRoom } from "@/lib/room-preparation";
 import { ANALYSIS_STEPS, TRIVIA } from "@/lib/content";
 import { groupRisksByView } from "@/lib/room-views";
 import { useSession } from "@/lib/session";
+import { SurvivorVoice } from "@/components/SurvivorVoice";
+import { triviaVoiceRequest } from "@/lib/voice-knowledge";
 
 export default function AnalysisLoadingPage() {
   const router = useRouter();
@@ -145,6 +147,7 @@ export default function AnalysisLoadingPage() {
             <a href={trivia.source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline"><Furigana text={trivia.source.title} /></a>
             <button type="button" onClick={() => setTriviaOffset((n) => n + 1)} className="ml-auto min-h-11 rounded-pill border-2 border-white bg-surface px-4 text-base font-bold shadow-sm"><Furigana text="次[つぎ]の豆知識[まめちしき]" /></button>
           </div>
+          <div className="mt-3"><SurvivorVoice request={triviaVoiceRequest(trivia.id)} /></div>
         </div>
       </div>
 
