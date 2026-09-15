@@ -24,6 +24,7 @@ function load(file) {
     if (p === '@/components/ui/Furigana') return { Furigana: ({ text }) => React.createElement('span', null, text) };
     if (!p.startsWith('.') && !p.startsWith('@/')) return require(p);
     const base = p.startsWith('@/') ? path.resolve('src', p.slice(2)) : path.resolve(path.dirname(file), p);
+    if (p.endsWith('.json')) return { default: JSON.parse(fs.readFileSync(base, 'utf8')) };
     return load(fs.existsSync(`${base}.ts`) ? `${base}.ts` : `${base}.tsx`);
   }, mod, mod.exports);
   return mod.exports;

@@ -54,19 +54,78 @@ test('lightweight image settings reach the API and keep both references and veri
 });
 const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
+  needsReview: true, reviewReason: 'スタンドで立つテレビの転倒への備えを確認する',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',
-  supportSurface: 'unknown', confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 }, ...overrides,
+  supportSurface: 'unknown', confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 },
+  scenario: '固定が不十分な場合は強い揺れでテレビが落下する可能性があります。',
+  preparation: 'テレビと台の固定方法を説明書で確認します。',
+  unknowns: ['固定具の状態'], knowledgeIds: ['EQ-004'], ...overrides,
 });
+test('knowledge text reaches vision input and citations resolve from the same local revision', async () => {
+  const { loadRoomKnowledge } = load('src/lib/server/room-knowledge.ts');
+  const knowledge = await loadRoomKnowledge();
+  assert.equal(knowledge.notes.length, 7);
+  const appliance = knowledge.notes.find(note => note.reference.id === 'EQ-004');
+  assert.ok(appliance.text.includes('テレビ'));
+  const originalFetch = global.fetch;
+  const key = process.env.OPENAI_API_KEY;
+  try {
+    process.env.OPENAI_API_KEY = 'test-only';
+    global.fetch = async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const content = body.input.find(item => item.role === 'user').content;
+      const supplied = JSON.parse(content[0].text).knowledge;
+      assert.deepEqual(supplied, knowledge);
+      const ids = body.text.format.schema.properties.risks.items.properties.knowledgeIds.items.enum;
+      assert.deepEqual(ids, knowledge.notes.map(note => note.reference.id));
+      return Response.json({output_text: JSON.stringify({risks: [detection()]})});
+    };
+    const result = await (await POST(request({image:'data:image/jpeg;base64,AA=='}))).json();
+    assert.deepEqual(result.risks[0].assessment, {
+      observation: detection().evidence, scenario: detection().scenario, preparation: detection().preparation,
+      unknowns: detection().unknowns, references: [appliance.reference], knowledgeRevision: knowledge.revision,
+    });
+    for (const overrides of [{knowledgeIds:['invented']}, {knowledgeIds:[]}, {knowledgeIds:['EQ-004','EQ-004']},
+      {scenario:''}, {preparation:null}, {unknowns:[42]}, {unknowns:Array(5).fill('unknown')}, {scenario:'a'.repeat(601)}]) {
+      global.fetch = async () => Response.json({output_text: JSON.stringify({risks:[detection(overrides)]})});
+      assert.equal((await POST(request({image:'data:image/jpeg;base64,AA=='}))).status, 502);
+    }
+  } finally {
+    global.fetch = originalFetch;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
+});
+
+test('missing and unchecked knowledge cannot be silently used; MD changes change the revision', async () => {
+  const { loadRoomKnowledge } = load('src/lib/server/room-knowledge.ts');
+  const os = require('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-knowledge-test-'));
+  try {
+    await assert.rejects(loadRoomKnowledge(root));
+    fs.cpSync('knowledge',root,{recursive:true});
+    const before = await loadRoomKnowledge(root);
+    const notePath = path.join(root,'earthquake/eq-004-appliances.md');
+    const original = fs.readFileSync(notePath,'utf8');
+    fs.writeFileSync(notePath, original+'\n追加の確認事項。\n');
+    assert.notEqual((await loadRoomKnowledge(root)).revision,before.revision);
+    fs.writeFileSync(notePath, original.replace('source_checked','draft'));
+    await assert.rejects(loadRoomKnowledge(root),/unchecked knowledge/);
+    fs.writeFileSync(notePath, original.replace('S-TFD-APPLIANCES','S-NOT-REGISTERED'));
+    await assert.rejects(loadRoomKnowledge(root),/unchecked knowledge/);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('認識した置き場所が問題文・対策・予想図の説明まで引き継がれる', async () => {
   const { recognitionRisks, recognitionViews } = load('src/lib/server/room-recognition.ts');
   const { fetchQuestions, aftermathEvents } = load('src/lib/api.ts');
   const { roomAdvice, roomAdviceImage } = load('src/lib/room-guidance.ts');
+  const knowledge = await load('src/lib/server/room-knowledge.ts').loadRoomKnowledge();
   const views = recognitionViews({image:'data:image/jpeg;base64,AA=='});
   for (const [supportSurface, from] of [['desk','机から'],['shelf','棚から'],['stand','台から'],['unknown','置かれた場所から']]) {
     const rows = recognitionRisks({output_text:JSON.stringify({risks:[detection({
       name:'ノートパソコン', adultName:'ノートパソコン', objectType:'elevated_objects', supportSurface,
       evidence: supportSurface === 'desk' ? '机の天板に載り、天板と脚が見える' : '支持面の確認用データ',
-    })]})}, views);
+    })]})}, views, knowledge);
     assert.equal(rows[0].supportSurface, supportSurface);
     rows[0].confirmed = true;
     const question = (await fetchQuestions(rows)).find(q => q.sourceRiskId === rows[0].id);
@@ -80,7 +139,7 @@ test('認識した置き場所が問題文・対策・予想図の説明まで�
   }
   const legacy = {id:'old',name:'ノートパソコン',objectType:'elevated_objects',kind:'fall',confirmed:true,x:50,y:50};
   assert(aftermathEvents([legacy])[0].text.includes('置かれた場所から'));
-  assert.throws(() => recognitionRisks({output_text:JSON.stringify({risks:[detection({supportSurface:'ceiling'})]})}, views));
+  assert.throws(() => recognitionRisks({output_text:JSON.stringify({risks:[detection({supportSurface:'ceiling'})]})}, views, knowledge));
 });
 
 test('photo analysis normalizes TV names and validates photo input', async () => {
@@ -98,6 +157,41 @@ test('photo analysis normalizes TV names and validates photo input', async () =>
     delete process.env.OPENAI_API_KEY;
     assert.equal((await POST(request({image:'data:image/jpeg;base64,AA=='}))).status,503);
   } finally { global.fetch = originalFetch; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; }
+});
+
+test('明らかに実害の乏しい小物を返さず、割れ物や家具は保持する', async () => {
+  const originalFetch = global.fetch;
+  const key = process.env.OPENAI_API_KEY;
+  try {
+    process.env.OPENAI_API_KEY = 'test-only';
+    const excluded = [
+      ['空の紙コップ', '机に小さな紙製の空容器がある', '少量の軽い紙製容器で、けがや閉塞につながる根拠がない'],
+      ['ぬいぐるみ', '棚に小さな柔らかいぬいぐるみがある', '柔らかい小物が一つで通路をふさぐ配置ではない'],
+    ].map(([name,evidence,reviewReason]) => detection({name,adultName:name,objectType:'elevated_objects',evidence,reviewReason,needsReview:false}));
+    const kept = [detection(), ...[
+      ['陶器のカップ', '机の端に陶器のカップがある', '落下して割れた破片への備えを確認する'],
+      ['包丁', '刃が露出した包丁が台の端にある', '露出した刃の落下によるけがへの備えを確認する'],
+      ['鉢植え', '背の高い棚の上に大きな鉢がある', '高い場所の鉢の落下への備えを確認する'],
+    ].map(([name,evidence,reviewReason]) => detection({name,adultName:name,objectType:'elevated_objects',evidence,reviewReason}))];
+    for (const rows of [[...excluded,...kept], excluded, []]) {
+      global.fetch = async (_url, init) => {
+        const body = JSON.parse(init.body);
+        const schema = body.text.format.schema.properties.risks.items;
+        assert.ok(schema.required.includes('needsReview'));
+        assert.ok(schema.required.includes('reviewReason'));
+        return Response.json({output_text:JSON.stringify({risks:rows})});
+      };
+      const response = await POST(request({image:'data:image/jpeg;base64,AA=='}));
+      assert.equal(response.status,200);
+      const {risks,source} = await response.json();
+      assert.equal(source,'ai');
+      assert.deepEqual(risks.map(r=>r.name), rows.length > 2 ? ['テレビ','陶器のカップ','包丁','鉢植え'] : []);
+      assert.ok(risks.every(r=>r.confirmed===false));
+    }
+  } finally {
+    global.fetch = originalFetch;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
 });
 
 test('masked full-size views reach the model separately and their local boxes round-trip to each photo', async () => {
@@ -177,7 +271,9 @@ test('unusable model output is not accepted as no objects or a made-up central m
     const reply = risks => ({status:'completed',output_text:JSON.stringify({risks})});
     const badRows = [null, detection({viewIndex:1}), detection({viewIndex:0.5}), detection({viewIndex:undefined}),
       detection({bounds:undefined}), detection({bounds:{x:110,y:20,w:10,h:10}}), detection({bounds:{x:20,y:30,w:0,h:10}}),
-      detection({name:' '}), detection({evidence:''}), detection({confidence:null}), detection({confidence:1.1}),
+      detection({name:' '}), detection({evidence:''}), detection({needsReview:undefined}),
+      detection({needsReview:'false'}), detection({reviewReason:''}), detection({reviewReason:undefined}),
+      detection({needsReview:false,bounds:{x:110,y:20,w:10,h:10}}), detection({needsReview:false,knowledgeIds:['invented']}), detection({confidence:null}), detection({confidence:1.1}),
       detection({objectType:'invented'}), detection({kind:'safe'})];
     for (const body of [null, {}, {output_text:'{}'}, {output_text:'null'},
       {...reply([]),status:'incomplete'}, {...reply([detection()]),status:'failed'},

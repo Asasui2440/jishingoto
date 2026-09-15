@@ -1,0 +1,23 @@
+.card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+.label { color: var(--color-primary-ink); font-size: 0.8125rem; font-weight: 700; }
+.title { margin-top: 8px; font-size: 1rem; font-weight: 700; line-height: 1.6; }
+.event { margin-top: 6px; color: var(--color-ink-muted); font-size: 0.75rem; line-height: 1.6; }
+.summary { margin-top: 12px; font-size: 1rem; line-height: 1.85; }
+.connection { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--color-primary-soft); font-size: 0.875rem; line-height: 1.75; }
+.connectionTitle { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 700; }
+.details { margin-top: 8px; font-size: 0.875rem; line-height: 1.8; }
+.details summary { min-height: 44px; padding-block: 10px; cursor: pointer; font-weight: 700; }
+.details p + p { margin-top: 8px; }
+.credit { color: var(--color-ink-muted); font-size: 0.75rem; }
+.source { display: block; min-height: 44px; padding-block: 10px; color: var(--color-primary-ink); font-size: 0.8125rem; line-height: 1.7; text-decoration: underline; text-underline-offset: 3px; }
+.next { min-height: 44px; margin-top: 4px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 999px; font-size: 0.875rem; font-weight: 700; }
+.card :is(a, button, summary):focus-visible { outline: 3px solid var(--color-primary-ink); outline-offset: 3px; }

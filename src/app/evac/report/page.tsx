@@ -16,6 +16,8 @@ import { reviewDecisions, scoreDecisions } from "@/lib/evac-review";
 import { formatDistance, formatDuration, getEvac, totalSeconds, useEvac } from "@/lib/evac";
 import { walkDistance } from "@/lib/evac-walk";
 import { useSession } from "@/lib/session";
+import { SurvivorVoice } from "@/components/SurvivorVoice";
+import { walkVoiceRequest } from "@/lib/voice-knowledge";
 
 type Sheet = "decision" | "route" | "help" | "room" | null;
 
@@ -182,6 +184,7 @@ export default function EvacReportPage() {
           </div>
           <ReviewIllustrations event={selected.event} choice={selected.choice} recommended={scoredSelection && scoredSelection.value < 1 ? scoredSelection.recommended : undefined} />
           <ChoiceTradeoffs key={selected.d.pointId} event={selected.event} choice={selected.choice} />
+          <SurvivorVoice request={walkVoiceRequest(selected.event, evac.scenario, selected.choice.id, selected.d.timedOut)} />
           <details key={`sources-${selected.d.pointId}`} className="rounded-field border border-border p-3 text-11 leading-relaxed text-ink-muted">
             <summary className="cursor-pointer font-bold text-primary-ink">判断のヒント・出典</summary>
             <p className="mt-3 rounded-field bg-canvas p-3 text-13"><Furigana text={selected.event.hint} /></p>

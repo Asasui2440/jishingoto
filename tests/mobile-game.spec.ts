@@ -806,6 +806,38 @@ test("危険確認は文字拡大・ふりがなでも操作でき、対象ゼ�
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test("ナレッジ付き写真分析は観察・想定・原典を表示し対象の修正後に消える", async ({ page }, testInfo) => {
+  await page.addInitScript(risk => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
+    photoUrl: "/figma/img/room-risk.jpg", risks: [risk], analysisSource: "ai", questions: [], answers: [], checked: [],
+  })), { ...DETECTED_RISKS[0], assessment: {
+    observation: "本が並んだ背の高い棚が見えます。",
+    scenario: "固定が不十分な場合、強い揺れで棚が倒れる可能性があります。",
+    preparation: "固定方法と、普段寝る場所との位置関係を確認しましょう。",
+    unknowns: ["壁への固定状態"], knowledgeRevision: "test-revision",
+    references: [{ id: "EQ-003", title: "家具の配置・収納・固定", checkedAt: "2026-09-15", sources: [
+      { id: "S-TFD-LAYOUT", title: "東京消防庁の地震対策", url: "https://www.tfd.metro.tokyo.lg.jp/ts/bfc_manual/instructor/cp6.html" },
+    ] }],
+  } });
+  await page.goto("/risks");
+  const assessment = page.getByRole("region", { name: "写真と資料から考える備え" });
+  await expect(assessment.getByText("本が並んだ背の高い棚が見えます。")).toBeVisible();
+  await expect(assessment.getByText("壁への固定状態")).toBeVisible();
+  await assessment.locator("summary").click();
+  await expect(assessment.getByRole("link")).toHaveAttribute("href", "https://www.tfd.metro.tokyo.lg.jp/ts/bfc_manual/instructor/cp6.html");
+  await expect(page.getByRole("region", { name: "確認の進み具合" }).getByRole("button")).toBeInViewport({ratio:1});
+  await assessment.scrollIntoViewIfNeeded();
+  await page.screenshot({path:testInfo.outputPath("knowledge-assessment.png")});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: /認識を修正する/ }).click();
+  const dialog = page.getByRole("dialog", { name: "認識を修正する" });
+  await dialog.getByLabel("名前", { exact: true }).fill("テレビ");
+  await dialog.locator("select").selectOption("tv");
+  await dialog.getByRole("button", { name: "保存", exact: true }).click();
+  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(assessment).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.session.v1")!).risks[0].assessment)).toBeUndefined();
+});
+
 test("家具の確認中は生成せず、修正した対象をクイズ開始時に渡す", async ({ page }) => {
   await page.addInitScript(risk => sessionStorage.setItem("jishingoto.session.v1", JSON.stringify({
     photoUrl: "data:image/png;base64,AA==", risks: [risk], analysisSource: "ai", questions: [], answers: [], checked: [], resultStep: 5,
@@ -1300,7 +1332,7 @@ test("統合後も避難クイズの15秒・25秒設定を保存して再開す�
   }
 });
 
-test("全画面のホームアイコンを右上に揃え、文字のトップボタンを出さない", async ({ page }, testInfo) => {
+test("画面右上はホーム、詳細ポップアップ右上は閉じるボタンにする", async ({ page }, testInfo) => {
   await page.route("**/api/room/**", route => route.abort());
   for (const path of ["/", "/home", "/camera", "/camera/video", "/privacy", "/places", "/test-room", "/offline-evac/index.html"]) {
     await page.goto(path);
@@ -1321,14 +1353,21 @@ test("全画面のホームアイコンを右上に揃え、文字のトップ�
   }
   await page.goto("/test-room");
   await page.getByRole("button", { name: "結果ページを試す（APIなし）", exact: true }).click();
-  await page.getByRole("button", { name: /理由・注意点を読む/ }).click();
+  const detailTrigger = page.getByRole("button", { name: /理由・注意点を読む/ });
+  await detailTrigger.click();
   const dialog = page.getByRole("dialog");
-  const home = dialog.getByRole("link", { name: "トップページへ戻る", exact: true });
-  const homeBox = (await home.boundingBox())!;
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "トップページへ戻る", exact: true })).toHaveCount(0);
+  const close = dialog.getByRole("button", { name: "閉じる", exact: true });
+  await expect(close).toBeFocused();
+  const closeBox = (await close.boundingBox())!;
   const dialogBox = (await dialog.boundingBox())!;
-  expect(homeBox.x).toBeGreaterThan(dialogBox.x + dialogBox.width / 2);
-  await home.click();
-  await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
+  expect(closeBox.x).toBeGreaterThan(dialogBox.x + dialogBox.width / 2);
+  expect(closeBox.width).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: testInfo.outputPath("detail-close-button.png") });
+  await close.click();
+  await expect(page).toHaveURL(/\/result$/);
+  await expect(dialog).not.toBeVisible();
+  await expect(detailTrigger).toBeFocused();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
 });

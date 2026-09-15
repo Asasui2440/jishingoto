@@ -9,6 +9,8 @@ import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Choice, Question } from "@/lib/content";
 import { reviewIllustration, reviewImagePath } from "@/lib/review-illustrations";
 import { Furigana } from "@/components/ui/Furigana";
+import { SurvivorVoice } from "@/components/SurvivorVoice";
+import { roomVoiceRequest } from "@/lib/voice-knowledge";
 
 export function ActionReview({ question, choice, timedOut, number }: { question: Question; choice: Choice; timedOut: boolean; number: number }) {
   const { audience } = useSettings();
@@ -121,6 +123,7 @@ export function ActionReview({ question, choice, timedOut, number }: { question:
           </div>}
         </section>
       </DetailSheet>
+      <SurvivorVoice request={roomVoiceRequest(question, choice.id, timedOut)} />
     </div>
   </article>;
 }
