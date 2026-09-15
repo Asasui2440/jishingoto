@@ -5,7 +5,7 @@ import { buildWalkSteps, distanceM, fetchDecisionPoints, fetchDetourFrom } from 
 import { getEvac, useEvac } from "./evac";
 import { nextWalkIndex, nextStreetIndex, rerouteWalk, observeStreetPosition, streetRouteGuidance } from "./evac-walk";
 import { reachedStreetArrival, type StreetSnapshot } from "./street-navigation";
-import type { EvacChoice } from "./evac-content";
+import type { EvacChoice, HazardEvent } from "./evac-content";
 
 export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: string | null; paused?: boolean } = {}) {
   const evac = useEvac();
@@ -14,6 +14,7 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ event: HazardEvent; choice: EvacChoice } | null>(null);
   const [timerOverride, setTimerOverride] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const scenario = evac.scenario ?? "earthquake";
@@ -43,10 +44,10 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   const step = walk?.steps[walk.index];
   const sceneReady = readyStepId === undefined || readyStepId === step?.id;
   const pending = !walk?.street?.arrived && (evac.mode === "mock" || !!walk?.street) && step?.event && (evac.mode === "mock" || !!walk?.street && (walk.questionsAligned ? walk.street.questionPointIds?.includes(step.pointId ?? "") : distanceM(walk.street.position, step.position) <= 20)) && step.pointId && !decisions.some((d) => d.pointId === step.pointId) ? step.event : null;
-  const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending;
+  const arrived = !!walk && (evac.mode === "api" ? !!walk.street?.arrived : walk.index === walk.steps.length - 1) && !pending && !feedback;
 
   const advance = useCallback((jump = false) => {
-    if (choosing.current) return;
+    if (choosing.current || feedback) return;
     setNotice(null);
     setError(null);
     setTimerOverride(null);
@@ -55,13 +56,13 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
       ...prev,
       walk: { ...prev.walk, index: jump ? nextWalkIndex(prev.walk, prev.decisions.map((d) => d.pointId), true) : nextStreetIndex(prev.walk, prev.decisions.map((d) => d.pointId)) },
     } : prev);
-  }, [update]);
+  }, [update, feedback]);
 
   useEffect(() => {
-    if (evac.mode === "api" || !walking || !walk || pending || notice || arrived || busy || !sceneReady || paused) return;
+    if (evac.mode === "api" || !walking || !walk || pending || feedback || notice || arrived || busy || !sceneReady || paused) return;
     const timer = setTimeout(() => advance(), 1600);
     return () => clearTimeout(timer);
-  }, [evac.mode, walking, walk, pending, notice, arrived, busy, advance, sceneReady, paused]);
+  }, [evac.mode, walking, walk, pending, feedback, notice, arrived, busy, advance, sceneReady, paused]);
 
   // Keep auto-walk enabled while a decision is shown; resume after its notice.
   useEffect(() => {
@@ -89,8 +90,10 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
   }, [update]);
 
   const choose = async (choice: EvacChoice, timedOut: boolean) => {
-    if (choosing.current || !walk || !step?.event || !step.pointId || !pending) return;
+    if (choosing.current || feedback || !walk || !step?.event || !step.pointId || !pending) return;
     choosing.current = true;
+    // Show the explanation before waiting for a possible route request.
+    setFeedback({ event: step.event, choice });
     setBusy(true);
     setError(null);
     try {
@@ -126,5 +129,12 @@ export function useEvacWalk({ readyStepId, paused = false }: { readyStepId?: str
     }
   };
 
-  return { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
+  const closeFeedback = () => {
+    if (choosing.current) return;
+    setFeedback(null);
+    setNotice(null);
+    setTimerOverride(null);
+  };
+
+  return { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, feedback, closeFeedback, advance, choose, timerOverride, setTimerOverride, retry: () => setAttempt((n) => n + 1) };
 }
