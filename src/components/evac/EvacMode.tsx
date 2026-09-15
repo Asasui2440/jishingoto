@@ -43,8 +43,8 @@ function ApiConfiguration({ children }: { children: ReactNode }) {
     <details className="mt-4 text-13 text-ink-muted">
       <summary className="cursor-pointer py-2 font-bold text-primary-ink">キーを設定する手順</summary>
       <ol className="ml-4 list-decimal space-y-2 leading-relaxed">
-        <li>Google Cloudの同じプロジェクトで請求先を設定し、Maps JavaScript API・Routes API・Geocoding API・Places API (New)を有効にします。キーは共通の1つです。</li>
-        <li>キーのAPI制限に上記4つを指定し、ウェブサイト制限に利用先URLを登録します。ローカルは <code className="break-all">http://localhost:3000/*</code>、公開版は <code className="break-all">https://jishingoto.vercel.app/*</code> です。</li>
+        <li>Google Cloudの同じプロジェクトで請求先を設定し、Maps JavaScript API・Routes API・Places UI Kit APIを有効にします。キーは共通の1つです。</li>
+        <li>キーのAPI制限に上記3つを指定し、ウェブサイト制限に利用先URLを登録します。ローカルは <code className="break-all">http://localhost:3000/*</code>、公開版は <code className="break-all">https://jishingoto.vercel.app/*</code> です。</li>
         <li>自分のパソコンでは、プロジェクトの.env.localで上の項目の「=」の右側にキーを貼り付けて保存し、開発サーバーを再起動します。</li>
         <li>公開版はVercelのSettings → Environment Variablesへ同じ名前で登録し、Productionに再デプロイします。</li>
       </ol>

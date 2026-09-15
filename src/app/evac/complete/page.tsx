@@ -32,8 +32,8 @@ export default function EvacCompletePage() {
     }
   };
   const restart = () => {
-    const {mode,scenario,analysisMode,home,homeLabel,shelter,timerSeconds,roomFinishedAt,reset,update} = evac;
-    reset(); update({mode,scenario,analysisMode,home,homeLabel,shelter,timerSeconds,roomFinishedAt});
+    const {mode,scenario,analysisMode,home,homeLabel,homeOrigin,shelter,timerSeconds,roomFinishedAt,reset,update} = evac;
+    reset(); update({mode,scenario,analysisMode,home,homeLabel,homeOrigin,shelter,timerSeconds,roomFinishedAt});
     router.push("/evac/routes");
   };
   return <GameShell>

@@ -1,4 +1,5 @@
 import { MAX_ROUTES, validPoint } from './core.mjs';
+import { expiredRoute } from './expiry.mjs';
 const DB = 'jishingoto-offline-evac-v1';
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -20,6 +21,7 @@ function aliases(records,id){return [...new Set(records.flatMap(r=>[r.id,...(r.a
 function consolidate(records,store){
   const groups=new Map();
   for(const record of [...records].sort((a,b)=>b.savedAt-a.savedAt)){
+    if(expiredRoute(record)){store.delete(record.id);continue;}
     const key=routeKey(record),group=groups.get(key)||[];group.push(record);groups.set(key,group);
   }
   return [...groups.values()].map(group=>{
@@ -40,6 +42,7 @@ export async function allRoutes() {
   });
 }
 export async function putRoute(route) {
+  if(expiredRoute(route))throw new Error('検索地点の保存期限が切れました。オンラインでもう一度検索してください。');
   const db=await openDB();
   return new Promise((resolve,reject)=>{
     const tx=db.transaction('routes','readwrite'),store=tx.objectStore('routes');let limit=false;
