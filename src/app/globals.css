@@ -22,7 +22,7 @@
   --color-primary-ink: #5d4612;
   --color-primary-soft: #fff3c8;
 
-  /* 青いロゴと、黄色の主要操作。 */
+  /* 青は補足表示、黄色は主要操作に使う。 */
   --color-accent: #205f82;
 
   /* 補足・強調カード。黄色の操作ボタンと区別する。 */
@@ -265,7 +265,7 @@ ruby > rt {
 }
 
 /* Phase 1: primary content stays visible; supporting detail opens separately. */
-.phase-one-navigation { position: fixed; top: max(4px, env(safe-area-inset-top)); left: max(12px, calc((100% - min(100%, 1120px)) / 2 + 12px)); z-index: 60; }
+.phase-one-navigation { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(16px, calc((100% - min(100%, 1120px)) / 2 + 16px)); z-index: 60; }
 .detail-sheet { position: fixed; inset: 0; margin: auto; padding: 0; width: min(100% - 24px, 440px); max-width: none; max-height: calc(100dvh - 24px); border: 0; border-radius: 20px; color: var(--color-ink); background: var(--color-canvas); }
 .detail-sheet::backdrop { background: rgb(15 23 42 / 55%); backdrop-filter: blur(3px); }
 .detail-sheet-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
@@ -276,7 +276,7 @@ html { scroll-padding-top: 60px; }
 .legacy-page { width: 100%; max-width: 1120px; margin: 0 auto; }
 @media (min-width: 640px) {
   .legacy-page { width: calc(100% - 48px); margin: 24px auto; }
-  .phase-one-navigation { left: max(36px, calc((100% - 1120px) / 2 + 12px)); }
+  .phase-one-navigation { right: max(40px, calc((100% - 1120px) / 2 + 16px)); }
 }
 
 /* 本文の実際の幅に合わせる。横向き・分割画面も同じ規則を使う。 */
@@ -320,9 +320,6 @@ html { scroll-padding-top: 60px; }
 @container (min-width: 640px) {
   .review-figure .grid .review-diagram { height: 185px; }
 }
-
-/* ロゴは読みやすい一続きの形を保ち、本文の文字拡大とは別に画面幅へ合わせる。 */
-.home-wordmark { font-size: min(2.5rem, 10cqw); }
 
 /* 色は見出しや小さな面に使い、本文と挿絵には白い余白を残す。 */
 .home-phase-two { border-color: #9fc9df; background: var(--color-glass-soft); color: var(--color-glass); }

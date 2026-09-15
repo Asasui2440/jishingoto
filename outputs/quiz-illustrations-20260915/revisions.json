@@ -1,0 +1,18 @@
+[
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "movement",
+      "prompt": "Edit this sprite sheet. Keep the same blue clothing, gentle flat hand-drawn style, white background. Fix the grid to EXACTLY FOUR equal square cells in a 2x2 square atlas. CRITICAL: an invisible vertical centerline and horizontal centerline separate cells, NOTHING crosses either line. Every drawing fits well inside its cell with at least 12% white margin on ALL sides. Each cell has exactly ONE adult, never two sequential poses. TOP LEFT one adult crouched with arms over head, simple tilted unmarked pale rectangular object on far left separated by obvious clear gap. TOP RIGHT one adult moving toward a distant table. BOTTOM LEFT one adult crouched covering head immediately beside tilted unmarked pale rectangular object. BOTTOM RIGHT adult crouched next to closed door. Remove the extra walking figure from top-left, simplify hazard objects to unmarked rectangle (no bookshelf details). No text, numbers, borders, shadows or symbols of correctness. Ensure complete adult body and objects are visible in their own cell.",
+      "source": "/Users/suzurinene/.codex/generated_images/01a0a2ae-53f2-7213-90e6-e22023fe0116/exec-bfc29fa0-1312-4c5e-bcc0-de6980070d47.png"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "kitchen",
+      "prompt": "Edit this square 2x2 action sprite sheet while keeping all four existing actions and the same blue-clothed adult style. Fix ONLY framing and poses: every cell must have wide white safety margins, each complete scene scaled down and centered in central 76% of its square quadrant. Nothing crosses the exact horizontal or vertical centerline and no head or foot touches/crosses an outside edge. TOP LEFT adult clearly looking DOWN at plate fragments before stove, hands down by body rather than thoughtfully looking up. TOP RIGHT adult hurries toward stove knob with plate fragments at feet. BOTTOM LEFT adult ignores stove, facing away. BOTTOM RIGHT adult sweeps floor. Use simple partial kitchen counter only, no giant room. Full adult figures, two coherent arms each, pale-blue clothing, pure white background, thin charcoal line, muted flat fills. No text, borders, numbers, divider, grading colors.",
+      "source": "/Users/suzurinene/.codex/generated_images/01a0a2ae-53f2-7213-90e6-e22023fe0116/exec-4b945fc1-099b-422b-8178-e8ea1a0e5811.png"
+    }
+  }
+]

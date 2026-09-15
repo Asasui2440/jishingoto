@@ -1,0 +1,56 @@
+{
+  "method": "Built-in image_gen",
+  "styleReference": "public/illustrations/textbook/room-v3.webp",
+  "palette": "blue",
+  "base": "Transform the supplied character illustration into ONE production-ready SQUARE 2x2 SPRITE ATLAS containing exactly FOUR independent small action vignettes, no UI. Strict geometry: four equal square quadrants in reading order top-left, top-right, bottom-left, bottom-right; entire vignette in central 80% of each quadrant; pure white background; NO borders, divider, words, labels, letters, numbers or correctness symbols. Exactly match reference's thin slightly irregular charcoal pen outlines, dot eyes, simple solid dark hair, understated faces, rounded adult proportions, very flat muted colors. IMPORTANT user change: SAME adult in all four cells wears a PALE SKY-BLUE overshirt (#83acd0), plain white shirt, cream trousers. Replace reference green with BLUE; no green clothing. Other objects pale yellow, muted blue or white. White negative space, essentials only, no shadows, gradients, anime detail, textures or glossy finish. These are alternatives including mistakes: no red/green grading, crosses, ticks, halos, injury or blood. Clear full body poses readable at 52px, only two arms, coherent anatomy. ",
+  "jobs": [
+    {
+      "name": "desk",
+      "scenes": "TOP LEFT adult crouched under sturdy four-leg wooden table, one hand gripping leg, other arm covering head/neck. TOP RIGHT adult reaching door handle. BOTTOM LEFT adult under table reading smartphone with both hands. BOTTOM RIGHT adult reaching out from under table toward blue bag."
+    },
+    {
+      "name": "movement",
+      "scenes": "TOP LEFT adult moves a short distance from an abstract tilting rectangular object then crouches covering head, tiny footsteps show distance. TOP RIGHT adult moving across open space toward distant table. BOTTOM LEFT adult crouches motionless covering head immediately beside same tilting object. BOTTOM RIGHT adult crouches beside plain door."
+    },
+    {
+      "name": "alert",
+      "scenes": "TOP LEFT crouching adult holding blue cushion over head and neck. TOP RIGHT adult carefully reading smartphone alert, blank rectangular notification. BOTTOM LEFT adult moving toward a distant table. BOTTOM RIGHT adult sending message on smartphone, blank chat bubble with two tiny family silhouettes."
+    },
+    {
+      "name": "floor",
+      "scenes": "Glass shards are small blue pieces; no injury. TOP LEFT barefoot adult staying on clear floor looks for curved clear path around glass shards toward shoes. TOP RIGHT barefoot adult on tiptoe trying to cross glass shards. BOTTOM LEFT seated adult putting a second sock over a socked foot beside glass shards. BOTTOM RIGHT adult reaching bare hand toward glass shards to clear them."
+    },
+    {
+      "name": "kitchen",
+      "scenes": "TOP LEFT adult pausing looking down at broken plate pieces on floor before stove. TOP RIGHT adult hurries to stove front knob without looking down at fragments, small burner flame. BOTTOM LEFT adult faces away from stove, hands resting, assuming automatic shutoff, small burner flame behind. BOTTOM RIGHT adult sweeps entire kitchen floor with broom beside stove and scattered plate pieces. Only simple counter, no large fire."
+    },
+    {
+      "name": "exit",
+      "scenes": "TOP LEFT adult opening plain door slightly and pausing to check walkway outside. TOP RIGHT adult searching low closet for emergency blue bag. BOTTOM LEFT adult stepping briskly outside through open door without stopping. BOTTOM RIGHT adult seated waiting beside closed door and small clock."
+    },
+    {
+      "name": "family",
+      "scenes": "TOP LEFT adult calling with hand cupped near mouth across doorway, low fallen cabinet blocking passage, staying out of debris. TOP RIGHT adult straining alone to lift fallen cabinet. BOTTOM LEFT adult crawling toward narrow gap under tilted fallen cabinet. BOTTOM RIGHT adult sitting watching phone waiting for reply, small empty chat bubble."
+    },
+    {
+      "name": "home",
+      "scenes": "TOP LEFT adult at home watching small TV with simple map, water bottles nearby. TOP RIGHT adult and family member carrying bags from tiny house to shelter building. BOTTOM LEFT adult with food bowl going to shelter building, untouched food cans remain at home behind. BOTTOM RIGHT adult relaxed on sofa facing away from TV with black off screen."
+    },
+    {
+      "name": "damaged",
+      "scenes": "TOP LEFT adult moving away from leaning cracked building into clear space. TOP RIGHT adult INSIDE leaning cracked room searches destination on phone. BOTTOM LEFT adult INSIDE leaning cracked room packs blue bag. BOTTOM RIGHT adult waits under table INSIDE leaning cracked room. Minimal cracks and slanted wall edge only, no collapse/injury."
+    },
+    {
+      "name": "information",
+      "scenes": "TOP LEFT adult checks smartphone beside small civic building symbol and blank calendar shape to show official current information. TOP RIGHT adult looks at phone surrounded by several duplicated blank social posts, popularity. BOTTOM LEFT adult presses send on phone, small neutral arrow from one blank chat bubble toward two others. BOTTOM RIGHT adult holds phone and walks out door carrying bag, following message."
+    },
+    {
+      "name": "basic",
+      "scenes": "TOP LEFT adult crouched low both arms guarding head and neck, no cushion/furniture. TOP RIGHT adult running briskly, no furniture. BOTTOM LEFT adult standing upright looking around, head uncovered, no furniture. BOTTOM RIGHT adult presses hands to tall tilted bookshelf to hold it upright."
+    },
+    {
+      "name": "obstacles",
+      "scenes": "TOP LEFT adult lifts leg stepping over scattered blocks and glass shards. TOP RIGHT adult stands beside sturdy table with head uncovered. BOTTOM LEFT adult reaches to slide window open. BOTTOM RIGHT adult presses both palms against window glass trying to hold it. No injury."
+    }
+  ]
+}

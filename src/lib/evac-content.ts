@@ -408,4 +408,4 @@ export const SIM_CONDITIONS = [
 ];
 
 /** 制限時間の既定値（秒）。延長・無効化できる。 */
-export const DEFAULT_TIMER_SECONDS = 10;
+export const DEFAULT_TIMER_SECONDS = 15;

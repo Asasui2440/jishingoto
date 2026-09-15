@@ -1,5 +1,6 @@
 "use client";
 
+import { TIMER_PRESETS } from "@/lib/evac-api";
 import { eventCondition, eventTitle } from "@/lib/evac-display";
 import { useEffect, useState } from "react";
 import { WalkIllustration } from "./WalkIllustration";
@@ -10,7 +11,7 @@ import { Furigana } from "@/components/ui/Furigana";
 import { SCENARIO_NOTE, MAP_NOTE, type EvacChoice, type HazardEvent } from "@/lib/evac-content";
 
 /** Choices stay beside the map; expanded context pauses the decision timer. */
-export function EventSheet({ event, viewLabel, viewingStreet = false, index, total, seconds, busy = false, onExtend, onDisableTimer, onViewStreet, onChoose }: {
+export function EventSheet({ event, viewLabel, viewingStreet = false, index, total, seconds, busy = false, onTimerChange, onViewStreet, onChoose }: {
   event: HazardEvent;
   viewLabel?: string;
   viewingStreet?: boolean;
@@ -19,8 +20,7 @@ export function EventSheet({ event, viewLabel, viewingStreet = false, index, tot
   seconds: number;
   busy?: boolean;
   onViewStreet?: () => void;
-  onExtend: (remaining: number) => void;
-  onDisableTimer: () => void;
+  onTimerChange: (seconds: number) => void;
   onChoose: (choice: EvacChoice, timedOut: boolean) => void;
 }) {
   const [remaining, setRemaining] = useState<number | null>(seconds > 0 ? seconds : null);
@@ -47,17 +47,11 @@ export function EventSheet({ event, viewLabel, viewingStreet = false, index, tot
   const critical = urgent && remaining! <= 3;
 
   // Keep the trigger mounted so closing the dialog restores keyboard focus.
-  const extendTimer = () => {
-    if (remaining === null || busy) return;
-    setTimerSettings(false);
-    setRemaining(remaining + 10);
-    onExtend(remaining);
-  };
-  const disableTimer = () => {
+  const selectTimer = (seconds: number) => {
     if (busy) return;
     setTimerSettings(false);
-    setRemaining(null);
-    onDisableTimer();
+    setRemaining(seconds);
+    onTimerChange(seconds);
   };
 
   return <>
@@ -108,7 +102,8 @@ export function EventSheet({ event, viewLabel, viewingStreet = false, index, tot
     <BottomSheet open={timerSettings} title="考える時間" onClose={() => setTimerSettings(false)}>
       <div className="flex flex-col gap-3 pb-2">
         <p className="text-13 text-ink-muted">問題が表示されると時間が減ります。Street View・詳しい説明・設定を開いている間はタイマーが止まります。時間切れでも自分で選べます。</p>
-        {remaining !== null ? <><button type="button" disabled={busy} onClick={extendTimer} className="min-h-12 rounded-full bg-primary font-bold text-ink">10秒ふやす</button><button type="button" disabled={busy} onClick={disableTimer} className="min-h-12 rounded-full border border-border font-bold text-primary-ink">制限なしにする</button></> : <p className="rounded-2xl bg-primary-soft p-4 text-center text-13 font-bold text-primary-ink">制限時間なし</p>}
+        <p className="text-13 text-ink-muted">選ぶと、この問題の残り時間も選んだ秒数から再開します。</p>
+        <div className="grid grid-cols-2 gap-3">{TIMER_PRESETS.map(preset => <button key={preset.seconds} type="button" disabled={busy} aria-pressed={seconds === preset.seconds} onClick={() => selectTimer(preset.seconds)} className={`min-h-12 rounded-full border font-bold ${seconds === preset.seconds ? "border-primary bg-primary text-ink" : "border-border text-primary-ink"}`}>{preset.seconds}秒</button>)}</div>
       </div>
     </BottomSheet>
   </>;

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Furigana } from "@/components/ui/Furigana";
-import { TopPageLink } from "@/components/ui/PhaseOneNavigation";
+import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import styles from "./GameUI.module.css";
 
 type IconName = "map" | "pin" | "route" | "walk" | "flag" | "settings" | "info" | "close" | "back" | "check" | "locate" | "search" | "chevron" | "play" | "pause" | "eye" | "clock";
@@ -31,9 +31,6 @@ export function GameIcon({ name, className = "size-5" }: { name: IconName; class
 
 export function GameShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`game-shell ${styles.shell} ${className}`}>
-    <nav aria-label="共通ナビゲーション" className="flex h-[52px] shrink-0 items-start px-3 pt-1">
-      <TopPageLink />
-    </nav>
     {children}
     <footer className={styles.footer}>練習用の想定です。災害時は公的情報に従ってください。</footer>
   </div>;
@@ -47,7 +44,8 @@ export function GameHeader({ title, subtitle, step, onBack, onHelp, actions, lea
       {leading ?? (onBack ? <button type="button" onClick={onBack} aria-label="戻る" className="grid size-11 shrink-0 place-items-center rounded-full bg-white"><GameIcon name="back" /></button> : <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary"><GameIcon name="route" /></span>)}
       <div className="min-w-0 flex-1"><h1 className="font-display text-lg font-bold leading-snug"><Furigana text={title} /></h1>{subtitle ? <p className="truncate text-11 text-ink-muted" title={subtitle}><Furigana text={subtitle} /></p> : null}</div>
       {actions}
-      {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" className="flex min-h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-2 text-11 font-bold"><GameIcon name="info" className="size-4" />使い方</button> : null}
+      {onHelp ? <button type="button" onClick={onHelp} aria-label="遊び方・設定" title="遊び方・設定" className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-white"><GameIcon name="info" /></button> : null}
+      <HeaderHomeLink />
     </div>
     <ol aria-label="体験の進み具合" className="mt-2 flex items-center gap-2">
       {(["準備", "体験", "ふりかえり"] as const).map((label, i) => <li key={label} aria-current={step === i + 1 ? "step" : undefined} className={`flex flex-1 items-center gap-1.5 text-[0.625rem] font-bold ${step >= i + 1 ? "text-blue-800" : "text-ink-soft"}`}><span className={`h-1 flex-1 rounded-full ${step >= i + 1 ? "bg-blue-600" : "bg-border"}`} /><span>{label}</span></li>)}

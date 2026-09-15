@@ -13,6 +13,45 @@ function load(file) {
 }
 const { POST } = load('src/app/api/room/analyze/route.ts');
 const request = body => new Request('http://localhost/api/room/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+test('lightweight image settings reach the API and keep both references and verification', async () => {
+  const { POST: aftermath } = load('src/app/api/room/aftermath/route.ts');
+  const originalFetch = global.fetch;
+  const keys = ['OPENAI_API_KEY', 'OPENAI_IMAGE_QUALITY', 'OPENAI_IMAGE_SIZE', 'OPENAI_MOCK_MODE'];
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  try {
+    process.env.OPENAI_API_KEY = 'test-only';
+    process.env.OPENAI_MOCK_MODE = 'false';
+    for (const [quality, size, expectedQuality, expectedSize] of [
+      ['low', '1152x768', 'low', '1152x768'], ['high', '1536x1024', 'high', '1536x1024'],
+      ['invalid', '1x1', 'medium', '1536x1024'],
+    ]) {
+      process.env.OPENAI_IMAGE_QUALITY = quality;
+      process.env.OPENAI_IMAGE_SIZE = size;
+      let comparisons = 0;
+      global.fetch = async (url, init) => {
+        if (url.endsWith('/edits')) {
+          assert.equal(init.body.get('quality'), expectedQuality);
+          assert.equal(init.body.get('size'), expectedSize);
+          assert.equal(init.body.getAll('image[]').length, 2);
+          assert.equal(init.body.get('output_format'), 'jpeg');
+          return Response.json({ data: [{ b64_json: 'AA==' }] });
+        }
+        comparisons++;
+        return Response.json({ output_text: JSON.stringify({ comparable: true, structureChanged: true, inventedObjects: false, maskRevealed: false }) });
+      };
+      const response = await aftermath(request({ image: 'data:image/png;base64,AA==' }));
+      assert.equal(comparisons, 1);
+      assert.equal(response.status, 502);
+      assert.equal((await response.json()).error, 'room-image-mismatch');
+    }
+  } finally {
+    global.fetch = originalFetch;
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
+    }
+  }
+});
 const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',

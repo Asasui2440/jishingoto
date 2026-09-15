@@ -13,6 +13,8 @@ import { roomObjectType, isCooktop, fallSource, EXIT_EXPLANATION } from "./room-
 import { HOME_KITCHEN_AFTER, SCENARIOS, shuffleChoices, type RoomSetting } from "./scenarios";
 import type { RoomView } from "./room-views";
 import { AFTER_SHAKING_QUESTIONS } from "./after-shaking-questions";
+import { adultQuestion } from "./adult-questions";
+import type { Audience } from "./settings";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -91,6 +93,8 @@ function questionForRisk(risk: Risk, index: number): Question {
 }
 
 export function withAdultSituation(question: Question, risk: Risk): Question {
+  // 条件付きの出題原稿は結果画面でもそのまま振り返る。
+  if (question.challenge) return question;
   if (question.id === HOME_KITCHEN_AFTER.id) return question;
   const name = adultText(risk.adultName ?? risk.name);
   const type = roomObjectType(risk);
@@ -115,7 +119,7 @@ function pickMany<T>(items: T[], count: number, random: () => number): T[] {
 }
 
 /** 写真で確認したコンロだけ火の元の問題を出す。 */
-export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "home", random = Math.random): Promise<Question[]> {
+export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "home", random = Math.random, audience: Audience = "child"): Promise<Question[]> {
   const roomQuestions = risks.filter((risk) => risk.confirmed).map((risk, index) => withAdultSituation(questionForRisk(risk, index), risk));
   const desk = roomQuestions.find((q) => q.choices.some((choice) => choice.id === "under-desk"));
   // 確認した別の家具でも身の守り方を考えられるよう、最大2問にする。
@@ -137,7 +141,7 @@ export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "hom
   after.push(...pickMany(pool, 5 - during.length - after.length, random));
   return during.map((q): Question => ({ ...q, phase: "during" }))
     .concat(after.map((q): Question => ({ ...q, phase: "after" })))
-    .map((q) => shuffleChoices(q, random));
+    .map((q) => shuffleChoices(audience === "adult" ? adultQuestion(q) : q, random));
 }
 
 export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test"; verification?: "checked" | "unavailable"; error?: string };

@@ -27,9 +27,13 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
   const apiKey = process.env.OPENAI_API_KEY;
   const mock = process.env.OPENAI_MOCK_MODE === "true";
-  const quality = process.env.OPENAI_IMAGE_QUALITY === "high" ? "high" : "medium";
+  const requestedQuality = process.env.OPENAI_IMAGE_QUALITY;
+  const quality = requestedQuality === "low" || requestedQuality === "high" ? requestedQuality : "medium";
+  // 比率を維持した軽量サイズも比較できる。未指定・不正値は従来の解像度。
+  const size = process.env.OPENAI_IMAGE_SIZE === "1152x768" ? "1152x768" : "1536x1024";
+  const model = process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2";
   const fail = (error: string, status = 502) => {
-    console.warn("Room image result", { error, status, elapsedMs: Date.now() - startedAt, quality });
+    console.warn("Room image result", { error, status, elapsedMs: Date.now() - startedAt, model, quality, size });
     return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
   };
   if (!apiKey && !mock) return fail("openai-not-configured", 503);
@@ -46,13 +50,13 @@ export async function POST(request: Request) {
   if (mock) return Response.json(mockResponse, { headers: { "Cache-Control": "no-store" } });
 
   const form = new FormData();
-  form.set("model", process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2");
+  form.set("model", model);
   form.append("image[]", file);
   try {
     const style = await readFile(join(process.cwd(), "public/illustrations/room-style-reference.jpeg"));
     form.append("image[]", new File([style], "style-reference.jpeg", { type: "image/jpeg" }));
   } catch { return fail("style-reference-unavailable", 500); }
-  form.set("size", "1536x1024");
+  form.set("size", size);
   form.set("quality", quality);
   form.set("output_format", "jpeg");
   form.set("output_compression", "85");
@@ -92,6 +96,6 @@ export async function POST(request: Request) {
   const generationMs = Date.now() - startedAt;
   const verification = await checkAftermath(body.image as string, imageUrl, objects, apiKey!);
   if (verification === "mismatch") return fail("room-image-mismatch");
-  console.info("Room image result", { verification, quality, generationMs, comparisonMs: Date.now() - startedAt - generationMs, elapsedMs: Date.now() - startedAt });
+  console.info("Room image result", { verification, model, quality, size, generationMs, comparisonMs: Date.now() - startedAt - generationMs, elapsedMs: Date.now() - startedAt });
   return Response.json({ imageUrl, verification }, { headers: { "Cache-Control": "no-store" } });
 }

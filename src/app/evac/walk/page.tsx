@@ -89,6 +89,8 @@ export default function EvacWalkPage() {
   </GameShell>;
 
   const connectionChanged = ready && mode === "api" && !!plan && !offRoute && !arrived && !automaticPano;
+  const routeRecovery = !hybrid && mode === "api" && (preparation?.status === "error" || connectionChanged);
+  const navigationAlert = routeRecovery ? preparation?.error ?? "道の接続が変わりました。道を再確認してください。" : error;
   const decisionBlocking = !!feedback || !!pending && (hybrid || preparation?.status !== "error");
   const moving = (hybrid || mode === "mock" || !!automaticPano) && walking && ready && !pending && !feedback && !notice && !arrived && !busy && !sheet;
   const events = walk.steps.filter(s => s.event);
@@ -138,18 +140,18 @@ export default function EvacWalkPage() {
           walking={moving} onAdvance={(!walking || !automaticPano) && ready && !pending && !feedback && !arrived && !sheet ? forward : undefined}
           arrived={arrived && ready} onReflect={() => { update({finishedAt:Date.now()}); router.push("/evac/report"); }} turn={Math.abs(turn) >= 25 ? turn : null}>
           {hud}
+          {navigationAlert && !street?.error ? <p role="alert" className={styles.navigationAlert}>{navigationAlert}</p> : null}
         </StreetStage>}
       </div>
-      {!hybrid && mode === "api" && (preparation?.status === "error" || connectionChanged || street?.error) ? <p role="alert" className={styles.navigationAlert}>{street?.error ?? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"}</p> : null}
       {!hybrid && mode === "api" && !arrived ? <button type="button" disabled={busy || !!feedback} onClick={startHybrid}
         className="mx-4 min-h-11 shrink-0 rounded-xl border border-border bg-white px-3 py-2 text-13 font-bold text-ink">画像のない区間もつないで歩く</button> : null}
-      {error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
+      {hybrid && error ? <p role="alert" className="mx-4 rounded-xl bg-warn-soft p-3 text-11">{error}</p> : null}
       {pending && (hybrid || preparation?.status !== "error") ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot} ${decisionVisible ? "" : styles.decisionHidden}`}>
         <div aria-hidden={!decisionVisible} inert={!decisionVisible} className={styles.decisionContent}>
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
             viewLabel={hybrid ? "地図・風景を確認する" : undefined} seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !decisionVisible || !!feedback} busy={busy}
             onViewStreet={() => setStreetPointId(step.pointId ?? step.id)}
-            onExtend={remaining => setTimerOverride(remaining + 10)} onDisableTimer={() => setTimerOverride(0)} onChoose={choose} />
+            onTimerChange={seconds => { update({ timerSeconds: seconds }); setTimerOverride(seconds); }} onChoose={choose} />
         </div>
       </div> : null}
       {(!initialReady && !ready && !error && !street?.error && preparation?.status !== "error") || announcingPoint ? <div role="status" data-testid="attention-toast" className={announcingPoint ? styles.attentionNotice : styles.loadingNotice}>
@@ -165,11 +167,15 @@ export default function EvacWalkPage() {
       </div> : null}
         <section className={styles.actions} aria-label="歩行の操作" inert={decisionBlocking} style={{ visibility: decisionBlocking ? "hidden" : "visible" }}>
 
-          {!hybrid && mode === "api" && (preparation?.status === "error" || connectionChanged) ? <div className="flex gap-2"><Button size="md" onClick={retryPlan}>道を再確認する</Button><Button size="md" variant="outline" onClick={() => router.push("/evac/routes")}>ルートを選び直す</Button></div> : null}
           {!arrived ? <div className="flex gap-2">
+            {routeRecovery ? <>
+              <Button size="md" onClick={() => { setWalking(false); retryPlan(); }}>道を再確認する</Button>
+              <Button size="md" variant="outline" onClick={() => { setWalking(false); router.push("/evac/routes"); }}>ルートを選び直す</Button>
+            </> : <>
               <Button size="md" disabled={!ready || busy || !canForward} onClick={forward}><GameIcon name="walk" />{mode === "api" && !hybrid ? "向いている道へ進む" : notice ? "先へ進む" : "進む"}</Button>
               <Button size="md" variant="outline" disabled={!walking && (!ready || busy || (!hybrid && mode === "api" && !automaticPano))} onClick={() => { if (notice) advance(); setWalking(!walking); }}><GameIcon name={walking ? "pause" : "play"} />{walking ? "一時停止" : "自動で歩く"}</Button>
-            </div> : null}
+            </>}
+          </div> : null}
         </section>
     </main>
     <AnswerFeedback feedback={feedback} busy={busy} error={error} onContinue={closeFeedback} />

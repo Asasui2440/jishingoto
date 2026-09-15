@@ -88,13 +88,6 @@ export default function SharePage() {
           <Button size="sm" className="min-h-11" onClick={() => router.push("/evac")}>フェーズ2へ</Button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="mx-auto p-2 font-display text-sm font-bold text-primary-ink underline underline-offset-2"
-        >
-          <Furigana text="ホームにもどる" />
-        </button>
       </div>
 
 
