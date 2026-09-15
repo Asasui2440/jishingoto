@@ -244,7 +244,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
   await noPageOverflow(page, page.getByRole("button",{name:"別のルートで試す",exact:true}));
   await page.screenshot({path:testInfo.outputPath("complete-options.png")});
   await page.getByRole("button",{name:"トップに戻る",exact:true}).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/home$/);
   await page.goto("/evac/complete");
   await page.getByRole("button",{name:"別のルートで試す",exact:true}).click();
   await expect(page).toHaveURL(/\/evac\/routes$/);

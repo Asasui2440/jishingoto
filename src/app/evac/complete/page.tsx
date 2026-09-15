@@ -48,6 +48,6 @@ export default function EvacCompletePage() {
         {error ? <p role="alert" className="text-13 text-danger">{error}</p> : null}
       </section>
     </main>
-    <div className="shrink-0 space-y-2 border-t border-border bg-surface px-4 py-2"><p className="text-center text-11 text-ink-muted">同じ出発地点・避難先で、別の道も試せます。</p><Button size="md" onClick={restart}>別のルートで試す</Button><Button size="md" variant="quiet" onClick={() => router.push("/")}>トップに戻る</Button></div>
+    <div className="shrink-0 space-y-2 border-t border-border bg-surface px-4 py-2"><p className="text-center text-11 text-ink-muted">同じ出発地点・避難先で、別の道も試せます。</p><Button size="md" onClick={restart}>別のルートで試す</Button><Button size="md" variant="quiet" onClick={() => router.push("/home")}>トップに戻る</Button></div>
   </GameShell>;
 }

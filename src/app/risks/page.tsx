@@ -145,9 +145,9 @@ export default function RoomRecognitionPage() {
                     </div>
                     <div className="relative overflow-hidden rounded-field bg-ink">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={photoUrl ?? roomRisk.src} alt={`${index + 1}番・${plain(risk.name)}の位置を確認する部屋の写真`} className="block h-auto w-full" />
-                      {risk.bounds && <span aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary bg-primary/15" style={{ left: `${risk.bounds.x}%`, top: `${risk.bounds.y}%`, width: `${risk.bounds.w}%`, height: `${risk.bounds.h}%` }} />}
-                      <span aria-hidden className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-primary font-bold text-ink" style={{ left: `${risk.x}%`, top: `${risk.y}%` }}>{index + 1}</span>
+                      <img src={shownPhoto ?? roomRisk.src} alt={`${index + 1}番・${plain(risk.name)}の位置を確認する部屋の写真`} className="block h-auto w-full" />
+                      {shownRisk?.bounds && <span aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary bg-primary/15" style={{ left: `${shownRisk.bounds.x}%`, top: `${shownRisk.bounds.y}%`, width: `${shownRisk.bounds.w}%`, height: `${shownRisk.bounds.h}%` }} />}
+                      <span aria-hidden className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-primary font-bold text-ink" style={{ left: `${shownRisk?.x ?? risk.x}%`, top: `${shownRisk?.y ?? risk.y}%` }}>{index + 1}</span>
                     </div>
                     <label htmlFor="object-name" className="text-13"><Furigana text={"名前"} /></label>
                     <input id="object-name" maxLength={40} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="min-h-11 rounded-field border border-border bg-surface px-3" />
