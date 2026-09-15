@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
 import { getEvac, useEvac } from "@/lib/evac";
 import { scoreDecisions } from "@/lib/evac-review";
+import { SurvivorVoice } from "@/components/SurvivorVoice";
+import { walkVoiceRequest } from "@/lib/voice-knowledge";
 
 export default function EvacSummaryPage() {
   const router = useRouter();
@@ -69,6 +71,7 @@ export default function EvacSummaryPage() {
         <h2 className="text-15 font-bold"><Furigana text={eventTitle(row.event.title)} /></h2>
         <ReviewIllustrations event={row.event} choice={row.choice} recommended={row.value < 1 ? row.recommended : undefined} />
         <ChoiceTradeoffs key={row.d.pointId} event={row.event} choice={row.choice} />
+        <SurvivorVoice request={walkVoiceRequest(row.event, evac.scenario, row.choice.id, row.d.timedOut)} />
         <details key={`reason-${row.d.pointId}`} className="rounded-tile bg-canvas p-3 text-13"><summary className="cursor-pointer font-bold">{row.value === 1 ? "この行動が良かった理由" : "次に意識したい理由"}</summary><p className="mt-2"><Furigana text={row.value === 1 ? row.choice.feedback : row.event.hint} /></p></details>
       </section> : null}
     </BottomSheet>

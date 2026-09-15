@@ -60,6 +60,22 @@ export const RISK_KINDS: Record<
   },
 };
 
+export type KnowledgeReference = {
+  id: string;
+  title: string;
+  checkedAt: string;
+  sources: { id: string; title: string; url: string }[];
+};
+
+export type RoomAssessment = {
+  observation: string;
+  scenario: string;
+  preparation: string;
+  unknowns: string[];
+  references: KnowledgeReference[];
+  knowledgeRevision: string;
+};
+
 export type Risk = {
   id: string;
   /** 家具などの名前 */
@@ -73,6 +89,8 @@ export type Risk = {
   objectType?: RoomObjectType;
   /** AI の自信度 0–1。ユーザーが自分で足したものは undefined */
   confidence?: number;
+  /** 写真の観察と、ナレッジを参照した条件付きの想定・備え。 */
+  assessment?: RoomAssessment;
   /** 写真上の位置（％）。マーカーの表示に使う */
   x: number;
   y: number;
@@ -132,6 +150,8 @@ export type Choice = {
 };
 
 export type Question = {
+  /** 確認済みの体験談と結ぶ固定の教材キー。動的IDや選択肢の位置を使わない。 */
+  knowledgeKey?: string;
   sources?: { title: string; url: string }[];
   phase?: "during" | "after";
   id: string;

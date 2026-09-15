@@ -80,9 +80,9 @@ function questionForRisk(risk: Risk, index: number): Question {
   const region = risk.bounds ?? { x, y, w: Math.min(26, 100 - x), h: Math.min(36, 100 - y) };
   const common = { id: `room-${risk.id}-${index}`, sourceRiskId: risk.id, riskKind: risk.kind, place: risk.name, highlight: { ...region, label: risk.name }, seconds: 10 };
   if (isCooktop(risk)) return { ...HOME_KITCHEN_AFTER, ...common, id: HOME_KITCHEN_AFTER.id, seconds: 12 };
-  if (type === "desk") return { ...common, axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
+  if (type === "desk") return { ...common, knowledgeKey: "room.desk.during", axis: "initial", category: "瞬間[しゅんかん]判断[はんだん]", situation: `強[つよ]いゆれが来[き]ました。近[ちか]くに${risk.name}があります。`, choices: SIMPLE_CHOICES.desk };
   if (type === "elevated_objects") return { ...common, axis: "initial", category: "落下物に注意", situation: `強い揺れで、${risk.name}が棚から落ちそうです。`, choices: SIMPLE_CHOICES.move };
-  if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
+  if (type === "loose_objects" || risk.kind === "block" || type === "doorway") return { ...common, knowledgeKey: "room.floor.after", phase: "after", axis: "evacuation", category: "ゆれがおさまったあと", situation: `ゆれがおさまりました。${risk.name}の近くの床[ゆか]に物[もの]が散[ち]らばり、通[とお]りにくくなった場面[ばめん]を考[かんが]えてね。`, seconds: 12, choices: SIMPLE_CHOICES.exit };
   if (type === "window") {
     const base = QUESTIONS.find((question) => question.id === "q6")!;
     return { ...base, ...common, riskKind: "break", situation: `${risk.name}のすぐそばで、強[つよ]いゆれにあいました。` };

@@ -1,0 +1,4 @@
+interface:
+  display_name: "室内の地震対策アドバイザー"
+  short_description: "室内写真と被災事例から条件付きの被害想定と具体的な備えを整理する"
+  default_prompt: "$room-quake-advisor を使って、この部屋の写真から地震時に起こり得る被害と優先して行う対策を、根拠と不明点を添えて説明してください。"
