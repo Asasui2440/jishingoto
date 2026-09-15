@@ -14,8 +14,8 @@ type Preparation = {
 };
 const empty = (): Preparation => ({ analysisJob: null, imageJob: null });
 const jobs: Preparation = typeof window === "undefined" ? empty() : (() => {
-  const scope = globalThis as typeof globalThis & { __jishingotoPreparationV2?: Preparation };
-  return scope.__jishingotoPreparationV2 ??= empty();
+  const scope = globalThis as typeof globalThis & { __jishingotoPreparationV3?: Preparation };
+  return scope.__jishingotoPreparationV3 ??= empty();
 })();
 
 export function prepareAftermath(photo: string | null, risks: Risk[], retry = false): Promise<Aftermath> {
