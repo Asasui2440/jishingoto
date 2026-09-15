@@ -11,6 +11,7 @@ import { ReviewIllustrations } from "@/components/evac/ReviewIllustrations";
 import { RoomConnectionSummary } from "@/components/evac/RoomConnectionSummary";
 import { RouteLegend } from "@/components/evac/RouteLegend";
 import { EvacModeBadge } from "@/components/evac/EvacMode";
+import { OfflineRouteSave } from "@/components/evac/OfflineRouteSave";
 import { EvacMap } from "@/components/evac/EvacMap";
 import { Button } from "@/components/ui/Button";
 import { Furigana } from "@/components/ui/Furigana";
@@ -19,7 +20,7 @@ import { formatDistance, formatDuration, getEvac, totalSeconds, useEvac } from "
 import { walkedPath, walkDistance } from "@/lib/evac-walk";
 import { useSession } from "@/lib/session";
 
-type Sheet = "decision" | "route" | "help" | "room" | null;
+type Sheet = "offline" | "decision" | "route" | "help" | "room" | null;
 
 /** 記録は地図で一覧し、選択の理由と次の行動はその場で開いて確かめる。 */
 export default function EvacReportPage() {
@@ -58,7 +59,7 @@ export default function EvacReportPage() {
     setSelectedId(id);
     setSheet("decision");
   };
-  const sheetTitle = sheet === "decision" ? `判断 ${selectedIndex + 1} / ${rows.length}`
+  const sheetTitle = sheet === "offline" ? "マップと避難所を保存" : sheet === "decision" ? `判断 ${selectedIndex + 1} / ${rows.length}`
     : sheet === "route" ? "通った道の記録"
     : sheet === "room" ? "部屋から避難まで"
     : "この記録について";
@@ -119,13 +120,21 @@ export default function EvacReportPage() {
           </div></div> : <button type="button" onClick={() => setSheet("help")} className="flex min-h-11 w-full items-center gap-2 rounded-field bg-primary-soft px-3 py-2 text-left text-11 text-primary-ink"><GameIcon name="info" className="size-4 shrink-0" /><span>今回は出題なし。経路の安全を示すものではありません。</span></button>}
         </section>
 
+        <div className="shrink-0 space-y-2 rounded-tile border border-primary-mid bg-primary-soft p-3">
+          <button type="button" disabled={!home || !shelter || !evac.finishedAt} onClick={() => setSheet("offline")} aria-describedby="offline-save-description" className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-13 font-bold text-ink disabled:opacity-40">
+            <GameIcon name="map" className="size-5" />このマップと避難所を保存する
+          </button>
+          <p id="offline-save-description" className="text-13 leading-relaxed text-primary-ink"><strong className="block text-15">災害時も、オフラインで使える。</strong>保存した地図で現在地を確認し、選んだ避難先までの経路を表示できます。</p>
+        </div>
+
         <Button onClick={() => router.push("/evac/summary")}>判断のスコアを見る<GameIcon name="chevron" className="size-5" /></Button>
       </main>
 
-      <BottomSheet open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)} footer={sheet === "decision" && selected ? <nav aria-label="判断の切り替え" className="flex gap-2">
+      <BottomSheet expanded={sheet === "offline"} open={sheet !== null} title={sheetTitle} onClose={() => setSheet(null)} footer={sheet === "decision" && selected ? <nav aria-label="判断の切り替え" className="flex gap-2">
         <Button size="md" variant="quiet" disabled={selectedIndex === 0} onClick={() => setSelectedId(rows[selectedIndex - 1].d.pointId)}>前の判断</Button>
         <Button size="md" onClick={() => selectedIndex < rows.length - 1 ? setSelectedId(rows[selectedIndex + 1].d.pointId) : setSheet(null)}>{selectedIndex < rows.length - 1 ? "次の判断" : "判断を閉じる"}</Button>
       </nav> : undefined}>
+        {sheet === "offline" && home && shelter && evac.finishedAt ? <OfflineRouteSave scenario={evac.scenario ?? "earthquake"} home={home} shelter={shelter} finishedAt={evac.finishedAt} followUp={evac.followUp} demo={mode === "mock" || !!startRoute?.demo} /> : null}
         {sheet === "decision" && selected ? <div className="space-y-4">
           <div>
             <p className="text-15 font-bold text-ink"><Furigana text={eventTitle(selected.event.title)} /></p>

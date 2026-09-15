@@ -1,10 +1,10 @@
 import type { ComponentProps } from "react";
 
-/** Figma の白カード（rounded-20 / 影ひかえめ） */
+/** 元の角丸を保った、細い枠の白いカード。 */
 export function Card({ className = "", ...props }: ComponentProps<"div">) {
   return (
     <div
-      className={["rounded-card bg-surface p-4 shadow-[0_8px_9px_rgba(0,0,0,0.04)]", className].join(" ")}
+      className={["rounded-card border border-border bg-surface p-4", className].join(" ")}
       {...props}
     />
   );

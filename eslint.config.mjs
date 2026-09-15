@@ -27,6 +27,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/offline-evac/vendor/**",
     // 自動生成（Figma から書き出した SVG をそのまま React 化したもの）
     "src/components/icons.tsx",
   ]),

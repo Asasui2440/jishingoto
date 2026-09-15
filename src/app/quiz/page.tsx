@@ -1,10 +1,9 @@
 "use client";
 
-import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import { questionRoomView } from "@/lib/room-views";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import roomQuiz from "@/../public/figma/img/room-risk.jpg";
 import { ChevronRightIcon, Volume2Icon } from "@/components/icons";
 import { Meter, Tag } from "@/components/ui/Bits";
@@ -88,8 +87,7 @@ function QuestionView({
       {intro && <div role="alert" className="fixed inset-0 z-50 grid place-items-center bg-ink/90 px-6 text-center text-white"><div className={shaking ? "animate-quake" : ""}><p className="text-sm font-bold"><Furigana text={"この部屋で地震が発生"} /></p><p className="mt-3 text-3xl font-black"><Furigana text={"揺れが始まりました！"} /></p></div></div>}
       <div>
         <StatusBar />
-        <div className="flex items-center gap-2 px-6 pt-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between px-6 pt-3">
           <div className="flex items-center gap-2">
             <span className="font-display text-sm font-black text-primary-ink">Q{index + 1}</span>
             <span className="text-13 text-ink-muted">
@@ -100,7 +98,6 @@ function QuestionView({
             <Volume2Icon className="size-4" />
             <Furigana text={"音・振動:"} /><Furigana text={sound ? "ON" : "OFF"} />
           </span>
-          </div><HeaderHomeLink />
         </div>
         {/* 全問終わるまで結果は出さないので、進み具合だけ見せる */}
         <div className="mt-2 px-6">
@@ -114,7 +111,8 @@ function QuestionView({
         </div>
       </div>
 
-      <div className={["flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+      <div className={["quiz-content flex flex-col gap-3 px-6 pt-2 pb-4", shaking ? "animate-quake" : ""].join(" ")}>
+        <div className="quiz-room flex flex-col gap-3">
         {/* 部屋で「あぶない」と確認した場所が、そのまま問題になる */}
         {kind && question.place ? (
           <div className="flex items-center gap-2">
@@ -132,7 +130,7 @@ function QuestionView({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt="問題の対象物が写っている部屋" className="block h-auto w-full" />
           ) : (
-            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 402px) 100vw, 402px" className="block h-auto w-full" priority />
+            <Image src={roomQuiz} alt="問題の対象物があるサンプルの部屋" sizes="(max-width: 639px) 100vw, 560px" className="block h-auto w-full" priority />
           )}
 
           {question.highlight ? (
@@ -176,13 +174,15 @@ function QuestionView({
           ) : null}
         </div></div>
 
+        </div>
+        <div className="quiz-question flex flex-col gap-3">
         <Card className="p-3">
           <p className="font-display text-lg font-bold text-ink">
             <Furigana text={question.situation} adult={question.adultSituation} />
           </p>
         </Card>
 
-        {!question.sourceRiskId && <p className="text-xs text-ink-muted"><Furigana text={"どの部屋でも役立つ共通の問題です。"} /></p>}
+        {!question.sourceRiskId && <p className="text-xs text-ink-muted">どの部屋でも役立つ共通の問題です。</p>}
 
 
         <ul className="flex flex-col gap-2.5">
@@ -210,6 +210,7 @@ function QuestionView({
             </li>
           ))}
         </ul>
+        </div>
       </div>
 
       <DisclaimerFooter />
@@ -225,6 +226,7 @@ export default function QuizPage() {
 
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [index, setIndex] = useState(0);
+  const answeredQuestion = useRef<string | null>(null);
 
   // 部屋で確認した危険にひもづく設問を取りに行く
   useEffect(() => {
@@ -251,6 +253,9 @@ export default function QuizPage() {
     (choice: Choice, timedOut: boolean) => {
       if (!questions) return;
       const question = questions[index];
+      // 連打や時間切れとタップの競合でも、同じ回答から二度進めない。
+      if (answeredQuestion.current === question.id) return;
+      answeredQuestion.current = question.id;
 
       // answer は同じ設問への回答を上書きするので、進む前に記録しておく
       answer({
@@ -268,7 +273,7 @@ export default function QuizPage() {
       if (index + 1 < questions.length) {
         setIndex(index + 1);
       } else {
-        update({ finishedAt: Date.now() });
+        update({ finishedAt: Date.now(), resultStep: 0, resultIntroPending: true });
         router.push("/result");
       }
     },
@@ -279,7 +284,7 @@ export default function QuizPage() {
     return (
       <div className="flex min-h-dvh flex-col justify-between">
         <StatusBar />
-        <header className="flex items-center gap-2 px-6 pt-3"><p className="min-w-0 flex-1 text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p><HeaderHomeLink /></header>
+        <p className="px-6 text-center text-13 text-ink-muted"><Furigana text={"問題を用意しています..."} /></p>
         <DisclaimerFooter />
       </div>
     );

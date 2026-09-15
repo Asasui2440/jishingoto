@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 
 
 export function AftermathShare({ photoUrl, risks, onFileReady, allowShare = true, allowSave = true }: { photoUrl: string | null; risks: Risk[]; onFileReady?: (file: File | null) => void; allowShare?: boolean; allowSave?: boolean }) {
+  const [comparisonUnavailable, setComparisonUnavailable] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -26,6 +27,7 @@ export function AftermathShare({ photoUrl, risks, onFileReady, allowShare = true
         setStatus(result.error ?? "表示できるAI予想図がありません。");
         return;
       }
+      setComparisonUnavailable(result.verification === "unavailable");
       const next = await createAftermathShareFile(result.imageUrl);
       if (!alive) return;
       objectUrl = URL.createObjectURL(next);
@@ -61,6 +63,7 @@ export function AftermathShare({ photoUrl, risks, onFileReady, allowShare = true
     {preview && <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={preview} alt="AIによる地震後の部屋の予想図。実際の被害写真ではありません" className="mx-auto h-auto w-[88%] rounded-field" />
+      {comparisonUnavailable && <p className="text-sm leading-relaxed text-ink-muted">元写真との自動比較は完了していません。部屋の形や家具を見比べてから保存・共有してください。</p>}
       {allowShare && <p className="text-sm leading-relaxed"><Furigana text={"公開前に、顔・名前・住所などが残っていないか確認してください。"} /></p>}
       {(allowShare || allowSave) && <div className={allowShare && allowSave ? "grid grid-cols-2 gap-2" : "flex justify-center"}>{allowShare && <Button size="md" onClick={() => void share()} disabled={busy}><Furigana text={"予想図を共有"} /></Button>}{allowSave && <Button size="md" variant="outline" onClick={save} disabled={busy}><Furigana text={"予想図を保存"} /></Button>}</div>}
 

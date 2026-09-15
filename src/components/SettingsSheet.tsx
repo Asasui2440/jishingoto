@@ -98,7 +98,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="animate-rise relative w-full max-w-[402px] rounded-t-[28px] bg-surface px-6 pt-5 outline-none"
+        className="settings-panel animate-rise relative rounded-t-[28px] bg-surface px-6 pt-5 outline-none"
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="font-display text-lg font-bold text-ink">

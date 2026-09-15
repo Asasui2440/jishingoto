@@ -21,9 +21,9 @@ export function DetailSheet({ title, summary, children, onOpenChange }: { title:
       document.body.style.overflow = "hidden";
       locked.current = true;
       onOpenChange?.(true);
-    }} className="flex min-h-12 w-full items-center gap-3 rounded-field border border-border bg-surface px-4 py-3 text-left">
+    }} className="detail-trigger flex min-h-12 w-full items-center gap-3 border-b border-border bg-transparent px-1 py-3 text-left">
       <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-primary-ink"><Furigana text={title} /></span>{summary && <span className="mt-1 block text-xs leading-relaxed text-ink-muted"><Furigana text={summary} /></span>}</span>
-      <span aria-hidden className="text-primary-ink">＋</span>
+      <span aria-hidden className="text-glass">＋</span>
     </button>
     <dialog ref={dialog} aria-labelledby={titleId} className="detail-sheet" onClick={event => { if (event.target === event.currentTarget) close(); }} onClose={() => {
       document.body.style.overflow = previousOverflow.current;

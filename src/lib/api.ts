@@ -1,3 +1,4 @@
+import { aftermathObjects } from "./aftermath-plan";
 /** ブラウザからアプリ内 Route Handler を呼ぶための境界。 */
 import {
   DETECTED_RISKS,
@@ -10,6 +11,7 @@ import {
 import { adultText } from "./adult-copy";
 import { roomObjectType, isCooktop, EXIT_EXPLANATION } from "./room-guidance";
 import { HOME_KITCHEN_AFTER, SCENARIOS, shuffleChoices, type RoomSetting } from "./scenarios";
+import type { RoomView } from "./room-views";
 import { AFTER_SHAKING_QUESTIONS } from "./after-shaking-questions";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,12 +26,12 @@ export async function detectBlurRegions(_photo?: Blob): Promise<BlurRegion[]> {
 export type RoomAnalysis = { risks: Risk[]; source: "ai" | "demo"; warning?: string };
 
 /** 撮影した部屋を OpenAI の画像理解モデルで解析する。 */
-export async function analyzeRoom(photoUrl: string | null): Promise<RoomAnalysis> {
+export async function analyzeRoom(photoUrl: string | null, views: RoomView[] = []): Promise<RoomAnalysis> {
   if (!photoUrl?.startsWith("data:image/")) {
     return { risks: DETECTED_RISKS.map((risk) => ({ ...risk })), source: "demo", warning: "写真がないため、サンプルの解析結果を表示しています。" };
   }
   try {
-    const response = await fetch("/api/room/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photoUrl }) });
+    const response = await fetch("/api/room/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(views.length ? { views } : { image: photoUrl }) });
     if (!response.ok) throw new Error("analysis failed");
     const body = (await response.json()) as { risks?: Risk[]; source?: RoomAnalysis["source"]; warning?: string };
     if (!Array.isArray(body.risks)) throw new Error("invalid analysis");
@@ -141,7 +143,7 @@ export async function fetchQuestions(risks: Risk[], _setting: RoomSetting = "hom
     .map((q) => shuffleChoices(q, random));
 }
 
-export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test"; error?: string };
+export type Aftermath = { imageUrl: string | null; events: { riskId: string; text: string; adultText: string }[]; source: "ai" | "preview" | "test"; verification?: "checked" | "unavailable"; error?: string };
 const AFTERMATH_TEXT: Record<Risk["kind"], string> = { fall: "たおれたり落[お]ちたりして、人[ひと]に当[あ]たるかもしれない", break: "われて、床[ゆか]に破片[はへん]が散[ち]らばるかもしれない", block: "動[うご]いたりくずれたりして、床[ゆか]の通[とお]り道[みち]をふさぐかもしれない" };
 
 export function aftermathEvents(risks: Risk[]): Aftermath["events"] {
@@ -157,23 +159,29 @@ export function aftermathEvents(risks: Risk[]): Aftermath["events"] {
   }));
 }
 
-export async function generateAftermath(photo: string | null): Promise<Aftermath> {
+export async function generateAftermath(photo: string | null, risks: Risk[] = []): Promise<Aftermath> {
   const events: Aftermath["events"] = [];
   if (!photo?.startsWith("data:image/")) return { imageUrl: null, events, source: "preview", error: "写真がありません。写真を選び直してください。" };
   try {
-    const response = await fetch("/api/room/aftermath", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photo }) });
+    if (photo.length > 4_000_000) return { imageUrl: null, events, source: "preview", error: "写真のデータが大きすぎます。写真を選び直してください。" };
+    const response = await fetch("/api/room/aftermath", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: photo, objects: aftermathObjects(risks) }), signal: AbortSignal.timeout(225_000) });
     if (!response.ok) {
       const failure = await response.json().catch(() => ({})) as { error?: string };
       const messages: Record<string, string> = {
+        "room-image-mismatch": "元の部屋と大きく異なる画像になったため、表示を見送りました。もう一度作成できます。",
         "openai-not-configured": "画像生成の設定がまだ完了していません。",
         "openai-rate-limit": "画像生成が混み合っているか、利用上限に達しています。時間をおいて試してください。",
-        "openai-timeout": "画像生成に時間がかかりすぎました。もう一度試してください。",
+        "openai-timeout": "画像生成に時間がかかりすぎました。時間をおいて、もう一度試してください。",
+        "openai-quota": "画像生成の利用上限に達しています。管理者によるAPIの利用設定の確認が必要です。",
+        "image-too-large": "写真のデータが大きすぎます。写真を選び直してください。",
+        "generated-image-too-large": "生成した画像のデータが大きすぎました。もう一度試してください。",
+        "openai-unreachable": "画像生成サービスに接続できませんでした。時間をおいて試してください。",
       };
-      return { imageUrl: null, events, source: "preview", error: messages[failure.error ?? ""] ?? "予想図を生成できませんでした。もう一度試してください。" };
+      return { imageUrl: null, events, source: "preview", error: messages[failure.error ?? ""] ?? (response.status === 504 ? messages["openai-timeout"] : response.status === 413 ? messages["image-too-large"] : "予想図を生成できませんでした。もう一度試してください。") };
     }
-    const body = (await response.json()) as { imageUrl?: string; source?: Aftermath["source"] };
-    return { imageUrl: body.imageUrl ?? null, events, source: body.source === "test" ? "test" : body.imageUrl ? "ai" : "preview" };
-  } catch {
-    return { imageUrl: null, events, source: "preview", error: "通信できませんでした。接続を確認して、もう一度試してください。" };
+    const body = (await response.json()) as { imageUrl?: string; source?: Aftermath["source"]; verification?: Aftermath["verification"] };
+    return { imageUrl: body.imageUrl ?? null, events, verification: body.verification, source: body.source === "test" ? "test" : body.imageUrl ? "ai" : "preview" };
+  } catch (error) {
+    return { imageUrl: null, events, source: "preview", error: error instanceof Error && error.name === "TimeoutError" ? "画像生成に時間がかかりすぎました。時間をおいて、もう一度試してください。" : "通信できませんでした。接続を確認して、もう一度試してください。" };
   }
 }

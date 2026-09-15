@@ -1,6 +1,7 @@
 "use client";
 
-import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
+import { aftermathInput } from "@/lib/aftermath-plan";
+import { preparedAftermath } from "@/lib/room-preparation";
 import { SocialImageShare } from "@/components/SocialImageShare";
 import { preparePredictionImage, resultImageError } from "@/lib/result-image";
 import { useRouter } from "next/navigation";
@@ -16,13 +17,13 @@ import { APP_SHARE_URL, quizShareText } from "@/lib/social-share";
 export default function SharePage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { answers, risks, photoUrl, aftermathPhotoUrl } = useSession();
+  const { answers, risks, photoUrl, aftermathPhotoUrl, roomViews } = useSession();
   const [includeImage, setIncludeImage] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   const scores = useMemo(() => scoreByAxis(answers, risks), [answers, risks]);
-  const exportInput = useMemo(() => ({ scores, audience, photoUrl, aftermathPhotoUrl, risks, attempt }), [scores, audience, photoUrl, aftermathPhotoUrl, risks, attempt]);
-  const [rendered, setRendered] = useState<{ input: typeof exportInput; predictionFile: File | null; predictionUrl: string | null; error: string } | null>(null);
+  const exportInput = useMemo(() => ({ scores, audience, ...aftermathInput({ photoUrl, aftermathPhotoUrl, roomViews, risks }), attempt }), [scores, audience, photoUrl, aftermathPhotoUrl, roomViews, risks, attempt]);
+  const [rendered, setRendered] = useState<{ input: typeof exportInput; predictionFile: File | null; predictionUrl: string | null; error: string; comparisonUnavailable?: boolean } | null>(null);
   const current = rendered?.input === exportInput ? rendered : null;
   const mock = current?.predictionFile?.name === "jishingoto-sample-room.png";
   const imageShareText = quizShareText(scores, includeImage && mock);
@@ -36,14 +37,12 @@ export default function SharePage() {
     if (!includeImage) return;
     let alive = true;
     let predictionUrl: string | null = null;
-    const { photoUrl, aftermathPhotoUrl, risks, attempt } = exportInput;
+    const { photo, risks, attempt } = exportInput;
     void (async () => {
-      const photo = aftermathPhotoUrl ?? photoUrl;
-      const confirmed = aftermathPhotoUrl ? [] : risks.filter(r => r.confirmed);
-      const predictionFile = await preparePredictionImage(photo, confirmed, attempt > 0);
+      const predictionFile = await preparePredictionImage(photo, risks, attempt > 0);
       if (!alive) return;
       predictionUrl = URL.createObjectURL(predictionFile);
-      setRendered({ input: exportInput, predictionFile, predictionUrl, error: "" });
+      setRendered({ input: exportInput, predictionFile, predictionUrl, error: "", comparisonUnavailable: preparedAftermath(photo, risks)?.verification === "unavailable" });
     })().catch(error => { if (alive) setRendered({ input: exportInput, predictionFile: null, predictionUrl: null, error: resultImageError(error).message }); });
     return () => { alive = false; if (predictionUrl) URL.revokeObjectURL(predictionUrl); };
   }, [exportInput, includeImage]);
@@ -53,13 +52,12 @@ export default function SharePage() {
       <div>
         <StatusBar />
         <div className="flex items-center justify-between px-6 pt-3">
-          <h1 className="min-w-0 flex-1 font-display text-lg font-bold text-ink">
+          <h1 className="font-display text-lg font-bold text-ink">
             <Furigana text="結果を共有" />
           </h1>
-          <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"} className="grid size-11 shrink-0 place-items-center">
+          <button type="button" onClick={() => router.push("/result")} aria-label={audience === "adult" ? "閉じる" : "とじる"}>
             <XCircleDarkIcon className="size-6 text-ink" />
           </button>
-          <HeaderHomeLink />
         </div>
       </div>
 
@@ -79,6 +77,7 @@ export default function SharePage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={current.predictionUrl} alt={mock ? "共有するサンプルの予想図" : "共有する地震後の予想図"} className="mx-auto h-auto w-[88%] rounded-field" />
           </figure> : <p role="status" className="text-sm"><Furigana text={error || "共有する予想図を準備しているよ。点数とリンクだけなら、チェックを外して共有できるよ。"} /></p>)}
+          {includeImage && current?.comparisonUnavailable && <p className="text-sm text-ink-muted">元写真との自動比較は完了していません。部屋の形や家具を見比べてから共有してください。</p>}
           {includeImage && error && <Button variant="outline" size="sm" onClick={() => setAttempt(n => n + 1)}><Furigana text="もう一度試す" /></Button>}
           <SocialImageShare platform="LINE" file={current?.predictionFile ?? null} includeImage={includeImage} text={imageShareText} url={APP_SHARE_URL} />
           {audience === "adult" && <SocialImageShare platform="X" file={current?.predictionFile ?? null} includeImage={includeImage} text={imageShareText} url={APP_SHARE_URL} />}

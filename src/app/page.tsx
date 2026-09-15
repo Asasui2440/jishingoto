@@ -19,7 +19,7 @@ export default function AudiencePage() {
         <span className="grid size-20 place-items-center rounded-full bg-primary-soft">
           <LogoCircleXIcon className="size-9 text-primary-ink" />
         </span>
-        <p className="font-display text-40 font-black leading-none text-accent">ジシンゴト</p>
+        <p className="font-display text-40 font-black leading-none text-primary-ink">ジシンゴト！</p>
         <p className="text-sm font-bold text-ink-muted">地震＋自分事</p>
       </header>
         <section aria-labelledby="audience-heading" className="flex flex-col gap-4">
@@ -42,7 +42,7 @@ export default function AudiencePage() {
             <button
               type="button"
               onClick={() => start("adult")}
-              className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-panel border-2 border-border bg-surface px-3 py-5 text-ink transition-colors hover:border-primary-mid hover:bg-primary-soft active:bg-primary-soft"
+              className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-panel border-2 border-[#9fc9df] bg-glass-soft px-3 py-5 text-ink transition-colors hover:border-glass hover:bg-[#d5eaf7] active:bg-[#c4e1f3]"
             >
               <span className="text-xs font-bold text-ink-muted">おとな</span>
               <span className="font-display text-28 font-extrabold">大人</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import { HeaderHomeLink } from "@/components/ui/PhaseOneNavigation";
 import Image from "next/image";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { useRouter } from "next/navigation";
@@ -13,6 +12,8 @@ import { type Risk, type RiskKind, type RoomObjectType } from "@/lib/content";
 import { getSession, useSession } from "@/lib/session";
 import { viewForRisk, riskOnView, groupRisksByView } from "@/lib/room-views";
 import { focusDescription } from "@/lib/focus-description";
+import { aftermathInput } from "@/lib/aftermath-plan";
+import { prepareAftermath } from "@/lib/room-preparation";
 import { SafetyProducts } from "@/components/SafetyProducts";
 import { RISK_KINDS } from "@/lib/content";
 import { useSettings } from "@/lib/settings";
@@ -52,7 +53,7 @@ const OBJECTS: { value: RoomObjectType; label: string; kind: RiskKind }[] = [
 export default function RoomRecognitionPage() {
   const router = useRouter();
   const { audience } = useSettings();
-  const { risks: sessionRisks, photoUrl, roomViews = [], analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
+  const { risks: sessionRisks, roomViews = [], photoUrl, analysisSource, analysisWarning, checked, toggleChecked, update } = useSession();
   const risks = groupRisksByView(sessionRisks, roomViews);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const allReviewed = risks.every(risk => reviewedIds.includes(risk.id));
@@ -114,7 +115,12 @@ export default function RoomRecognitionPage() {
       questions: [],
       answers: [],
       finishedAt: null,
+      resultStep: 0,
+      resultIntroPending: false,
     }));
+    const session = getSession();
+    const prediction = aftermathInput(session);
+    void prepareAftermath(prediction.photo, prediction.risks);
     router.push("/quiz");
   };
 
@@ -123,8 +129,8 @@ export default function RoomRecognitionPage() {
       <StatusBar />
       <main className="flex flex-1 flex-col gap-3 px-5 py-3">
         <div>
-          <header className="flex items-center gap-2"><div className="min-w-0 flex-1"><p className="text-11 font-bold text-primary-ink"><Furigana text="体験の準備" /></p>
-          <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1></div><HeaderHomeLink /></header>
+          <p className="text-11 font-bold text-primary-ink">体験の準備</p>
+          <h1 className="mt-2 font-display text-xl font-bold"><Furigana text="部屋[へや]の危険[きけん]を確認[かくにん]しよう" adult="室内の危険候補を確認" /></h1>
           <p className="mt-2 text-13 text-ink-muted"><Furigana text="写真[しゃしん]の番号[ばんごう]を押[お]して、危険[きけん]と備[そな]えを確認[かくにん]しよう。" adult="写真の番号を選ぶと、危険の理由と対策を確認できます。" /></p>
         </div>
         {analysisSource === "demo" && <p role="status" className="rounded-field bg-warn-soft p-3 text-11 text-warn">{analysisWarning ?? "サンプルの部屋で体験できます。"}</p>}
@@ -149,21 +155,21 @@ export default function RoomRecognitionPage() {
                       {shownRisk?.bounds && <span aria-hidden className="pointer-events-none absolute rounded-field border-[3px] border-primary bg-primary/15" style={{ left: `${shownRisk.bounds.x}%`, top: `${shownRisk.bounds.y}%`, width: `${shownRisk.bounds.w}%`, height: `${shownRisk.bounds.h}%` }} />}
                       <span aria-hidden className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-primary font-bold text-ink" style={{ left: `${shownRisk?.x ?? risk.x}%`, top: `${shownRisk?.y ?? risk.y}%` }}>{index + 1}</span>
                     </div>
-                    <label htmlFor="object-name" className="text-13"><Furigana text={"名前"} /></label>
+                    <label htmlFor="object-name" className="text-13">名前</label>
                     <input id="object-name" maxLength={40} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="min-h-11 rounded-field border border-border bg-surface px-3" />
-                    <label htmlFor="object-type" className="text-13"><Furigana text={"何が写っていますか？"} /></label>
+                    <label htmlFor="object-type" className="text-13">何が写っていますか？</label>
                     <select id="object-type" value={draft.objectType} onChange={(event) => setDraft({ ...draft, objectType: event.target.value as RoomObjectType })} className="min-h-11 rounded-field border border-border bg-surface px-3">
                       {OBJECTS.map((object) => <option key={object.value} value={object.value}>{object.label}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <Button size="md" type="button" variant="outline" onClick={event => event.currentTarget.closest("dialog")?.close()}>キャンセル</Button>
-                      <Button size="md" type="submit" disabled={!draft.name.trim()}><Furigana text={"保存"} /></Button>
+                      <Button size="md" type="submit" disabled={!draft.name.trim()}>保存</Button>
                     </div>
                     <button type="button" className="min-h-11 text-13 text-ink-muted underline" onClick={() => {
                       update((prev) => ({ ...prev, risks: prev.risks.filter((item) => item.id !== risk.id) }));
                       setEditing(null);
                       setEditNotice("対象を一覧から外しました。続ける場合は別の番号を選んでください。");
-                    }}><Furigana text={"これは写っていない（一覧から外す）"} /></button>
+                    }}>これは写っていない（一覧から外す）</button>
                   </form>
               </li>
             ))}
@@ -196,9 +202,7 @@ export default function RoomRecognitionPage() {
         </div>
         {selected && selectedAdvice && <article className="rounded-panel bg-surface p-4" aria-live="polite">
           <p className="text-11 font-bold" style={{ color: RISK_KINDS[selected.kind].text }}><Furigana text={RISK_KINDS[selected.kind].label} /></p>
-          <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="mt-1 font-display text-lg font-bold">{selectedIndex + 1}. <Furigana text={selected.name} adult={selected.adultName} /></h2>
-          </div>
           <p className="mt-2 text-13 leading-relaxed text-ink-muted"><Furigana text={DANGER_TEXT[selected.kind].child} adult={DANGER_TEXT[selected.kind].adult} /></p>
           <p className="mt-2 text-sm font-bold text-secondary-ink"><Furigana text={selectedAdvice.headline} /></p>
           <AdviceIllustration key={selected.id} risk={selected} />
