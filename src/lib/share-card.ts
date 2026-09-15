@@ -19,9 +19,9 @@ export const SUMMARY_COPY = {
   title: "あなたの防災4つのチカラ",
   description: "選んだ行動を振り返り、次の備えにつなげよう。",
   adultDescription: "今回の判断を振り返り、次の備えにつなげましょう。",
-  prediction: "震度6の地震後の予想図",
-  note: "震度6強・固定不明の家具は未固定を想定したAIの一例です。実際の被害とは限りません。",
-  childNote: "震度6強で、固定が見えない家具は固定していないとしたAIの一例だよ。この通りとは限らないよ。",
+  prediction: "地震後の部屋の予想図",
+  note: "写真をもとにAIが描いた想像図です。実際の被害を断定するものではありません。",
+  childNote: "写真をもとにAIが考えた予想図だよ。本当にこの通りになるとは限らないよ。",
 };
 
 /** 未出題の項目も、画面と同じく「今回はなし／対象なし」で表示する。 */
@@ -38,7 +38,7 @@ export async function createResultSummaryFile({ rows, audience, imageUrl, mock =
   if (!image.naturalWidth || !image.naturalHeight) throw new Error("prediction unavailable");
   const canvas = document.createElement("canvas");
   const w = 1080, pictureW = 968;
-  const predictionY = 260, pictureY = predictionY + 216;
+  const predictionY = 260, pictureY = predictionY + 184;
   const pictureH = Math.round(pictureW * image.naturalHeight / image.naturalWidth);
   const summaryY = pictureY + pictureH + 64;
   canvas.width = w;
@@ -61,19 +61,9 @@ export async function createResultSummaryFile({ rows, audience, imageUrl, mock =
   rect(48, 202, 984, 18, 9, "#ffcf3f");
   rect(16, predictionY, 1048, pictureY + pictureH + 24 - predictionY, 44, "#ffffff");
   text(mock ? "地震後の部屋の予想図（サンプル）" : SUMMARY_COPY.prediction, 56, predictionY + 60, 34);
-  rect(16, predictionY + 90, 1048, 90, 0, "#e4eff7");
-  const note = copy(mock ? audience === "adult" ? MOCK_NOTE : MOCK_NOTE_CHILD : audience === "adult" ? SUMMARY_COPY.note : SUMMARY_COPY.childNote);
-  ctx.font = `700 23px "Noto Sans JP", system-ui, sans-serif`;
-  ctx.fillStyle = "#405868";
-  let noteLine = "", noteY = predictionY + 124;
-  for (const character of note) {
-    if (noteLine && ctx.measureText(noteLine + character).width > 1016) {
-      ctx.fillText(noteLine, 32, noteY); noteY += 30; noteLine = "";
-    }
-    noteLine += character;
-  }
-  ctx.fillText(noteLine, 32, noteY);
-  if (!mock && comparisonUnavailable) text("元写真との自動比較は未完了です。部屋の形や家具を確認してください。", 32, predictionY + 199, 21, "#405868");
+  rect(16, predictionY + 90, 1048, 64, 0, "#e4eff7");
+  text(mock ? audience === "adult" ? MOCK_NOTE : MOCK_NOTE_CHILD : audience === "adult" ? SUMMARY_COPY.note : SUMMARY_COPY.childNote, 32, predictionY + 130, mock ? 21 : 23, "#405868");
+  if (!mock && comparisonUnavailable) text("元写真との自動比較は未完了です。部屋の形や家具を確認してください。", 32, predictionY + 167, 21, "#405868");
   ctx.save(); ctx.beginPath(); ctx.roundRect(56, pictureY, pictureW, pictureH, 32); ctx.clip();
   ctx.drawImage(image, 56, pictureY, pictureW, pictureH); ctx.restore();
   rect(48, summaryY, 984, 620, 48, "#ffffff");

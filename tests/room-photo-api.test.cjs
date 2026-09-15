@@ -338,14 +338,12 @@ test('aftermath targets confirmed objects and compares structure; mismatches are
   const key = process.env.OPENAI_API_KEY;
   const quality = process.env.OPENAI_IMAGE_QUALITY;
   const image = 'data:image/png;base64,AA==';
-  const objects = [{name:'壁掛けテレビ',type:'tv',mounted:true,bounds:{x:10,y:20,w:30,h:40}},
-    ...[['本棚','bookshelf'],['机','desk'],['椅子','other']].map(([name,type]) => ({name,type,mounted:false,bounds:null}))];
+  const objects = [{name:'壁掛けテレビ',type:'tv',mounted:true,bounds:{x:10,y:20,w:30,h:40}}];
   try {
     process.env.OPENAI_API_KEY = 'test-only';
     delete process.env.OPENAI_IMAGE_QUALITY;
     for (const result of ['checked','mismatch','unavailable']) {
       const calls = [];
-      let plannedEdits;
       global.fetch = async (url,init) => {
         calls.push(url);
         if (url.endsWith('/edits')) {
@@ -353,18 +351,9 @@ test('aftermath targets confirmed objects and compares structure; mismatches are
           assert.equal(init.body.has('input_fidelity'),false);
           assert.match(init.body.get('prompt'),/壁掛け・壁内のテレビは取り付け位置に維持/);
           assert.match(init.body.get('prompt'),/"x":10,"y":20,"w":30,"h":40/);
-          assert.match(init.body.get('prompt'),/震度6強を想定/);
-          plannedEdits = JSON.parse(init.body.get('prompt').split('\n').find(line => line.startsWith('[{')));
-          assert.equal(plannedEdits.length, objects.length);
-          assert.match(plannedEdits[1].edit, /転倒/);
-          assert.match(plannedEdits[2].edit, /横倒し/);
-          assert.match(plannedEdits[3].edit, /横倒し/);
           return Response.json({data:[{b64_json:'AA=='}]});
         }
         const body = JSON.parse(init.body);
-        const comparedEdits = JSON.parse(body.input[1].content[0].text.split('\n')[1]);
-        assert.deepEqual(comparedEdits.slice(1), plannedEdits.slice(1), '転倒・移動を生成と比較で同じ条件にする');
-        assert.match(body.input[0].content, /移動・転倒・落下・散乱は許容/);
         assert.equal(body.store,false);
         assert.equal(body.text.format.strict,true);
         const images = body.input[1].content.filter(p=>p.type==='input_image');

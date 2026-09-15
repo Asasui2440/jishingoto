@@ -52,7 +52,7 @@ export function AftermathCard({
       <div className="flex items-center gap-2 border-b border-border bg-glass-soft px-4 py-3">
         <AlertOctagonIcon className="size-[18px] shrink-0" />
         <h2 className="font-display text-15 font-bold text-ink">
-          <Furigana text={display?.mock ? "地震後の部屋の予想図（サンプル）" : SUMMARY_COPY.prediction} />
+          <Furigana text={display?.mock ? "地震後の部屋の予想図（サンプル）" : "地震後[じしんご]の部屋[へや]の予想図[よそうず]"} />
         </h2>
       </div>
 
