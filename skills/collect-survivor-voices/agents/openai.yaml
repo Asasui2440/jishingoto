@@ -1,0 +1,4 @@
+interface:
+  display_name: "被災者の声を集める"
+  short_description: "公開された災害体験を原典で確認し、出典付きMarkdownに蓄積する"
+  default_prompt: "$collect-survivor-voices で、被災者の声を公開資料から集め、既存ノートとの重複を確認してknowledge/voices/に追加してください。"

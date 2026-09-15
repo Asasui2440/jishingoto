@@ -1,5 +1,6 @@
 import mockResponse from "@/data/mock/room-analysis.json";
 import { recognitionRequest, recognitionRisks, recognitionViews } from "@/lib/server/room-recognition";
+import { loadRoomKnowledge } from "@/lib/server/room-knowledge";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -24,20 +25,27 @@ export async function POST(request: Request) {
 
   if (mock) return Response.json(mockResponse, { headers: { "Cache-Control": "no-store" } });
 
+  let knowledge;
+  try {
+    knowledge = await loadRoomKnowledge();
+  } catch {
+    return Response.json({ error: "knowledge-unavailable" }, { status: 503 });
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(40_000)]),
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(recognitionRequest(views, process.env.OPENAI_VISION_MODEL ?? "gpt-5.6-luna")),
+      body: JSON.stringify(recognitionRequest(views, process.env.OPENAI_VISION_MODEL ?? "gpt-5.6-luna", knowledge)),
     });
   } catch {
     return Response.json({ error: "openai-unreachable" }, { status: 502 });
   }
   if (!upstream.ok) return Response.json({ error: "openai-error" }, { status: 502 });
   try {
-    const risks = recognitionRisks(await upstream.json(), views);
+    const risks = recognitionRisks(await upstream.json(), views, knowledge);
     return Response.json({ risks, source: "ai" }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "invalid-openai-response" }, { status: 502 });

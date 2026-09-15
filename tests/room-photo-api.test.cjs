@@ -16,8 +16,65 @@ const request = body => new Request('http://localhost/api/room/analyze',{method:
 const detection = (overrides = {}) => ({
   viewIndex: 0, evidence: '横長の画面に枠とスタンドが見える',
   name: 'テレビ受像機', adultName: 'テレビ受像機', kind: 'fall', objectType: 'tv',
-  confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 }, ...overrides,
+  confidence: 0.9, bounds: { x: 20, y: 30, w: 40, h: 50 },
+  scenario: '固定が不十分な場合は強い揺れでテレビが落下する可能性があります。',
+  preparation: 'テレビと台の固定方法を説明書で確認します。',
+  unknowns: ['固定具の状態'], knowledgeIds: ['EQ-004'], ...overrides,
 });
+test('knowledge text reaches vision input and citations resolve from the same local revision', async () => {
+  const { loadRoomKnowledge } = load('src/lib/server/room-knowledge.ts');
+  const knowledge = await loadRoomKnowledge();
+  assert.equal(knowledge.notes.length, 7);
+  const appliance = knowledge.notes.find(note => note.reference.id === 'EQ-004');
+  assert.ok(appliance.text.includes('テレビ'));
+  const originalFetch = global.fetch;
+  const key = process.env.OPENAI_API_KEY;
+  try {
+    process.env.OPENAI_API_KEY = 'test-only';
+    global.fetch = async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const content = body.input.find(item => item.role === 'user').content;
+      const supplied = JSON.parse(content[0].text).knowledge;
+      assert.deepEqual(supplied, knowledge);
+      const ids = body.text.format.schema.properties.risks.items.properties.knowledgeIds.items.enum;
+      assert.deepEqual(ids, knowledge.notes.map(note => note.reference.id));
+      return Response.json({output_text: JSON.stringify({risks: [detection()]})});
+    };
+    const result = await (await POST(request({image:'data:image/jpeg;base64,AA=='}))).json();
+    assert.deepEqual(result.risks[0].assessment, {
+      observation: detection().evidence, scenario: detection().scenario, preparation: detection().preparation,
+      unknowns: detection().unknowns, references: [appliance.reference], knowledgeRevision: knowledge.revision,
+    });
+    for (const overrides of [{knowledgeIds:['invented']}, {knowledgeIds:[]}, {knowledgeIds:['EQ-004','EQ-004']},
+      {scenario:''}, {preparation:null}, {unknowns:[42]}, {unknowns:Array(5).fill('unknown')}, {scenario:'a'.repeat(601)}]) {
+      global.fetch = async () => Response.json({output_text: JSON.stringify({risks:[detection(overrides)]})});
+      assert.equal((await POST(request({image:'data:image/jpeg;base64,AA=='}))).status, 502);
+    }
+  } finally {
+    global.fetch = originalFetch;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
+});
+
+test('missing and unchecked knowledge cannot be silently used; MD changes change the revision', async () => {
+  const { loadRoomKnowledge } = load('src/lib/server/room-knowledge.ts');
+  const os = require('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'room-knowledge-test-'));
+  try {
+    await assert.rejects(loadRoomKnowledge(root));
+    fs.cpSync('knowledge',root,{recursive:true});
+    const before = await loadRoomKnowledge(root);
+    const notePath = path.join(root,'earthquake/eq-004-appliances.md');
+    const original = fs.readFileSync(notePath,'utf8');
+    fs.writeFileSync(notePath, original+'\n追加の確認事項。\n');
+    assert.notEqual((await loadRoomKnowledge(root)).revision,before.revision);
+    fs.writeFileSync(notePath, original.replace('source_checked','draft'));
+    await assert.rejects(loadRoomKnowledge(root),/unchecked knowledge/);
+    fs.writeFileSync(notePath, original.replace('S-TFD-APPLIANCES','S-NOT-REGISTERED'));
+    await assert.rejects(loadRoomKnowledge(root),/unchecked knowledge/);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('photo analysis normalizes TV names and validates photo input', async () => {
   const originalFetch = global.fetch;
   const key = process.env.OPENAI_API_KEY;

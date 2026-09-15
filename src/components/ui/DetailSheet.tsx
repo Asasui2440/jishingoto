@@ -1,6 +1,5 @@
 "use client";
 
-import { TopLink } from "./TopLink";
 import { Furigana } from "./Furigana";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
@@ -33,8 +32,9 @@ export function DetailSheet({ title, summary, children, onOpenChange }: { title:
       <div className="detail-sheet-panel">
         <header className="flex shrink-0 items-center gap-2 border-b border-border bg-surface p-3">
           <h2 id={titleId} className="min-w-0 flex-1 text-base font-bold"><Furigana text={title} /></h2>
-          <button type="button" autoFocus onClick={close} className="min-h-11 shrink-0 rounded-field px-3 text-sm font-bold text-primary-ink"><Furigana text="閉じる" /></button>
-          <TopLink onClick={close} />
+          <button type="button" autoFocus onClick={close} aria-label="閉じる" title="閉じる" className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-surface text-primary-ink">
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="m6 6 12 12M6 18 18 6" /></svg>
+          </button>
         </header>
         <div className="detail-sheet-content space-y-4 p-4">{children}</div>
       </div>
