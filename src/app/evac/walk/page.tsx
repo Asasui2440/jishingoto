@@ -3,6 +3,7 @@
 import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnswerFeedback } from "@/components/evac/AnswerFeedback";
 import { EventSheet } from "@/components/evac/EventSheet";
 import { StreetStage } from "@/components/evac/StreetStage";
 import { EvacMap } from "@/components/evac/EvacMap";
@@ -30,7 +31,7 @@ export default function EvacWalkPage() {
   const [streetPointId, setStreetPointId] = useState<string | null>(null);
   const [announcedPointId, setAnnouncedPointId] = useState<string | null>(null);
   const game = useEvacWalk({ readyStepId, paused: sheet !== null });
-  const { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, advance, choose, timerOverride, setTimerOverride, retry } = game;
+  const { observeStreet, evac, route, step, pending, arrived, walking, setWalking, busy, error, notice, feedback, closeFeedback, advance, choose, timerOverride, setTimerOverride, retry } = game;
   const { mode, home, shelter, walk, decisions, timerSeconds, update } = evac;
   const { preparation, retry: retryPlan } = useStreetRoutePlan(route, street, mode === "api");
   const plan = preparation?.plan ?? null;
@@ -55,16 +56,16 @@ export default function EvacWalkPage() {
   const returnPano = !arrived ? plannedReturnLink(street, plan)?.pano ?? null : null;
   const automaticPano = !arrived ? plannedStreetLink(street, plan)?.pano ?? null : null;
   useEffect(() => {
-    if (mode !== "api" || !walking || !ready || pending || notice || arrived || busy || sheet) return;
+    if (mode !== "api" || !walking || !ready || pending || feedback || notice || arrived || busy || sheet) return;
     if (!automaticPano) return;
     const timer = setTimeout(() => {
       if (!getEvac().walk?.street?.arrived) navigation.current?.move(automaticPano);
     }, 1600);
     return () => clearTimeout(timer);
-  }, [mode, walking, ready, pending, notice, arrived, busy, sheet, automaticPano, street?.pano, setWalking]);
-  const announcingPoint = !!pending && ready && announcedPointId !== step?.pointId;
+  }, [mode, walking, ready, pending, feedback, notice, arrived, busy, sheet, automaticPano, street?.pano, setWalking]);
+  const announcingPoint = !!pending && !feedback && ready && announcedPointId !== step?.pointId;
   const viewingStreet = !!pending && streetPointId === (step?.pointId ?? step?.id);
-  const decisionVisible = !!pending && ready && !announcingPoint && !viewingStreet;
+  const decisionVisible = !!pending && !feedback && ready && !announcingPoint && !viewingStreet;
   useEffect(() => {
     const state = getEvac();
     if (!state.startRouteId || !state.shelter) router.replace("/evac");
@@ -90,8 +91,8 @@ export default function EvacWalkPage() {
   const navigationAlert = routeRecovery
     ? preparation?.error ?? "道の接続が変わりました。道を再確認してください。"
     : error;
-  const decisionBlocking = !!pending && preparation?.status !== "error";
-  const moving = (mode === "mock" || !!automaticPano) && walking && ready && !pending && !notice && !arrived && !busy && !sheet;
+  const decisionBlocking = !!feedback || !!pending && preparation?.status !== "error";
+  const moving = (mode === "mock" || !!automaticPano) && walking && ready && !pending && !feedback && !notice && !arrived && !busy && !sheet;
   const events = walk.steps.filter(s => s.event);
   const decisionIndex = events.findIndex(s => s.pointId === step.pointId);
   const next = walk.steps[walk.index + 1];
@@ -99,7 +100,7 @@ export default function EvacWalkPage() {
   const facingLink = street?.links.slice().sort((a, b) => Math.abs(angleDifference(a.heading, street.heading)) - Math.abs(angleDifference(b.heading, street.heading)))[0];
   const canForward = mode === "mock" || !!facingLink && !!street && Math.abs(angleDifference(facingLink.heading, street.heading)) < 60;
   const forward = () => {
-    if (!ready || busy || pending || sheet) return;
+    if (!ready || busy || pending || feedback || sheet) return;
     advance(); // Clears the notice; only mock mode changes the planned step here.
     if (mode === "api" && facingLink && canForward) navigation.current?.move(facingLink.pano);
   };
@@ -123,8 +124,8 @@ export default function EvacWalkPage() {
         <StreetStage initialPosition={walk.street?.position ?? walk.steps[0].position} demoPosition={step.position}
           navigationRef={navigation} onNavigation={onNavigation} onChangeStart={() => { setWalking(false); router.push("/evac"); }} recommendedPano={automaticPano} returnPano={returnPano} heading={step.heading} destination={shelter.position} arrivalEndpoint={route.path[route.path.length - 1]} kind={pending?.kind ?? null}
           zone={ready ? pending?.zone : null} zoneNumber={decisionIndex + 1} height="100%" demo={mode === "mock"}
-          sceneKey={step.id} onSettled={setReadyStepId} showArrow={ready && !pending && !arrived && !sheet}
-          walking={moving} onAdvance={(!walking || !automaticPano) && ready && !pending && !arrived && !sheet ? forward : undefined}
+          sceneKey={step.id} onSettled={setReadyStepId} showArrow={ready && !pending && !feedback && !arrived && !sheet}
+          walking={moving} onAdvance={(!walking || !automaticPano) && ready && !pending && !feedback && !arrived && !sheet ? forward : undefined}
           arrived={arrived && ready} onReflect={() => { update({finishedAt:Date.now()}); router.push("/evac/report"); }} turn={Math.abs(turn) >= 25 ? turn : null}>
           <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
             <div className="flex flex-col items-start gap-2">
@@ -136,10 +137,10 @@ export default function EvacWalkPage() {
           {navigationAlert && !street?.error ? <p role="alert" className={styles.navigationAlert}>{navigationAlert}</p> : null}
         </StreetStage>
       </div>
-      {decisionBlocking ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot} ${decisionVisible ? "" : styles.decisionHidden}`}>
+      {pending && preparation?.status !== "error" ? <div className={`${styles.decisionSlot} ${styles.illustratedSlot} ${decisionVisible ? "" : styles.decisionHidden}`}>
         <div aria-hidden={!decisionVisible} inert={!decisionVisible} className={styles.decisionContent}>
           <EventSheet key={step.pointId} event={pending!} index={decisionIndex} total={events.length}
-            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !decisionVisible} busy={busy}
+            seconds={timerOverride ?? timerSeconds} viewingStreet={sheet !== null || !decisionVisible || !!feedback} busy={busy}
             onViewStreet={() => setStreetPointId(step.pointId ?? step.id)}
             onTimerChange={seconds => { update({ timerSeconds: seconds }); setTimerOverride(seconds); }} onChoose={choose} />
         </div>
@@ -168,6 +169,7 @@ export default function EvacWalkPage() {
             </div> : null}
         </section>
     </main>
+    <AnswerFeedback feedback={feedback} busy={busy} error={error} onContinue={closeFeedback} />
     <BottomSheet open={sheet === "map"} title="いまいる場所と通った道" onClose={() => setSheet(null)}>
       <EvacMap floodHazard={evac.scenario === "flood"} mode={mode} center={currentPosition} home={home} shelters={[shelter]} selectedShelterId={shelter.id} routes={[route]} activeRouteId={route.id}
         markers={arrivalNode ? [{ id: "arrival", position: arrivalNode.position, label: "着", color: "#bfdbfe", title: "体験の到着地点" }] : []}
@@ -177,7 +179,7 @@ export default function EvacWalkPage() {
     </BottomSheet>
     <BottomSheet open={sheet === "help"} title="歩き方・設定" onClose={() => setSheet(null)}>
       <div className="space-y-4 text-13 leading-relaxed text-ink-muted">
-        <p>風景をドラッグすると、その場で周囲を見回せます。API版では画面に表示された道を選び、隣の撮影地点へ一歩ずつ進みます。歩き始める前に、選んだルートを最後まで歩ける道のつながりを確認します。「自動で歩く」は確認済みの道を進みます。判断や地図の表示中は待機し、回答・閉じる操作のあと自動で再開します。避難先側の経路終点に近いStreet Viewの撮影地点を到着地点にしています。地図の「着」が目印です。</p>
+        <p>風景をドラッグすると、その場で周囲を見回せます。API版では画面に表示された道を選び、隣の撮影地点へ一歩ずつ進みます。歩き始める前に、選んだルートを最後まで歩ける道のつながりを確認します。「自動で歩く」は確認済みの道を進みます。問題・回答の解説・地図の表示中は待機し、解説を確認して「歩行を続ける」を押すか、地図を閉じると自動で再開します。避難先側の経路終点に近いStreet Viewの撮影地点を到着地点にしています。地図の「着」が目印です。</p>
         <p>途中で起こる場面を想定して、行動を選びましょう。説明や地図を開いている間、判断のタイマーは停止します。</p>
         <p>風景はGoogle Street Viewです。枠やイラストは練習用の想定で、実際の被害や画像解析の結果ではありません。API版で風景が利用できない場合は移動を停止します。地図はいつでも確認できます。</p>
         {mode === "mock" ? <Button size="md" variant="outline" disabled={!ready || busy || !!pending || arrived} onClick={() => { setSheet(null); advance(true); }}>次の判断ポイントへ進む</Button> : null}

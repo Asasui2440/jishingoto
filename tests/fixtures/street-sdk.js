@@ -32,7 +32,7 @@
   nodes.E = { position: { lat: C.lat, lng: C.lng + 0.001 }, links: [{ pano: "C", heading: 270 }] };
   if (params.has("disconnected")) nodes.B.links = [{ pano: "A", heading: 180 }];
   if (params.has("courtyard")) nodes.G = {position:{lat:C.lat + 0.0002,lng:C.lng},links:[{pano:"Z",heading:0}]};
-  const decision = { id: "wall", kind: "wall", title: "壁の近くをどう進む？", situation: "訓練用の場面です。", choices: [{ id: "go", label: "周囲を確認して進む", detail: "確認して進みます。", extraSeconds: 0, reroute: false }] };
+  const decision = { id: "wall", kind: "wall", title: "壁の近くをどう進む？", situation: "訓練用の場面です。", hint: "周囲の状況を確認してから進みます。", choices: [{ id: "go", label: "周囲を確認して進む", detail: "確認して進みます。", feedback: "周囲を確認して進む判断です。", pros: ["周囲を確認できます。"], cons: ["変化にも注意します。"], priority: 3, extraSeconds: 0, reroute: false }] };
   const route = { id: "fixture", kind: "short", path, distanceM: 61, durationS: 60, notes: [], eventCount: 0 };
   sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify({
     mode: "api", analysisMode: "sample", home: A, homeLabel: "出発地点", shelter: { id: "end", name: "避難先", position: C },

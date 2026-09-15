@@ -3,15 +3,16 @@ import { readFile } from "node:fs/promises";
 import { WALK_SCENARIOS } from "../src/lib/walk-scenarios";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
-async function openIllustratedQuestion(page: Page, number = 28, seconds = 3) {
+async function openIllustratedQuestion(page: Page, number = 28, seconds = 3, mode: "api" | "mock" = "api") {
   await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
-  await page.addInitScript(({event,seconds}) => {
+  await page.addInitScript(({event,seconds,mode}) => {
     const saved = JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!);
     saved.timerSeconds = seconds;
+    saved.mode = mode;
     saved.walk.steps[1].event = event;
     saved.walk.steps[1].pointId = "illustrated-question";
     sessionStorage.setItem("jishingoto.evac.v2", JSON.stringify(saved));
-  }, {event:WALK_SCENARIOS.find(c=>c.number===number)!.event,seconds});
+  }, {event:WALK_SCENARIOS.find(c=>c.number===number)!.event,seconds,mode});
   await page.goto("/evac/walk?decision=1", {waitUntil:"domcontentloaded"});
   await page.getByRole("button",{name:"自動で歩く",exact:true}).click();
   await expect(page.getByRole("region",{name:/判断ポイント/}).locator("li button").first()).toBeEnabled();
@@ -65,6 +66,52 @@ test("問題はすぐ回答でき、Street View確認中は時計と地点を保
   await card.locator("li button").first().click();
   await expect(card).toHaveCount(0);
 });
+
+for (const priority of [3, 2, 1]) {
+  test(`回答直後に優先度${priority}の評価と推奨行動・解説を表示する`, async ({ page }, testInfo) => {
+    await openIllustratedQuestion(page, 28, 0, "mock");
+    const event = WALK_SCENARIOS.find(item => item.number === 28)!.event;
+    const choice = event.choices.find(item => item.priority === priority)!;
+    const best = event.choices.find(item => item.priority === 3)!;
+    await page.getByRole("region", { name: /判断ポイント/ }).getByRole("button", { name: new RegExp(choice.label) }).click();
+    const feedback = page.getByRole("dialog", { name: "回答と解説" });
+    await expect(feedback).toBeVisible();
+    const selected = feedback.getByRole("region", { name: "選んだ行動の評価" });
+    await expect(selected).toContainText(choice.label);
+    await expect(selected).toContainText(choice.feedback);
+    const situationImage = selected.getByRole("figure", { name: "問題の条件", exact: true }).locator("img");
+    await expect(situationImage).toHaveAttribute("src", `/illustrations/evac/${event.id}/situation-v2.webp`);
+    const chosenImage = selected.getByRole("figure", { name: "選んだ行動", exact: true }).locator("img");
+    await expect(chosenImage).toHaveAttribute("src", `/illustrations/evac/${event.id}/${choice.id}-v2.webp`);
+    await expect.poll(() => chosenImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    const comparison = selected.getByRole("figure", { name: "次に意識したい行動", exact: true });
+    if (priority < 3) {
+      await expect(comparison.locator("img")).toHaveAttribute("src", `/illustrations/evac/${event.id}/${best.id}-v2.webp`);
+    } else {
+      await expect(comparison).toHaveCount(0);
+    }
+    await chosenImage.scrollIntoViewIfNeeded();
+    await expect(chosenImage).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: testInfo.outputPath(`answer-illustrations-${priority}.png`), animations: "disabled" });
+    const points = feedback.getByRole("region", { name: "この行動のポイント" });
+    await points.scrollIntoViewIfNeeded();
+    await expect(points.getByRole("tab", { name: priority === 3 ? "利点" : "気をつけたい点", exact: true })).toHaveAttribute("aria-selected", "true");
+    const otherTab = points.getByRole("tab", { name: priority === 3 ? "気をつけたい点" : "利点", exact: true });
+    await otherTab.click();
+    await expect(otherTab).toHaveAttribute("aria-selected", "true");
+    await expect(selected.getByLabel(priority === 3 ? "良い判断" : priority === 2 ? "もう一工夫" : "見直したい判断", { exact: true })).toBeVisible();
+    const recommended = feedback.getByRole("region", { name: "この場面の推奨行動" });
+    await expect(recommended).toContainText(best.label);
+    await expect(recommended).toContainText(event.hint);
+    await noPageOverflow(page, feedback.getByRole("button", { name: "歩行を続ける" }));
+    await page.screenshot({ path: testInfo.outputPath(`answer-priority-${priority}.png`), animations: "disabled" });
+    await feedback.getByRole("button", { name: "歩行を続ける" }).click();
+    await expect(feedback).not.toBeVisible();
+    const decisions = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).decisions);
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0].choiceId).toBe(choice.id);
+  });
+}
 
 test("画像の読み込み中も問題文と回答操作を表示する", async ({page}) => {
   let release!: () => void;
@@ -195,6 +242,7 @@ test("MainのStreet View体験をコンパクトな画面で最後まで進め�
     if (number === 1) await capture(page, testInfo, "street-view-decision");
     await choices.first().click();
     await expect(decision).not.toBeVisible();
+    await page.getByRole("dialog", { name: "回答と解説" }).getByRole("button", { name: "歩行を続ける" }).click();
   }
 
   await jumpToNextDecision(page, false);
@@ -429,7 +477,7 @@ test("到着ノードを取得できない場合は自動歩行で進み続け�
 });
 
 
-test("判断中は自動歩行を保持し回答後に再開する", async ({ page }) => {
+test("回答直後の解説で自動歩行を止め、確認後に再開する", async ({ page }, testInfo) => {
   await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
   await page.goto("/evac/walk?decision=1", {waitUntil:"domcontentloaded"});
   await page.getByRole("button", { name: "自動で歩く" }).click();
@@ -438,6 +486,17 @@ test("判断中は自動歩行を保持し回答後に再開する", async ({ pa
   await page.waitForTimeout(1800);
   expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual(["B"]);
   await decision.getByRole("button", { name: /周囲を確認して進む/ }).click();
+  const feedback = page.getByRole("dialog", { name: "回答と解説" });
+  await expect(feedback).toBeVisible();
+  await expect(feedback.getByRole("region", { name: "選んだ行動の評価" })).toContainText("周囲を確認して進む");
+  await expect(feedback.getByRole("region", { name: "この場面の推奨行動" })).toBeVisible();
+  await page.waitForTimeout(3200);
+  expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual(["B"]);
+  await expect(page.getByRole("button", { name: "ふりかえる" })).toHaveCount(0);
+  await noPageOverflow(page, feedback.getByRole("button", { name: "歩行を続ける" }));
+  await page.screenshot({ path: testInfo.outputPath("answer-feedback.png"), animations: "disabled" });
+  await feedback.getByRole("button", { name: "歩行を続ける" }).click();
+  await expect(feedback).not.toBeVisible();
   await expect(page.getByRole("button", { name: "一時停止" })).toBeVisible();
   await expect(page.getByRole("button", { name: "ふりかえる" })).toBeEnabled();
   expect(await page.evaluate(() => (window as unknown as { streetTest: { moves: string[] } }).streetTest.moves)).toEqual(["B", "C"]);
@@ -842,7 +901,7 @@ test("共通問題をノードで出題し回答後は自動歩行を再開す�
   await expect(page.getByText("自動走行中",{exact:true})).toBeVisible();
   expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
   await expect(page.getByText(/選んだルートに沿って歩いています/)).toHaveCount(0);
-  await expect(page.getByText("電池が減った想定")).toBeVisible({timeout:25000});
+  await expect(page.getByText("電池が減った", { exact: true })).toBeVisible({timeout:25000});
   const before = await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length);
   expect(before).toBe(3);
   const buttons = page.getByRole("region",{name:/判断ポイント/}).locator("li button");
@@ -868,11 +927,13 @@ test("共通問題をノードで出題し回答後は自動歩行を再開す�
   expect(await page.evaluate(() => (window as unknown as {streetTest:{moves:string[]}}).streetTest.moves.length)).toBe(before);
   expect(Math.abs((await scene.boundingBox())!.height-sceneBefore!.height)).toBeLessThan(1);
   await page.getByRole("button",{name:/現在地・避難先・分岐の目印を紙に控える/}).click();
+  await page.getByRole("dialog", { name: "回答と解説" }).getByRole("button", { name: "歩行を続ける" }).click();
   for (const index of [2,3]) {
     const card = page.getByRole("region",{name:new RegExp(`^判断ポイント ${index} /`)});
     const proceed = card.locator('li button').filter({has:page.locator('img[src$="/go-v2.webp"]')});
     await expect(proceed).toBeEnabled({timeout:25000});
     await proceed.click();
+    await page.getByRole("dialog", { name: "回答と解説" }).getByRole("button", { name: "歩行を続ける" }).click();
   }
   await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!));
@@ -883,10 +944,13 @@ test("共通問題をノードで出題し回答後は自動歩行を再開す�
 
 test("洪水の迂回は現在のノードから再計算し残り問題を引き継ぐ", async ({page}) => {
   await page.addInitScript({path:"tests/fixtures/street-sdk.js"});
+  let releaseReroute!: () => void;
+  const rerouteReady = new Promise<void>(resolve => { releaseReroute = resolve; });
   const requests: {maxPoints:number; excludedEventIds:string[];route:{path:{lat:number;lng:number}[]}}[]=[];
   await page.route("**/api/evac/assess",async route=>route.fulfill({status:503,json:{message:"test unavailable"}}));
   await page.route("**/api/evac/scenarios",async route=>{
     requests.push(route.request().postDataJSON());
+    if (requests.length > 1) await rerouteReady;
     await route.fulfill({json:{source:"context",points:requests.length>1?[]:[{id:"fixture:case-10",t:.4,position:{lat:35.0003,lng:139},heading:90,remainingM:40,remainingS:30,event:WALK_SCENARIOS.find(c=>c.number===10)!.event}]}});
   });
   await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&contextDetour=1");
@@ -894,11 +958,21 @@ test("洪水の迂回は現在のノードから再計算し残り問題を引�
   await expect(page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/})).toBeVisible();
   const departure = await page.evaluate(()=>JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).walk.street.position);
   await page.getByRole("button",{name:/待機場所へ移り、案内員と移動継続・避難先を見直す/}).click();
+  const feedback = page.getByRole("dialog", { name: "回答と解説" });
+  await expect(feedback).toBeVisible();
+  await expect(feedback.getByRole("region", { name: "この場面の推奨行動" })).toContainText(WALK_SCENARIOS.find(c => c.number === 10)!.event.hint);
+  await expect(feedback.getByRole("button", { name: "迂回路を確認中…" })).toBeDisabled();
+  await feedback.press("Escape");
+  await expect(feedback).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).decisions)).toHaveLength(0);
+  releaseReroute();
+  await feedback.getByRole("button", { name: "歩行を続ける" }).click();
   for (const index of [2,3]) {
     const card = page.getByRole("region",{name:new RegExp(`^判断ポイント ${index} /`)});
     const proceed = card.locator('li button').filter({has:page.locator('img[src$="/go-v2.webp"]')});
     await expect(proceed).toBeEnabled({timeout:25000});
     await proceed.click();
+    await page.getByRole("dialog", { name: "回答と解説" }).getByRole("button", { name: "歩行を続ける" }).click();
   }
   await expect(page.getByText("避難先付近に到着",{exact:true})).toBeVisible();
   expect(requests).toHaveLength(2);
@@ -909,6 +983,33 @@ test("洪水の迂回は現在のノードから再計算し残り問題を引�
   expect(result.session.decisions[0].rerouted).toBe(true);
   expect(result.street.moves).toContain("D");
   expect(result.street.positionCommands).toBe(0);
+});
+
+test("迂回に失敗しても回答の解説を表示し、選び直して続けられる", async ({ page }) => {
+  await page.addInitScript({ path: "tests/fixtures/street-sdk.js" });
+  let requests = 0;
+  await page.route("**/api/evac/assess", route => route.fulfill({ status: 503, json: {} }));
+  await page.route("**/api/evac/scenarios", async route => {
+    requests++;
+    if (requests > 1) {
+      await route.fulfill({ status: 503, json: { message: "テスト：迂回後の問題を取得できません" } });
+      return;
+    }
+    await route.fulfill({ json: { source: "context", points: [{ id: "fixture:case-10", t: .4, position: { lat: 35.0003, lng: 139 }, heading: 90, remainingM: 40, remainingS: 30, event: WALK_SCENARIOS.find(c => c.number === 10)!.event }] } });
+  });
+  await page.goto("/evac/walk?analysisFailure=1&streetAuto=1&eightNodes=1&contextDetour=1");
+  await page.getByRole("button", { name: "自動で歩く" }).click();
+  await page.getByRole("button", { name: /待機場所へ移り、案内員と移動継続・避難先を見直す/ }).click();
+  const feedback = page.getByRole("dialog", { name: "回答と解説" });
+  await expect(feedback.getByRole("alert")).toBeVisible();
+  await expect(feedback.getByRole("region", { name: "この場面の推奨行動" })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).decisions)).toHaveLength(0);
+  await feedback.getByRole("button", { name: "回答を選び直す" }).click();
+  await page.getByRole("region", { name: /判断ポイント/ }).getByRole("button", { name: /予定の避難先へ向かい、途中で情報を聞く/ }).click();
+  await expect(feedback.getByRole("alert")).toHaveCount(0);
+  await expect(feedback.getByRole("region", { name: "選んだ行動の評価" })).toContainText("予定の避難先へ向かい、途中で情報を聞く");
+  await feedback.getByRole("button", { name: "歩行を続ける" }).click();
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("jishingoto.evac.v2")!).decisions)).toHaveLength(1);
 });
 
 test("Street Viewの初期取得失敗を再試行して同じ体験を続ける", async ({page}) => {
