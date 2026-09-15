@@ -5,12 +5,15 @@ import { TopLink } from "./TopLink";
 
 export function PhaseOneNavigation() {
   const pathname = usePathname();
-  if (pathname === "/" || pathname.startsWith("/evac")) return null;
-  return <><div aria-hidden className="h-[calc(52px+env(safe-area-inset-top))]" /><nav aria-label="共通ナビゲーション" className="phase-one-navigation">
-    <TopPageLink />
+  if (pathname.startsWith("/evac")) return null;
+  return <><div aria-hidden className="h-[calc(64px+env(safe-area-inset-top))]" /><nav aria-label="共通ナビゲーション" className="phase-one-navigation">
+    <TopLink />
   </nav></>;
 }
 
-export function TopPageLink() {
-  return <TopLink />;
+/** 避難画面のヘッダー内に配置する。 */
+export function HeaderHomeLink() {
+  return <nav aria-label="共通ナビゲーション" className="shrink-0">
+    <TopLink />
+  </nav>;
 }

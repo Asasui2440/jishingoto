@@ -83,6 +83,11 @@ function SetupMap({ mode, initialRoutes, settingsOpen, setSettingsOpen, selectMo
   const active = routes.find(r => r.id === startRouteId) ?? null;
   const validShelter = !!shelter && !!shelters?.some(s => s.id === shelter.id);
 
+  useEffect(() => {
+    // 以前の10秒・20秒・制限なしの設定は、新しい既定値へ戻す。
+    if (!TIMER_PRESETS.some(preset => preset.seconds === timerSeconds)) update({ timerSeconds: TIMER_PRESETS[0].seconds });
+  }, [timerSeconds, update]);
+
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
     if (!getEvac().home) update({home: DEMO_HOME, homeLabel: mode === "mock" ? DEMO_AREA_LABEL : "文京区の周辺", startedAt: Date.now()});

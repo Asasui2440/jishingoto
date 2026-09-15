@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { EVAC_SCENARIOS } from "@/lib/evac-scenario";
 import { BottomSheet, GameHeader, GameIcon, GameShell } from "@/components/evac/GameUI";
 import { eventTitle } from "@/lib/evac-display";
@@ -21,6 +21,37 @@ import { walkedPath, walkDistance } from "@/lib/evac-walk";
 import { useSession } from "@/lib/session";
 
 type Sheet = "offline" | "decision" | "route" | "help" | "room" | null;
+
+function AddedTimeInfo({ label }: { label: string }) {
+  const id = useId();
+  const root = useRef<HTMLSpanElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovered || focused || pinned;
+  useEffect(() => {
+    if (!open) return;
+    const close = () => { setHovered(false); setFocused(false); setPinned(false); };
+    const outside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) close(); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
+  }, [open]);
+  return <span ref={root} aria-label="選んだ行動による追加時間" className="relative mx-1 mt-1.5 block"
+    onPointerEnter={event => { if (event.pointerType === "mouse") setHovered(true); }} onPointerLeave={() => setHovered(false)}>
+    <button type="button" aria-label="追加時間の説明" aria-expanded={open} aria-describedby={open ? id : undefined}
+      onClick={() => { setFocused(false); setHovered(false); setPinned(!pinned); }}
+      onFocus={event => setFocused(event.currentTarget.matches(":focus-visible"))}
+      onBlur={event => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget as Node)) { setFocused(false); setPinned(false); } }}
+      className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-field bg-primary-soft px-1 text-13 font-bold text-primary-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink">
+      <Furigana text={label} /><GameIcon name="info" className="size-4 shrink-0" />
+    </button>
+    {open && <span id={id} role="tooltip" className="absolute right-0 top-full z-30 w-[min(260px,calc(100vw-48px))] rounded-field border border-border bg-surface p-3 text-left text-13 font-medium leading-relaxed text-ink shadow-lg">
+      <Furigana text="選んだ行動によって追加された想定時間です。上の想定時間の合計に含まれています。実際にかかった時間や減点ではありません。" />
+    </span>}
+  </span>;
+}
 
 /** 記録は地図で一覧し、選択の理由と次の行動はその場で開いて確かめる。 */
 export default function EvacReportPage() {
@@ -55,6 +86,10 @@ export default function EvacReportPage() {
   const connectedRoom = !!room.finishedAt && evac.roomFinishedAt === room.finishedAt;
   const trail = walkedPath(walk);
   const changed = takenRouteIds.length > 1;
+  const addedSeconds = decisions.reduce((sum, decision) => sum + decision.extraSeconds, 0);
+  const addedMinutes = Math.floor(addedSeconds / 60);
+  const addedRemainder = addedSeconds % 60;
+  const addedTime = `${addedMinutes ? `${addedMinutes}分` : ""}${addedRemainder ? `${addedRemainder}秒` : ""}`;
   const selectDecision = (id: string) => {
     setSelectedId(id);
     setSheet("decision");
@@ -76,11 +111,14 @@ export default function EvacReportPage() {
         ) : undefined}
       />
 
-      <main className="flex min-h-0 flex-1 flex-col gap-2.5 px-4 pb-3">
+      <main className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-3">
         <dl className="grid shrink-0 grid-cols-3 divide-x divide-border rounded-tile bg-canvas py-2.5 text-center">
           <div><dt className="text-11 text-ink-muted"><Furigana text="考[かんが]えた場面[ばめん]" /></dt><dd className="mt-0.5 font-display text-xl font-bold">{rows.length}<span className="ml-1 text-11 font-medium">地点</span></dd></div>
           <div><dt className="text-11 text-ink-muted"><Furigana text="歩[ある]いた距離[きょり]" /></dt><dd className="mt-1 font-display text-15 font-bold">{formatDistance(walk ? walkDistance(walk) : startRoute?.distanceM ?? 0)}</dd></div>
-          <div><dt className="text-11 text-ink-muted"><Furigana text="想定時間[そうていじかん]" /></dt><dd className="mt-1 font-display text-15 font-bold">{formatDuration(totalSeconds(evac))}</dd></div>
+          <div><dt className="text-11 text-ink-muted"><Furigana text="想定時間[そうていじかん]" /></dt><dd className="mt-1 font-display text-15 font-bold">
+            {formatDuration(totalSeconds(evac))}
+            <AddedTimeInfo label={addedSeconds > 0 ? `＋${addedTime}` : "追加なし"} />
+          </dd></div>
         </dl>
 
         <div ref={mapBox} className="relative min-h-[110px] flex-1 overflow-hidden rounded-panel border border-border">
@@ -162,7 +200,7 @@ export default function EvacReportPage() {
           <div><p className="text-11">選んだ避難場所</p><p className="mt-1 font-bold text-ink"><Furigana text={shelter?.name ?? "—"} /></p><p className="mt-1">{shelter?.address}</p></div>
           <div><p className="text-11">はじめの経路</p><p className="mt-1 font-bold text-ink"><Furigana text={startRoute?.label ?? "—"} /> · {startRoute ? formatDistance(startRoute.distanceM) : "—"}</p></div>
           <div><p className="mb-2 text-11">体験中の経路</p><ol className="space-y-2">{(takenRouteIds.length ? takenRouteIds : startRouteId ? [startRouteId] : []).map((id, index) => <li className="flex items-center gap-2" key={`${id}-${index}`}><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-11 font-bold text-primary-ink">{index + 1}</span><Furigana text={routes.find((route) => route.id === id)?.label ?? "途中からの迂回路"} /></li>)}</ol><p className="mt-2 text-11">{changed ? "途中で別の経路に変更しました。" : "最初の経路のまま体験しました。"}</p></div>
-          <p>到着までの想定時間：<strong className="text-ink">{formatDuration(totalSeconds(evac))}</strong><span className="mt-1 block text-11">選択肢ごとに設定した仮の所要時間を含みます。実測時間や減点ではありません。</span></p>
+          <p>到着までの想定時間：<strong className="text-ink">{formatDuration(totalSeconds(evac))}</strong><span className="mt-2 block font-bold text-primary-ink"><Furigana text={addedSeconds > 0 ? `選んだ行動で＋${addedTime}（合計に含む）` : "選んだ行動による追加時間なし"} /></span><span className="mt-1 block text-11">選択肢ごとに設定した仮の所要時間を含みます。実測時間や減点ではありません。</span></p>
           {startRoute?.demo ? <p className="rounded-field bg-primary-soft p-3 text-11 text-primary-ink">練習用に合成した経路です。実際の道路とは異なります。</p> : null}
         </div> : null}
 

@@ -265,7 +265,7 @@ ruby > rt {
 }
 
 /* Phase 1: primary content stays visible; supporting detail opens separately. */
-.phase-one-navigation { position: fixed; top: max(4px, env(safe-area-inset-top)); left: max(12px, calc((100% - min(100%, 1120px)) / 2 + 12px)); z-index: 60; }
+.phase-one-navigation { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(16px, calc((100% - min(100%, 1120px)) / 2 + 16px)); z-index: 60; }
 .detail-sheet { position: fixed; inset: 0; margin: auto; padding: 0; width: min(100% - 24px, 440px); max-width: none; max-height: calc(100dvh - 24px); border: 0; border-radius: 20px; color: var(--color-ink); background: var(--color-canvas); }
 .detail-sheet::backdrop { background: rgb(15 23 42 / 55%); backdrop-filter: blur(3px); }
 .detail-sheet-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
@@ -276,7 +276,7 @@ html { scroll-padding-top: 60px; }
 .legacy-page { width: 100%; max-width: 1120px; margin: 0 auto; }
 @media (min-width: 640px) {
   .legacy-page { width: calc(100% - 48px); margin: 24px auto; }
-  .phase-one-navigation { left: max(36px, calc((100% - 1120px) / 2 + 12px)); }
+  .phase-one-navigation { right: max(40px, calc((100% - 1120px) / 2 + 16px)); }
 }
 
 /* 本文の実際の幅に合わせる。横向き・分割画面も同じ規則を使う。 */
